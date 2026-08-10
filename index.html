@@ -712,6 +712,95 @@
   .todo-empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
   .todo-empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
+  /* 用户切换 */
+  .todo-user-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .todo-user-bar .user-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .todo-user-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .todo-user-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .todo-user-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .todo-user-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .todo-user-chip .chip-del {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-left: 2px;
+    padding: 0 2px;
+    border-radius: 50%;
+    line-height: 1;
+  }
+  .todo-user-chip .chip-del:hover { opacity: 1; background: rgba(255,255,255,0.3); }
+  .todo-user-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px dashed var(--border);
+    background: #fff;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .todo-user-add:hover { border-color: var(--primary); color: var(--primary); }
+  .todo-user-input-group {
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+  .todo-user-input-group.active { display: inline-flex; }
+  .todo-user-input-group input {
+    padding: 5px 10px;
+    border: 1px solid var(--primary);
+    border-radius: 16px;
+    font-size: 13px;
+    outline: none;
+    width: 120px;
+  }
+  .todo-user-input-group button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .user-btn-ok { background: var(--primary); color: #fff; }
+  .user-btn-ok:hover { background: var(--primary-dark); }
+  .user-btn-cancel { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+
   /* Responsive */
   @media (max-width: 768px) {
     .container { padding: 16px; }
@@ -1321,6 +1410,20 @@
   <!-- ===== 待办事项 ===== -->
   <section class="section" id="todoSection">
     <h2 class="section-title">📝 待办事项</h2>
+
+    <!-- 用户选择 -->
+    <div class="todo-user-bar">
+      <span class="user-label">👤 当前用户：</span>
+      <div class="todo-user-select" id="todoUserSelect">
+        <!-- 动态填充 -->
+      </div>
+      <div class="todo-user-input-group" id="todoUserInputGroup">
+        <input type="text" id="todoNewUserName" placeholder="输入姓名..." maxlength="20" onkeydown="if(event.key==='Enter')addTodoUser()">
+        <button class="user-btn-ok" onclick="addTodoUser()">✓ 确认</button>
+        <button class="user-btn-cancel" onclick="cancelAddUser()">取消</button>
+      </div>
+      <button class="todo-user-add" id="todoUserAddBtn" onclick="showAddUserInput()">＋ 添加用户</button>
+    </div>
 
     <!-- 统计卡片 -->
     <div class="todo-header-bar">
@@ -2340,17 +2443,112 @@ function resetEmployee() {
 var todoList = [];
 var todoFilter = 'all';
 var editingId = null;
-var TODO_KEY = 'wpgholdings_todos';
+var currentUser = '';
+var userList = [];
+var USERS_KEY = 'wpgholdings_todo_users';
+
+function getTodoKey() {
+  return 'wpgholdings_todos_' + (currentUser || 'default');
+}
+
+function loadUserList() {
+  try {
+    var raw = localStorage.getItem(USERS_KEY);
+    userList = raw ? JSON.parse(raw) : [];
+  } catch (e) { userList = []; }
+  if (userList.length === 0) {
+    userList = ['Yuki'];
+    saveUserList();
+  }
+  // 恢复上次用户
+  var lastUser = localStorage.getItem('wpgholdings_todo_lastuser') || '';
+  if (lastUser && userList.indexOf(lastUser) !== -1) {
+    currentUser = lastUser;
+  } else {
+    currentUser = userList[0];
+  }
+}
+
+function saveUserList() {
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(userList));
+  } catch (e) { console.error('用户列表存储失败:', e); }
+}
+
+function renderUserChips() {
+  var container = document.getElementById('todoUserSelect');
+  var html = '';
+  userList.forEach(function(u) {
+    var activeClass = u === currentUser ? ' active' : '';
+    var delBtn = userList.length > 1 ? '<span class="chip-del" onclick="event.stopPropagation();deleteTodoUser(\'' + escapeHtml(u) + '\')">×</span>' : '';
+    html += '<span class="todo-user-chip' + activeClass + '" onclick="switchTodoUser(\'' + escapeHtml(u) + '\')">' + escapeHtml(u) + delBtn + '</span>';
+  });
+  container.innerHTML = html;
+}
+
+function switchTodoUser(name) {
+  if (name === currentUser) return;
+  currentUser = name;
+  localStorage.setItem('wpgholdings_todo_lastuser', name);
+  renderUserChips();
+  loadTodos();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function showAddUserInput() {
+  document.getElementById('todoUserInputGroup').classList.add('active');
+  document.getElementById('todoUserAddBtn').style.display = 'none';
+  document.getElementById('todoNewUserName').value = '';
+  document.getElementById('todoNewUserName').focus();
+}
+
+function cancelAddUser() {
+  document.getElementById('todoUserInputGroup').classList.remove('active');
+  document.getElementById('todoUserAddBtn').style.display = '';
+}
+
+function addTodoUser() {
+  var name = document.getElementById('todoNewUserName').value.trim();
+  if (!name) { alert('请输入用户名'); return; }
+  if (userList.indexOf(name) !== -1) { alert('该用户已存在'); return; }
+  userList.push(name);
+  saveUserList();
+  currentUser = name;
+  localStorage.setItem('wpgholdings_todo_lastuser', name);
+  cancelAddUser();
+  renderUserChips();
+  loadTodos();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function deleteTodoUser(name) {
+  if (userList.length <= 1) { alert('至少保留一个用户'); return; }
+  if (!confirm('确定删除用户「' + name + '」及其所有待办事项吗？')) return;
+  // 删除该用户的数据
+  try { localStorage.removeItem('wpgholdings_todos_' + name); } catch (e) {}
+  userList = userList.filter(function(u) { return u !== name; });
+  saveUserList();
+  if (currentUser === name) {
+    currentUser = userList[0];
+    localStorage.setItem('wpgholdings_todo_lastuser', currentUser);
+    loadTodos();
+  }
+  renderUserChips();
+  renderTodoList();
+  updateTodoStats();
+}
 
 function loadTodos() {
   try {
-    var raw = localStorage.getItem(TODO_KEY);
+    var raw = localStorage.getItem(getTodoKey());
     todoList = raw ? JSON.parse(raw) : [];
   } catch (e) { todoList = []; }
 }
 function saveTodos() {
   try {
-    localStorage.setItem(TODO_KEY, JSON.stringify(todoList));
+    localStorage.setItem(getTodoKey(), JSON.stringify(todoList));
   } catch (e) { console.error('待办存储失败:', e); }
 }
 function genId() { return 't' + Date.now() + Math.random().toString(36).substr(2, 6); }
@@ -2593,6 +2791,8 @@ function escapeHtml(str) {
 }
 
 // 初始化
+loadUserList();
+renderUserChips();
 loadTodos();
 renderTodoList();
 updateTodoStats();
