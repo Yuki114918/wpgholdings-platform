@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>开放式工作平台</title>
+<meta name="description" content="工作平台 · 员工花名册 · HR法令查询 · 快捷入口">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="工作平台">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<script src="data/employees-data.js"></script>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-light: #eff6ff;
+    --primary-dark: #1d4ed8;
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.05);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    color: white;
+    padding: 20px 32px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.5px; }
+  .header-time { font-size: 14px; opacity: 0.85; }
+
+  /* Work Status Bar */
+  .work-status-bar {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    font-size: 14px;
+  }
+  .work-status-bar .ws-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+  .work-status-bar .ws-label { color: var(--text-secondary); font-size: 13px; }
+  .work-status-bar .ws-value { font-weight: 600; }
+  .work-status-bar .ws-timer { font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; font-size: 16px; font-weight: 700; color: #2563eb; }
+  .work-status-bar .ws-timer.off { color: #16a34a; }
+  .work-status-bar .ws-timer.rest { color: #9333ea; }
+  .work-status-bar .ws-divider { width: 1px; height: 24px; background: var(--border); }
+  .work-status-bar .ws-calendar-link {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 14px; border-radius: 6px;
+    background: #2563eb; color: #fff; text-decoration: none;
+    font-weight: 500; font-size: 13px; transition: background .2s;
+  }
+  .work-status-bar .ws-calendar-link:hover { background: #1d4ed8; }
+
+  /* Weather panel */
+  .weather-panel {
+    position: absolute; top: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%); z-index: 1000;
+    min-width: 220px; background: #fff; border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.15); border: 1px solid var(--border);
+    padding: 12px; font-size: 14px; color: var(--text-primary);
+  }
+  .weather-panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .weather-close { cursor: pointer; font-size: 18px; line-height: 1; color: var(--text-secondary); }
+  .weather-close:hover { color: var(--text-primary); }
+  .weather-current {
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    background: #f0f7ff; margin-bottom: 10px; transition: background .2s;
+  }
+  .weather-current:hover { background: #e0efff; }
+  .weather-cities {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .weather-city {
+    text-align: center; padding: 7px 0; border-radius: 6px;
+    background: #f5f5f5; cursor: pointer; transition: background .2s;
+  }
+  .weather-city:hover { background: #e5e5e5; }
+
+  /* Main Container */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+
+  /* Quick Access Section */
+  .section { margin-bottom: 32px; }
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  .quick-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .quick-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .quick-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+  }
+  .quick-card .card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .card-icon.blue { background: #dbeafe; color: #2563eb; }
+  .card-icon.green { background: #dcfce7; color: #16a34a; }
+  .card-icon.purple { background: #f3e8ff; color: #9333ea; }
+  .card-icon.orange { background: #fff7ed; color: #ea580c; }
+  .card-icon.teal { background: #ccfbf1; color: #0d9488; }
+  .card-icon.red { background: #fee2e2; color: #dc2626; }
+  .card-icon.pink { background: #fce7f3; color: #db2777; }
+  .card-icon.amber { background: #fef3c7; color: #d97706; }
+  .card-icon.cyan { background: #cffafe; color: #0891b2; }
+
+  .quick-sub-header {
+    grid-column: 1 / -1;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 4px 4px 4px 0;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: color .2s;
+  }
+  .quick-sub-header:hover { color: var(--primary); }
+  .quick-sub-header .toggle-arrow { font-size: 14px; }
+  .quick-sub-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    transition: background .2s;
+  }
+  .quick-sub-header:hover::after { background: var(--primary); }
+  .quick-sub-header .toggle-arrow {
+    font-size: 11px;
+    transition: transform .3s;
+    display: inline-block;
+  }
+  .quick-sub-header.collapsed .toggle-arrow { transform: rotate(-90deg); }
+  .recruit-cards {
+    display: contents;
+  }
+  .recruit-cards.collapsed { display: none; }
+
+  .quick-card .card-info h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .quick-card .card-info p { font-size: 13px; color: var(--text-secondary); }
+  .quick-card .card-arrow {
+    margin-left: auto;
+    font-size: 18px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+    transition: opacity 0.25s;
+  }
+  .quick-card:hover .card-arrow { opacity: 1; color: var(--primary); }
+
+  /* HR Legal Query Section */
+  .legal-section {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .legal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .legal-header h3 { font-size: 17px; font-weight: 600; }
+
+  .city-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .city-tab {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+  }
+  .city-tab:hover { border-color: var(--primary); color: var(--primary); }
+  .city-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  .legal-search {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .legal-search input {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    width: 240px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .legal-search input:focus { border-color: var(--primary); }
+  .legal-search button {
+    padding: 8px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .legal-search button:hover { background: var(--primary-dark); }
+
+  .legal-content { padding: 24px; }
+  .legal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 20px;
+  }
+  .legal-card {
+    background: var(--primary-light);
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #dbeafe;
+  }
+  .legal-card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legal-card h4 .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary);
+    border-radius: 50%;
+  }
+  .legal-card ul { list-style: none; padding: 0; }
+  .legal-card ul li {
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .legal-card ul li:last-child { border-bottom: none; }
+  .legal-card .label { color: var(--text-secondary); font-size: 13px; }
+  .legal-card .value { font-weight: 500; text-align: right; }
+  .legal-card .highlight { color: var(--primary); font-weight: 600; }
+
+  /* Economic Compensation Card */
+  .econ-comp-card .econ-comp-summary {}
+  .econ-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .econ-row + .econ-row { border-top: 1px solid #f1f5f9; }
+  .econ-label { font-size: 13px; color: var(--text-secondary); }
+  .econ-value { font-weight: 600; text-align: right; }
+  .econ-value.highlight-red { color: #dc2626; font-size: 16px; }
+  .econ-basis-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--primary);
+    line-height: 1.5;
+    text-decoration: underline;
+    text-decoration-color: rgba(59,130,246,.4);
+    transition: color .2s, text-decoration-color .2s;
+  }
+  .econ-basis-link:hover { color: #1d4ed8; text-decoration-color: #1d4ed8; }
+  .econ-basis-link::after {
+    content: '↗';
+    font-size: 11px;
+    opacity: .7;
+  }
+
+  /* Policy Items */
+  .policy-list { margin-top: 16px; }
+  .policy-item {
+    padding: 14px 16px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .policy-item:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+  .policy-item .policy-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .policy-item .policy-desc { font-size: 13px; color: var(--text-secondary); }
+  .policy-item .policy-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+  }
+
+  /* Dispute Cases Section */
+  .case-search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .case-search-bar input, .case-search-bar select {
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+  }
+  .case-search-bar input { flex: 1; min-width: 200px; }
+  .case-search-bar select { min-width: 140px; }
+  .case-search-bar input:focus, .case-search-bar select:focus { border-color: var(--primary); }
+  .case-search-bar button {
+    padding: 10px 24px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .case-search-bar button:hover { background: var(--primary-dark); }
+
+  .case-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .case-table th {
+    background: #f1f5f9;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .case-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .case-table tr:hover { background: #f8fafc; }
+  .case-table .case-type {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .case-type.wage { background: #fef3c7; color: #92400e; }
+  .case-type.termination { background: #fce7f3; color: #9d174d; }
+  .case-type.injury { background: #ffedd5; color: #9a3412; }
+  .case-type.contract { background: #dbeafe; color: #1e40af; }
+  .case-type.insurance { background: #dcfce7; color: #166534; }
+  .case-type.overtime { background: #f3e8ff; color: #6b21a8; }
+
+  .case-detail {
+    margin-top: 20px;
+    padding: 20px;
+    background: #fffbeb;
+    border-radius: 10px;
+    border: 1px solid #fde68a;
+    display: none;
+  }
+  .case-detail.active { display: block; }
+  .case-detail h4 { margin-bottom: 12px; color: #92400e; }
+  .case-detail .detail-row { margin-bottom: 8px; font-size: 14px; }
+  .case-detail .detail-label { font-weight: 600; color: var(--text-secondary); margin-right: 8px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: white;
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal h3 { margin-bottom: 16px; font-size: 18px; }
+  .modal p { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.8; }
+  .modal .close-btn {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .modal .close-btn:hover { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .header { padding: 16px; }
+    .header h1 { font-size: 18px; }
+    .quick-cards { grid-template-columns: 1fr; }
+    .legal-grid { grid-template-columns: 1fr; }
+    .legal-header { flex-direction: column; align-items: flex-start; }
+    .legal-search input { width: 100%; }
+    .case-search-bar { flex-direction: column; }
+    .case-table { font-size: 12px; }
+    .case-table th, .case-table td { padding: 8px; }
+  }
+
+  /* Loading */
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* Employee Search */
+  .employee-section {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .employee-search-bar {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .employee-search-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 280px;
+  }
+  .employee-search-wrapper input {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .employee-search-wrapper input:focus { border-color: var(--primary); }
+  .employee-stats { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+  .employee-result-area { padding: 16px; }
+  .emp-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .emp-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+  .emp-card .emp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .emp-card .emp-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .emp-card .emp-name { font-size: 16px; font-weight: 600; }
+  .emp-card .emp-id { font-size: 12px; color: var(--text-secondary); }
+  .emp-card .emp-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #dcfce7;
+    color: #16a34a;
+    font-weight: 500;
+  }
+  .emp-card .emp-badge.inactive {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  .emp-card .emp-details .leave-date-row {
+    grid-column: 1 / -1;
+    background: #fef2f2;
+    border-left: 3px solid #dc2626;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+  }
+  .emp-card .emp-details .leave-date-val {
+    color: #dc2626;
+    font-weight: 700;
+  }
+  .emp-card .emp-details .leave-reason-row {
+    grid-column: 1 / -1;
+    background: #fefce8;
+    border-left: 3px solid #ca8a04;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .emp-card .emp-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    font-size: 13px;
+  }
+  .emp-card .emp-details .dl { color: var(--text-secondary); }
+  .emp-card .emp-details .dv { color: var(--text); font-weight: 500; }
+
+  /* Peoplus Modal */
+  .peoplus-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+  }
+  .peoplus-overlay.active { display: flex; }
+  .peoplus-modal {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    width: 90vw;
+    max-width: 960px;
+    height: 80vh;
+    max-height: 700px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .peoplus-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .peoplus-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.8;
+  }
+  .peoplus-close:hover { opacity: 1; }
+  .peoplus-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .peoplus-login-info {
+    padding: 12px 20px;
+    background: #fefce8;
+    border-bottom: 1px solid #fde68a;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .peoplus-login-info code {
+    background: #fef3c7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    user-select: all;
+  }
+  .peoplus-actions {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+  }
+  .peoplus-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .peoplus-btn-primary:hover { background: var(--primary-dark); }
+  .peoplus-iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+  }
+
+  /* 外链查看器 Modal */
+  .link-viewer-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 210;
+    justify-content: center;
+    align-items: center;
+  }
+  .link-viewer-overlay.active { display: flex; }
+  .link-viewer-modal {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 95vw;
+    max-width: 1400px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .lv-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    color: white;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .lv-back {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .lv-back:hover { background: rgba(255,255,255,0.3); }
+  .lv-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lv-open {
+    color: white;
+    font-size: 13px;
+    text-decoration: none;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+  .lv-open:hover { opacity: 1; text-decoration: underline; }
+  .lv-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.8;
+    line-height: 1;
+  }
+  .lv-close:hover { opacity: 1; }
+  .lv-body {
+    flex: 1;
+    position: relative;
+    background: #f8f9fb;
+  }
+  .lv-iframe {
+    border: none;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .lv-blocked {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 40px;
+  }
+  .lv-blocked-icon { font-size: 56px; margin-bottom: 16px; }
+  .lv-blocked p { font-size: 15px; margin-bottom: 20px; color: var(--text-secondary); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-inner">
+    <h1 style="cursor:pointer" onclick="scrollToTop()" title="点击返回顶部">🏢 开放式工作平台</h1>
+    <span class="header-time" id="headerTime"></span>
+  </div>
+</header>
+
+<!-- Work Status Bar -->
+<div class="work-status-bar" id="workStatusBar">
+  <div class="ws-item">
+    <span>📅</span>
+    <span class="ws-value" id="wsWeekday">--</span>
+  </div>
+  <div class="ws-divider"></div>
+  <div class="ws-item">
+    <span>⏰</span>
+    <span class="ws-timer" id="wsTimer">--</span>
+  </div>
+  <div class="ws-divider"></div>
+  <div class="ws-item" id="weatherWidget" title="点击切换城市" onclick="toggleWeatherPanel(event)" style="cursor:pointer; position:relative;">
+    <span id="weatherIcon">🌤️</span>
+    <span class="ws-value" id="weatherTemp">--°</span>
+    <span class="ws-label" id="weatherCity">获取位置...</span>
+    <div id="weatherPanel" class="weather-panel" style="display:none;" onclick="event.stopPropagation();">
+      <div class="weather-panel-header">
+        <span>🌤️ 选择城市</span>
+        <span class="weather-close" onclick="hideWeatherPanel()">×</span>
+      </div>
+      <div class="weather-current" onclick="fetchWeatherByGPS(); hideWeatherPanel();">
+        📍 自动定位（GPS）
+      </div>
+      <div class="weather-cities">
+        <div class="weather-city" onclick="selectCity('上海')">上海</div>
+        <div class="weather-city" onclick="selectCity('北京')">北京</div>
+        <div class="weather-city" onclick="selectCity('深圳')">深圳</div>
+        <div class="weather-city" onclick="selectCity('杭州')">杭州</div>
+        <div class="weather-city" onclick="selectCity('武汉')">武汉</div>
+        <div class="weather-city" onclick="selectCity('厦门')">厦门</div>
+        <div class="weather-city" onclick="selectCity('青岛')">青岛</div>
+        <div class="weather-city" onclick="selectCity('成都')">成都</div>
+        <div class="weather-city" onclick="selectCity('苏州')">苏州</div>
+      </div>
+    </div>
+  </div>
+  <div class="ws-divider"></div>
+  <a class="ws-calendar-link" href="https://outlook.cloud.microsoft/calendar/view/month" target="_blank" rel="noopener">📅 行事曆</a>
+</div>
+
+<div class="container">
+
+  <!-- 快捷入口 -->
+  <section class="section">
+    <h2 class="section-title">快捷入口</h2>
+    <div class="quick-cards">
+      <a class="quick-card" href="https://app.powerbi.com/Redirect?action=OpenReport&appId=5d160a1a-e16f-4b6a-bdb2-19fe69dad938&reportObjectId=3e67ebea-36e0-4b23-b890-0b459955888a&ctid=de047c79-d4d9-4af3-91de-bc44b0581490&reportPage=ace67697260e6b55c256&pbi_source=appShareLink&portalSessionId=295bb883-c3cd-4e8a-b760-c63abd9d5d48" target="_blank" rel="noopener">
+        <div class="card-icon blue">📊</div>
+        <div class="card-info">
+          <h3>数位中心</h3>
+          <p>Power BI 数据仪表盘 · 经营数据一览</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://wpggpt.wpgholdings.com/workspace/48c61292-2deb-484e-9416-cef994dae42e" target="_blank" rel="noopener" onclick="openLinkViewer(this.href,'🤖 人事小I'); return false;">
+        <div class="card-icon purple">🤖</div>
+        <div class="card-info">
+          <h3>人事小I</h3>
+          <p>AI 智能人事助手 · 快速解答HR问题</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://app.powerbi.com/links/Owm-lRWEdP?ctid=de047c79-d4d9-4af3-91de-bc44b0581490&pbi_source=linkShare" target="_blank" rel="noopener">
+        <div class="card-icon orange">💰</div>
+        <div class="card-info">
+          <h3>薪资事后管理报告</h3>
+          <p>Power BI 薪资数据 · 事后分析与洞察</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" onclick="openPeoplus(); return false;" href="javascript:void(0)">
+        <div class="card-icon teal">👥</div>
+        <div class="card-info">
+          <h3>Peoplus 人事系统</h3>
+          <p>员工自助 · 薪资查询 · 人事流程</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://axs71k9bp.accounts.cloud.sap/saml2/idp/sso/axs71k9bp.accounts.ondemand.com?SAMLRequest=nZJbj9MwEIX%2FiuV3OzdoE6vpqlCtqMSlYgMPvCDXnm4tHDt4bLL8e9K0ixYJ9oE3yz5z5sznWd089Jb8gIDGu5YWPKcEnPLauPuWfupuWU1v1iuUvS0HsUnx5D7C9wQYyVToUFxeWpqCE16iQeFkDyiiEnebd29FyXMxBB%2B98paS7VRonIxzs1OMA4oskw%2B4LL41h4FLpXxyEbmyPmmOcshm%2F8zo6YT%2Bb1LvNPTSaa58T8mtDwrmmC09SotAyW7b0q8K9BKqQ8UaXRfsRf1SsrqSNWtqpaGCZlHJcpIiJtg5jNLFlpZ5uWB5zfJFl5eiyEVV8XLZfKFkfx3olXEXUM9Nf7iIULzpuj3bf7jrKPn8CHwS0CteMXcPT7k%2BbywRIZxR0vUjynEcOSalAPEoVfQBz1iycbg%2FeXtOscqe9vr9se8n8912761RP8nGWj%2B%2BDiAjtDSGBDPWXsZ%2Fxyl4Md8YzY6zVCSHAyhzNKDp%2F6xKtr5G%2FXPr1r8A&RelayState=%2Flogin%3Fcompany%3Dwpgholding&SigAlg=http%3A%2F%2Fwww.w3.org%2F2001%2F04%2Fxmldsig-more%23rsa-sha256&Signature=j3Un7QKS%2BUeD2TlTVgtLT8E532XY%2FwsF%2F9R876iPU2ITb%2BSwmO0JIIs3fmYl4u9XvKy1fJiiRpQoKqFm%2FGRsD9%2BhJVJRIyfSsib2PDJBPVwMYxw%2FbGA5oCsjuK%2F%2FN1mT3cKyMqFo5NuuvsI7KexbIj2Y%2F3Wbesknt5xMqFeuhbXpI7ysGLBWjaqT49jfURkUvYZhqvcKbzamdjNSW5ihvHvwqO237%2ByspQ2LAJ1Vb%2BMJ%2FvGv00gX9c8K0lGajC%2FnM%2BgLZLd3Ap3At98sJQZLinTN9eMwJ1fwgaH2We1TqmNfbGp5KFladtmaYU42w913sbCG%2Fx8LlHiUtijUCaY1PEf5kThtiGkmOeP3b8cJqgAqRJHRqPajNr968Pg9XVGwCFfB9KbKACpYto4aahArMuc3tGfz9DwrOb%2FoZl7mMtFTvrkIgSd7qTL9dJyTjFhGBhh2QLIafSAmXTxuCwbZ43RCQ9dI0%2B74f43iQs9skw2T80KFwWhJEtWg0eheIw%2BK" target="_blank" rel="noopener" onclick="openLinkViewer(this.href,'🏢 员工中心'); return false;">
+        <div class="card-icon green">🏢</div>
+        <div class="card-info">
+          <h3>员工中心</h3>
+          <p>SAP SuccessFactors · 员工自助服务中心</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://flow.wpgholdings.com/newindex.aspx" target="_blank" rel="noopener">
+        <div class="card-icon amber">📝</div>
+        <div class="card-info">
+          <h3>单据审批</h3>
+          <p>Flow 审批流程 · 单据查阅与签核</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://www.jiandaoyun.com/dashboard/app/6a0588da14a6671d09abb566#/app/6a0588da14a6671d09abb566/dash/6a0c1d04eb66937633a8e480" target="_blank" rel="noopener">
+        <div class="card-icon purple">📈</div>
+        <div class="card-info">
+          <h3>简道云仪表盘</h3>
+          <p>jiandaoyun.com · 数据分析看板</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://app.powerbi.com/groups/2113c489-603a-4eec-acf8-0ca7641cb49d/reports/312fac96-5bf9-4458-b5de-aa797b799b52/bf9b1b807b657edf5a0f?experience=power-bi" target="_blank" rel="noopener">
+        <div class="card-icon red">📋</div>
+        <div class="card-info">
+          <h3>工作量表</h3>
+          <p>Power BI 报表 · 工作量数据一览</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <!-- 招聘平台合集 -->
+      <div class="quick-sub-header collapsed" onclick="toggleRecruit(this)">🎯 招聘平台 <span class="toggle-arrow">▼</span></div>
+
+      <div class="recruit-cards collapsed">
+      <a class="quick-card" href="https://www.italent.cn/Login" target="_blank" rel="noopener">
+        <div class="card-icon blue">🏢</div>
+        <div class="card-info">
+          <h3>北森招聘</h3>
+          <p>iTalent · 招聘管理系统 · 人才选拔</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://www.zhipin.com" target="_blank" rel="noopener">
+        <div class="card-icon green">💼</div>
+        <div class="card-info">
+          <h3>BOSS直聘</h3>
+          <p>zhipin.com · 在线直聊招聘平台</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://ehire.51job.com" target="_blank" rel="noopener">
+        <div class="card-icon orange">📋</div>
+        <div class="card-info">
+          <h3>前程无忧</h3>
+          <p>51job · 综合招聘服务平台</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://rd6.zhaopin.com" target="_blank" rel="noopener">
+        <div class="card-icon cyan">🔍</div>
+        <div class="card-info">
+          <h3>智联招聘</h3>
+          <p>zhaopin.com · 专业人力资源服务</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- HR法令查询 -->
+  <section class="section">
+    <h2 class="section-title">HR法令查询</h2>
+    <div class="legal-section">
+      <div class="legal-header">
+        <div class="city-tabs" id="cityTabs">
+          <button class="city-tab active" data-city="national" onclick="switchCity('national')">🇨🇳 全国法规</button>
+          <button class="city-tab" data-city="shanghai" onclick="switchCity('shanghai')">上海</button>
+          <button class="city-tab" data-city="beijing" onclick="switchCity('beijing')">北京</button>
+          <button class="city-tab" data-city="shenzhen" onclick="switchCity('shenzhen')">深圳</button>
+          <button class="city-tab" data-city="wuhan" onclick="switchCity('wuhan')">武汉</button>
+          <button class="city-tab" data-city="xiamen" onclick="switchCity('xiamen')">厦门</button>
+          <button class="city-tab" data-city="qingdao" onclick="switchCity('qingdao')">青岛</button>
+          <button class="city-tab" data-city="hangzhou" onclick="switchCity('hangzhou')">杭州</button>
+          <button class="city-tab" data-city="chengdu" onclick="switchCity('chengdu')">成都</button>
+          <button class="city-tab" data-city="suzhou" onclick="switchCity('suzhou')">苏州</button>
+        </div>
+        <div class="legal-search">
+          <input type="text" id="legalSearchInput" placeholder="搜索法规关键词...">
+          <button onclick="searchLegal()">🔍 搜索</button>
+          <button onclick="resetLegal()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);">↺ 返回</button>
+        </div>
+      </div>
+      <div class="legal-content" id="legalContent">
+        <!-- 动态填充 -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 劳动争议案件查询 -->
+  <section class="section">
+    <h2 class="section-title">劳动争议案件查询</h2>
+    <div class="legal-section">
+      <div class="legal-header">
+        <h3>📋 最新劳动争议典型案例及法规适配</h3>
+      </div>
+      <div class="legal-content">
+        <div class="case-search-bar">
+          <input type="text" id="caseSearchInput" placeholder="输入关键词搜索（如：劳动合同、加班费、工伤...）">
+          <select id="caseCityFilter">
+            <option value="">全部城市</option>
+            <option value="上海">上海</option>
+            <option value="北京">北京</option>
+            <option value="深圳">深圳</option>
+            <option value="武汉">武汉</option>
+            <option value="厦门">厦门</option>
+            <option value="青岛">青岛</option>
+            <option value="杭州">杭州</option>
+            <option value="成都">成都</option>
+            <option value="苏州">苏州</option>
+          </select>
+          <select id="caseTypeFilter">
+            <option value="">全部类型</option>
+            <option value="wage">工资报酬</option>
+            <option value="termination">解除合同</option>
+            <option value="injury">工伤认定</option>
+            <option value="contract">劳动合同</option>
+            <option value="insurance">社会保险</option>
+            <option value="overtime">加班争议</option>
+          </select>
+          <button onclick="searchCases()">🔍 查询案件</button>
+          <button onclick="resetCases()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);">↺ 返回</button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table class="case-table">
+            <thead>
+              <tr>
+                <th>案件类型</th>
+                <th>城市</th>
+                <th>案件摘要</th>
+                <th>适用法规</th>
+                <th>裁判要点</th>
+                <th>日期</th>
+              </tr>
+            </thead>
+            <tbody id="caseTableBody">
+            </tbody>
+          </table>
+        </div>
+        <div class="case-detail" id="caseDetail"></div>
+        <div class="empty-state" id="caseEmpty">
+          <div class="empty-icon">🔍</div>
+          <p>点击上方查询按钮查看劳动争议案件</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 员工花名册查询 -->
+  <section class="section">
+    <h2 class="section-title">员工花名册查询</h2>
+    <div class="employee-section">
+      <div class="employee-search-bar">
+        <div class="employee-search-wrapper">
+          <span style="font-size:20px;">🔍</span>
+          <input type="text" id="employeeSearchInput" placeholder="输入工号或姓名查询（支持模糊匹配）..." oninput="searchEmployee()">
+          <button onclick="resetEmployee()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 18px;cursor:pointer;font-size:14px;white-space:nowrap;">↺ 返回</button>
+        </div>
+        <div class="employee-stats" id="employeeStats">共 <strong id="employeeCount">0</strong> 条员工记录（含绩效考核主管）</div>
+      </div>
+      <div class="employee-result-area" id="employeeResultArea">
+        <div class="empty-state" id="employeeEmpty">
+          <div class="empty-icon">👤</div>
+          <p>请输入工号或姓名搜索员工资料</p>
+          <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">示例：输入"0022"或"梁碧华"</p>
+        </div>
+      </div>
+      <div id="employeeResultCount" style="display:none;padding:8px 16px;font-size:13px;color:var(--text-secondary);"></div>
+      <div id="employeeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;padding:0 16px 16px;"></div>
+      <div id="employeeLoadMore" style="display:none;text-align:center;padding:0 16px 16px;">
+        <button onclick="showMoreEmployees()" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 24px;cursor:pointer;font-size:14px;">加载更多结果...</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Peoplus 弹窗 -->
+<div id="peoplusOverlay" class="peoplus-overlay" onclick="closePeoplus(event)">
+  <div class="peoplus-modal" onclick="event.stopPropagation()">
+    <div class="peoplus-header">
+      <span>👥 Peoplus 人事系统</span>
+      <button class="peoplus-close" onclick="closePeoplus()">&times;</button>
+    </div>
+    <div class="peoplus-body">
+      <div class="peoplus-actions">
+        <a href="https://wpgpro.peoplus.cn/login" target="_blank" rel="noopener" class="peoplus-btn-primary">🔗 在新窗口打开</a>
+      </div>
+      <iframe id="peoplusIframe" class="peoplus-iframe" src="https://wpgpro.peoplus.cn/login" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- 外链查看器弹窗 -->
+<div id="linkViewerOverlay" class="link-viewer-overlay">
+  <div class="link-viewer-modal">
+    <div class="lv-header">
+      <button class="lv-back" onclick="closeLinkViewer()">← 返回工作平台</button>
+      <span class="lv-title" id="lvTitle">-</span>
+      <a class="lv-open" id="lvOpenLink" href="#" target="_blank" rel="noopener">🔗 在新窗口打开</a>
+      <button class="lv-close" onclick="closeLinkViewer()">&times;</button>
+    </div>
+    <div class="lv-body">
+      <iframe id="lvIframe" class="lv-iframe" src="about:blank" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+
+<!-- 浮动回到顶部按钮 -->
+<button id="backToTop" onclick="scrollToTop()" title="返回顶部">↑</button>
+
+<style>
+#backToTop {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  z-index: 150;
+  pointer-events: none;
+}
+#backToTop.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#backToTop:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37,99,235,0.45);
+}
+#backToTop.visible:hover {
+  transform: translateY(-2px);
+}
+</style>
+  <p>开放式工作平台 · 仅供内部使用 · 数据来源：上海市劳动和社会保障学会《人力资源和社保保障管理实用手册》及各地人社局</p>
+</footer>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalContent" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="closeModal()">&times;</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script src="data/legal-data.js?v=3"></script>
+<script>
+// ==================== 初始化 ====================
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    updateTime();
+    setInterval(updateTime, 1000);
+  } catch (e) { console.error('时间初始化失败:', e); }
+
+  try {
+    renderNationalLaws();
+  } catch (e) { console.error('全国法规渲染失败:', e); }
+
+  try {
+    // 如果 caseData 未定义，使用空数组兜底
+    renderCases(typeof caseData !== 'undefined' ? caseData : []);
+  } catch (e) { console.error('案例渲染失败:', e); }
+
+  try {
+    fetchWeather();
+  } catch (e) { console.error('天气初始化失败:', e); }
+
+  // 动态更新员工总数
+  try {
+    if (typeof EMPLOYEES_DATA !== 'undefined') {
+      document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
+    }
+  } catch (e) { console.error('员工数更新失败:', e); }
+
+  // 城市切换（事件委托，作为兜底）
+  const cityTabs = document.getElementById('cityTabs');
+  if (cityTabs) {
+    cityTabs.addEventListener('click', (e) => {
+      const btn = e.target.closest('.city-tab');
+      if (btn) switchCity(btn.dataset.city);
+    });
+  }
+
+  // 键盘搜索
+  try {
+    const legalInput = document.getElementById('legalSearchInput');
+    if (legalInput) legalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchLegal(); });
+    const caseInput = document.getElementById('caseSearchInput');
+    if (caseInput) caseInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchCases(); });
+  } catch (e) { console.error('搜索事件绑定失败:', e); }
+});
+
+// 城市切换函数（每个标签直接 onclick 调用，移动端最可靠）
+function switchCity(cityKey) {
+  try {
+    document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+    const target = document.querySelector('.city-tab[data-city="' + cityKey + '"]');
+    if (target) target.classList.add('active');
+    if (cityKey === 'national') {
+      renderNationalLaws();
+    } else {
+      renderCityData(cityKey);
+    }
+  } catch (e) {
+    console.error('切换城市失败:', e);
+    alert('切换失败，请刷新页面重试');
+  }
+}
+
+function updateTime() {
+  const now = new Date();
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  const str = now.getFullYear() + '年' + (now.getMonth()+1) + '月' + now.getDate() + '日' +
+    ' 星期' + weekdays[now.getDay()] + ' ' +
+    String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('headerTime').textContent = str;
+  updateWorkTimer();
+}
+
+// ==================== 天气 ====================
+const WEATHER_ICONS = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌦️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  66: '🌨️', 67: '🌨️',
+  71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
+  80: '🌦️', 81: '🌦️', 82: '🌦️',
+  85: '🌨️', 86: '🌨️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️'
+};
+
+function getWeatherEmoji(code) {
+  return WEATHER_ICONS[code] || '🌡️';
+}
+
+let lastWeatherFetch = 0;
+let currentWeatherLat = null;
+let currentWeatherLon = null;
+
+function setWeatherLoading(text) {
+  document.getElementById('weatherIcon').textContent = '⏳';
+  document.getElementById('weatherTemp').textContent = '--°';
+  document.getElementById('weatherCity').textContent = text || '获取中...';
+}
+
+function setWeatherData(code, temp, city) {
+  document.getElementById('weatherIcon').textContent = getWeatherEmoji(code);
+  document.getElementById('weatherTemp').textContent = Math.round(temp) + '°';
+  document.getElementById('weatherCity').textContent = city;
+}
+
+function setWeatherError(text) {
+  document.getElementById('weatherIcon').textContent = '🌤️';
+  document.getElementById('weatherTemp').textContent = '--°';
+  document.getElementById('weatherCity').textContent = text || '定位失败';
+}
+
+async function fetchWeatherRaw(lat, lon, cityName) {
+  const weatherRes = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
+  );
+  const weatherData = await weatherRes.json();
+  const w = weatherData.current_weather;
+  setWeatherData(w.weathercode, w.temperature, cityName || '当前位置');
+  currentWeatherLat = lat;
+  currentWeatherLon = lon;
+}
+
+// 通过城市名称获取天气
+async function selectCity(cityName) {
+  hideWeatherPanel();
+  setWeatherLoading(cityName);
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=zh&format=json`
+    );
+    const geoData = await geoRes.json();
+    if (!geoData.results || geoData.results.length === 0) {
+      throw new Error('未找到城市');
+    }
+    const r = geoData.results[0];
+    await fetchWeatherRaw(r.latitude, r.longitude, cityName);
+    localStorage.setItem('weatherCity', cityName);
+    localStorage.removeItem('weatherUseGPS');
+  } catch (e) {
+    console.log('城市天气失败:', e.message);
+    setWeatherError('获取失败');
+  }
+}
+
+// GPS 定位
+async function fetchWeatherByGPS() {
+  setWeatherLoading('定位中...');
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('不支持定位'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        timeout: 10000, maximumAge: 600000
+      });
+    });
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // 反查城市名
+    let cityName = '';
+    try {
+      const geoRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`
+      );
+      const geoData = await geoRes.json();
+      cityName = geoData.city || geoData.locality || '';
+      cityName = cityName.replace(/市$/, '').replace(/区$/, '');
+    } catch (e) {
+      cityName = '当前位置';
+    }
+
+    await fetchWeatherRaw(lat, lon, cityName || '当前位置');
+    localStorage.setItem('weatherUseGPS', 'true');
+    localStorage.removeItem('weatherCity');
+  } catch (e) {
+    console.log('GPS定位失败:', e.message);
+    // GPS 失败，自动降级到 IP 定位
+    await fetchWeatherByIP();
+  }
+}
+
+// IP 定位（GPS 失败时的兜底）
+async function fetchWeatherByIP() {
+  setWeatherLoading('IP定位中...');
+  try {
+    // 优先尝试 ipapi.co
+    let data = null;
+    try {
+      const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+      data = await res.json();
+    } catch (e) {}
+
+    // ipapi.co 失败则尝试 ipinfo.io
+    if (!data || data.error) {
+      const res = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+      const info = await res.json();
+      if (info.loc) {
+        const [lat, lon] = info.loc.split(',').map(Number);
+        const cityName = (info.city || '').replace(/市$/, '');
+        await fetchWeatherRaw(lat, lon, cityName || '当前位置');
+        localStorage.setItem('weatherCity', cityName || '当前位置');
+        localStorage.removeItem('weatherUseGPS');
+        return;
+      }
+    } else {
+      await fetchWeatherRaw(data.latitude, data.longitude, (data.city || '当前位置').replace(/市$/, ''));
+      localStorage.setItem('weatherCity', (data.city || '当前位置').replace(/市$/, ''));
+      localStorage.removeItem('weatherUseGPS');
+      return;
+    }
+
+    throw new Error('IP定位不可用');
+  } catch (e) {
+    console.log('IP定位失败:', e.message);
+    // 最终兜底：默认上海
+    await selectCity('上海');
+  }
+}
+
+// 入口：根据用户上次选择或默认 GPS
+async function fetchWeather() {
+  const now = Date.now();
+  if (now - lastWeatherFetch < 120000) { // 2 分钟内不重复请求
+    return;
+  }
+  lastWeatherFetch = now;
+
+  const savedCity = localStorage.getItem('weatherCity');
+  const useGPS = localStorage.getItem('weatherUseGPS') === 'true';
+
+  if (savedCity && !useGPS) {
+    await selectCity(savedCity);
+  } else {
+    await fetchWeatherByGPS();
+  }
+}
+
+function toggleWeatherPanel(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('weatherPanel');
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+}
+
+function hideWeatherPanel() {
+  document.getElementById('weatherPanel').style.display = 'none';
+}
+
+// 点击页面其他地方关闭天气面板
+document.addEventListener('click', function(e) {
+  const widget = document.getElementById('weatherWidget');
+  if (widget && !widget.contains(e.target)) {
+    hideWeatherPanel();
+  }
+});
+
+// 每 30 分钟刷新一次天气
+setInterval(fetchWeather, 1800000);
+
+// Work countdown timer (8:30-17:30, Mon-Fri)
+function updateWorkTimer() {
+  const now = new Date();
+  const day = now.getDay();
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  document.getElementById('wsWeekday').textContent = '今天 星期' + weekdays[day];
+
+  const tEl = document.getElementById('wsTimer');
+  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const nowSec = h * 3600 + m * 60 + s;
+  const START = 8 * 3600 + 30 * 60; // 8:30
+  const END = 17 * 3600 + 30 * 60;  // 17:30
+
+  const isWorkday = day >= 1 && day <= 5;
+
+  if (!isWorkday) {
+    tEl.textContent = '🌴 休息日';
+    tEl.className = 'ws-timer rest';
+    return;
+  }
+
+  if (nowSec < START) {
+    // Before work
+    const remain = START - nowSec;
+    const rh = Math.floor(remain / 3600), rm = Math.floor((remain % 3600) / 60), rs = remain % 60;
+    tEl.textContent = '距上班 ' + String(rh).padStart(2,'0') + ':' + String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
+    tEl.className = 'ws-timer';
+  } else if (nowSec < END) {
+    // Working hours
+    const remain = END - nowSec;
+    const rh = Math.floor(remain / 3600), rm = Math.floor((remain % 3600) / 60), rs = remain % 60;
+    tEl.textContent = '距下班 ' + String(rh).padStart(2,'0') + ':' + String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
+    tEl.className = 'ws-timer';
+  } else {
+    // After work
+    tEl.textContent = '🏠 已下班';
+    tEl.className = 'ws-timer off';
+  }
+}
+
+// ==================== 城市数据渲染 ====================
+function renderCityData(cityKey) {
+  const data = cityData[cityKey];
+  const container = document.getElementById('legalContent');
+
+  container.innerHTML = `
+    <div class="legal-grid">
+      <div class="legal-card">
+        <h4><span class="dot"></span>💰 工资与社保缴费标准</h4>
+        <ul>
+          <li><span class="label">最低工资标准</span><span class="value highlight">¥${data.minWage}/月</span></li>
+          <li><span class="label">执行日期</span><span class="value">${data.minWageDate}</span></li>
+          <li><span class="label">社平工资</span><span class="value highlight">¥${data.socAvg}/月</span></li>
+          <li><span class="label">社保缴费基数下限</span><span class="value">¥${data.socBaseMin}</span></li>
+          <li><span class="label">社保缴费基数上限</span><span class="value">¥${data.socBaseMax}</span></li>
+          <li><span class="label">公积金缴费基数下限</span><span class="value">¥${data.housingFundMin}</span></li>
+          <li><span class="label">公积金缴费基数上限</span><span class="value">¥${data.housingFundMax}</span></li>
+        </ul>
+      </div>
+
+      <div class="legal-card">
+        <h4><span class="dot"></span>📋 五险一金缴费比例</h4>
+        <ul>
+          <li><span class="label">养老保险（个人/单位）</span><span class="value">${data.pensionEmp} / ${data.pensionCom}</span></li>
+          <li><span class="label">医疗保险（个人/单位）</span><span class="value">${data.medicalEmp} / ${data.medicalCom}</span></li>
+          <li><span class="label">失业保险（个人/单位）</span><span class="value">${data.unemploymentEmp} / ${data.unemploymentCom}</span></li>
+          <li><span class="label">工伤保险（单位）</span><span class="value">${data.injuryCom}</span></li>
+          <li><span class="label">生育保险（单位）</span><span class="value">${data.maternityCom}</span></li>
+          <li><span class="label">住房公积金（个人/单位）</span><span class="value">${data.housingFundEmp} / ${data.housingFundCom}</span></li>
+        </ul>
+      </div>
+
+      <div class="legal-card econ-comp-card" style="border-left: 4px solid #dc2626;">
+        <h4><span class="dot" style="background:#dc2626;"></span>⚖️ 经济补偿金计算标准</h4>
+        <div class="econ-comp-summary">
+          <div class="econ-row"><span class="econ-label">月社平工资（封顶基数）</span><span class="econ-value">¥${data.econCompAvg}/月</span></div>
+          <div class="econ-row"><span class="econ-label">三倍封顶线</span><span class="econ-value highlight-red">¥${data.econCompCap}/月</span></div>
+          <div class="econ-row"><span class="econ-label">最低工资标准</span><span class="econ-value">¥${data.minWage}/月</span></div>
+          <div class="econ-row" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+            <a class="econ-basis-link" href="${data.econCompBasis.url}" target="_blank" rel="noopener" title="点击查看官方数据来源">${data.econCompBasis.text}</a>
+          </div>
+        </div>
+        <div class="econ-formula" style="margin-top:10px;padding:10px;background:#fef2f2;border-radius:8px;font-size:13px;line-height:1.8;">
+          <strong>🔢 计算公式：</strong><br>
+          经济补偿金(N) = 离职前12个月月均工资 × 工作年限<br>
+          违法解除赔偿金(2N) = N × 2<br>
+          代通知金(N+1) = N + 1个月工资（仅适用于《劳动合同法》第40条情形）<br>
+          <span style="color:#dc2626;">⚠ 月薪超过三倍封顶线时，按封顶线计算，且年限封顶12年</span>
+        </div>
+      </div>
+    </div>
+
+    <h4 style="margin: 24px 0 12px; font-size: 15px; color: var(--text);">📜 ${data.name}市主要劳动法规政策</h4>
+    <div class="policy-list">
+      ${data.policies.map(p => `
+        <div class="policy-item" onclick="showPolicyDetail('${p.title.replace(/'/g, "\\'")}', '${p.desc.replace(/'/g, "\\'")}', '${p.ref.replace(/'/g, "\\'")}', '${data.name}', '${(p.url || '').replace(/'/g, "\\'")}')">
+          <div class="policy-title">${p.title}</div>
+          <div class="policy-desc">${p.desc}</div>
+          <div class="policy-meta"><span>📖 ${p.ref}</span><span>📍 ${data.name}</span></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+
+// ==================== 全国法规渲染 ====================
+function renderNationalLaws() {
+  const container = document.getElementById('legalContent');
+  const categories = [...new Set(nationalLaws.map(l => l.category))];
+  
+  let html = `<div class="legal-grid" style="margin-bottom:20px">`;
+  
+  // 按分类分组展示
+  categories.forEach(cat => {
+    const laws = nationalLaws.filter(l => l.category === cat);
+    html += `
+      <div class="legal-card">
+        <h4><span class="dot"></span>📜 ${cat}</h4>
+        <ul>
+          ${laws.map(l => `
+            <li onclick="showPolicyDetail('${l.title.replace(/'/g, "\\'")}', '${l.desc.replace(/'/g, "\\'")}——${l.chapters}', '${l.ref.replace(/'/g, "\\'")}', '全国', '${(l.url || '').replace(/'/g, "\\'")}')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);">
+              <div style="font-weight:600;color:var(--text);">${l.title}</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${l.desc.substring(0, 60)}...</div>
+              <div style="font-size:11px;color:#3b82f6;margin-top:3px;">📖 ${l.ref}</div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>`;
+  });
+  
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ==================== 法规搜索 ====================
+function searchLegal() {
+  const keyword = document.getElementById('legalSearchInput').value.trim().toLowerCase();
+  if (!keyword) {
+    const activeCity = document.querySelector('.city-tab.active').dataset.city;
+    renderCityData(activeCity);
+    return;
+  }
+
+  const allPolicies = [];
+  // 搜索全国法规
+  nationalLaws.forEach(l => {
+    if (l.title.toLowerCase().includes(keyword) || l.desc.toLowerCase().includes(keyword) || l.category.toLowerCase().includes(keyword)) {
+      allPolicies.push({ title: l.title, desc: l.desc + '——' + l.chapters, ref: l.ref, city: '全国', url: l.url || '' });
+    }
+  });
+  // 搜索地方法规
+  Object.entries(cityData).forEach(([key, data]) => {
+    data.policies.forEach(p => {
+      if (p.title.toLowerCase().includes(keyword) || p.desc.toLowerCase().includes(keyword)) {
+        allPolicies.push({ ...p, city: data.name });
+      }
+    });
+  });
+
+  // Also search city basic info
+  Object.entries(cityData).forEach(([key, data]) => {
+    if (data.name.toLowerCase().includes(keyword)) {
+      // Already covered by policies, add city-level info
+    }
+  });
+
+  const container = document.getElementById('legalContent');
+  if (allPolicies.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>未找到与"${keyword}"相关的法规政策</p><p style="font-size:13px;color:var(--text-secondary);">请尝试其他关键词，如：劳动合同、工资、工伤、社保、公积金等</p></div>`;
+  } else {
+    container.innerHTML = `
+      <p style="margin-bottom:16px;color:var(--text-secondary);">找到 <strong>${allPolicies.length}</strong> 条与"<strong>${keyword}</strong>"相关的法规：</p>
+      <div class="policy-list">
+        ${allPolicies.map(p => `
+          <div class="policy-item" onclick="showPolicyDetail('${p.title.replace(/'/g, "\\'")}', '${p.desc.replace(/'/g, "\\'")}', '${p.ref.replace(/'/g, "\\'")}', '${p.city}', '${(p.url || '').replace(/'/g, "\\'")}')">
+            <div class="policy-title">${p.title}</div>
+            <div class="policy-desc">${p.desc}</div>
+            <div class="policy-meta"><span>📖 ${p.ref}</span><span>📍 ${p.city}</span></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+}
+
+// ==================== 政策详情弹窗 ====================
+function showPolicyDetail(title, desc, ref, city, directUrl) {
+  // 判断传入的链接是否像可直接打开正文的直链（html/pdf/shtml 等具体文件），而非首页或搜索页
+  var looksLikeDirect = directUrl && /\.(html|pdf|shtml|htm|jsp|php|aspx|asp)([?#].*)?$/i.test(directUrl) && !/search|query|s\?|wd=|q=|keyword/i.test(directUrl);
+  // 通用搜索链接，用于没有直链时帮助用户查找
+  var searchQuery = encodeURIComponent(title + ' ' + ref);
+  var searchLink = 'https://www.bing.com/search?q=' + searchQuery;
+
+  // 源文件区域按钮
+  var sourceLinksHtml = '';
+  if (looksLikeDirect) {
+    sourceLinksHtml = `
+      <a href="${directUrl}" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;background:#1a73e8;color:#fff;border-radius:6px;text-decoration:none;font-size:13px;">📄 查看法规原文</a>
+      <a href="${searchLink}" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;background:#fff;color:#1a73e8;border:1px solid #1a73e8;border-radius:6px;text-decoration:none;font-size:13px;">🔍 搜索引擎查找</a>`;
+  } else {
+    sourceLinksHtml = `
+      <a href="${directUrl || searchLink}" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;background:#1a73e8;color:#fff;border-radius:6px;text-decoration:none;font-size:13px;">🏛 前往政府网站查询</a>
+      <a href="${searchLink}" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;background:#fff;color:#1a73e8;border:1px solid #1a73e8;border-radius:6px;text-decoration:none;font-size:13px;">🔍 搜索引擎查找</a>`;
+  }
+
+  var refLink = looksLikeDirect ? directUrl : searchLink;
+
+  document.getElementById('modalBody').innerHTML = `
+    <h3>${title}</h3>
+    <p><strong>适用城市：</strong>${city}</p>
+    <p><strong>法规出处：</strong><a href="${refLink}" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:underline;">${ref}</a></p>
+    <p><strong>内容摘要：</strong>${desc}</p>
+    <div style="margin:16px 0;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+      <p style="margin:0 0 8px;font-weight:600;">📖 查看源文件</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${sourceLinksHtml}
+      </div>
+    </div>
+    <hr style="margin:16px 0;border-color:var(--border);">
+    <p style="font-size:13px;color:var(--text-secondary);">
+      ⚠️ 以上信息仅供参考，具体以当地人社局和人社部最新发布的正式文件为准。涉及具体法律事务建议咨询专业劳动法律师。
+    </p>
+  `;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal(event) {
+  if (event && event.target !== document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+// ==================== 重置 & 返回主页 ====================
+function resetLegal() {
+  document.getElementById('legalSearchInput').value = '';
+  const activeTab = document.querySelector('.city-tab.active');
+  const city = activeTab ? activeTab.dataset.city : 'national';
+  if (!activeTab) {
+    document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.city-tab[data-city="national"]').classList.add('active');
+  }
+  renderCityData(city);
+  document.getElementById('legalContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetCases() {
+  document.getElementById('caseSearchInput').value = '';
+  document.getElementById('caseCityFilter').value = '';
+  document.getElementById('caseTypeFilter').value = '';
+  renderCases(caseData);
+  document.getElementById('caseDetail').classList.remove('active');
+  document.querySelector('.legal-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 滚动监听：显示/隐藏回到顶部按钮
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('backToTop');
+  if (window.scrollY > 400) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+});
+
+// ==================== 案件查询 ====================
+function renderCases(cases) {
+  const tbody = document.getElementById('caseTableBody');
+  const empty = document.getElementById('caseEmpty');
+
+  if (cases.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('caseDetail').classList.remove('active');
+    return;
+  }
+
+  empty.style.display = 'none';
+  tbody.innerHTML = cases.map(c => `
+    <tr style="cursor:pointer" onclick="showCaseDetail(${c.id})">
+      <td><span class="case-type ${c.type}">${c.typeName}</span></td>
+      <td>${c.city}</td>
+      <td style="max-width:280px;">${c.summary}</td>
+      <td style="font-size:13px;">${c.law}</td>
+      <td style="max-width:280px;font-size:13px;">${c.ruling}</td>
+      <td style="white-space:nowrap;font-size:13px;">${c.date}</td>
+    </tr>
+  `).join('');
+}
+
+function searchCases() {
+  const keyword = document.getElementById('caseSearchInput').value.trim().toLowerCase();
+  const cityFilter = document.getElementById('caseCityFilter').value;
+  const typeFilter = document.getElementById('caseTypeFilter').value;
+
+  let filtered = caseData;
+
+  if (keyword) {
+    filtered = filtered.filter(c =>
+      c.title.toLowerCase().includes(keyword) ||
+      c.summary.toLowerCase().includes(keyword) ||
+      c.law.toLowerCase().includes(keyword) ||
+      c.ruling.toLowerCase().includes(keyword)
+    );
+  }
+  if (cityFilter) filtered = filtered.filter(c => c.city === cityFilter);
+  if (typeFilter) filtered = filtered.filter(c => c.type === typeFilter);
+
+  renderCases(filtered);
+  document.getElementById('caseDetail').classList.remove('active');
+}
+
+function showCaseDetail(id) {
+  const c = caseData.find(x => x.id === id);
+  if (!c) return;
+
+  const detail = document.getElementById('caseDetail');
+  detail.innerHTML = `
+    <h4>📌 ${c.title}</h4>
+    <div class="detail-row"><span class="detail-label">城市：</span>${c.city}</div>
+    <div class="detail-row"><span class="detail-label">案件类型：</span><span class="case-type ${c.type}">${c.typeName}</span></div>
+    <div class="detail-row"><span class="detail-label">适用法规：</span>${c.law}</div>
+    <div class="detail-row"><span class="detail-label">裁判日期：</span>${c.date}</div>
+    <div class="detail-row"><span class="detail-label">案件详情：</span>${c.detail}</div>
+    <div class="detail-row"><span class="detail-label">裁判要点：</span>${c.ruling}</div>
+  `;
+  detail.classList.add('active');
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ==================== Peoplus 弹窗 ====================
+function openPeoplus() {
+  document.getElementById('peoplusOverlay').classList.add('active');
+}
+function closePeoplus(e) {
+  if (e && e.target !== document.getElementById('peoplusOverlay')) return;
+  document.getElementById('peoplusOverlay').classList.remove('active');
+}
+
+// ==================== 招聘平台折叠 ====================
+function toggleRecruit(header) {
+  header.classList.toggle('collapsed');
+  var cards = header.nextElementSibling;
+  cards.classList.toggle('collapsed');
+}
+
+// ==================== 外链查看器 ====================
+function openLinkViewer(url, title) {
+  // Power BI 不允许 iframe 嵌入，直接在新窗口打开
+  if (url.indexOf('powerbi.com') !== -1) {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  document.getElementById('lvTitle').textContent = title;
+  document.getElementById('lvOpenLink').href = url;
+  document.getElementById('lvIframe').src = url;
+  document.getElementById('linkViewerOverlay').classList.add('active');
+}
+function closeLinkViewer() {
+  document.getElementById('linkViewerOverlay').classList.remove('active');
+  document.getElementById('lvIframe').src = 'about:blank';
+}
+
+// ==================== 繁简转换 ====================
+var trad2simp = {
+  '乾':'干','亞':'亚','來':'来','俠':'侠','倫':'伦','偉':'伟','傑':'杰','傳':'传','儀':'仪','儲':'储',
+  '兒':'儿','凱':'凯','剛':'刚','劉':'刘','劍':'剑','勁':'劲','勝':'胜','勢':'势','勳':'勋','區':'区',
+  '吳':'吴','呂':'吕','啓':'启','啟':'启','喬':'乔','單':'单','嚴':'严','國':'国','園':'园','圓':'圆',
+  '堅':'坚','堯':'尧','壽':'寿','夢':'梦','姍':'姗','婁':'娄','婭':'娅','嬋':'婵','嬌':'娇','孫':'孙',
+  '學':'学','宮':'宫','寧':'宁','寶':'宝','崢':'峥','嵐':'岚','巖':'岩','帥':'帅','師':'师','帶':'带',
+  '幗':'帼','廣':'广','張':'张','強':'强','彥':'彦','從':'从','恆':'恒','悅':'悦','惲':'恽','愛':'爱',
+  '慶':'庆','憶':'忆','應':'应','懷':'怀','戀':'恋','揚':'扬','昇':'升','時':'时','晉':'晋','暉':'晖',
+  '曄':'晔','曉':'晓','書':'书','會':'会','東':'东','栢':'柏','梟':'枭','棟':'栋','楊':'杨','楓':'枫',
+  '業':'业','極':'极','榮':'荣','槨':'椁','樂':'乐','樑':'梁','標':'标','樹':'树','樺':'桦','橋':'桥',
+  '權':'权','欽':'钦','歐':'欧','歡':'欢','沖':'冲','淩':'凌','淵':'渊','湧':'涌','湯':'汤','準':'准',
+  '溫':'温','滿':'满','漢':'汉','潔':'洁','潤':'润','潯':'浔','澤':'泽','濛':'蒙','濤':'涛','濱':'滨',
+  '瀟':'潇','灃':'沣','灝':'灏','為':'为','煇':'𪸩','煉':'炼','煒':'炜','煙':'烟','煥':'焕','燁':'烨',
+  '燦':'灿','爍':'烁','爛':'烂','爾':'尔','瑋':'玮','瑤':'瑶','瑩':'莹','璦':'瑷','環':'环','璽':'玺',
+  '瓊':'琼','畢':'毕','發':'发','盧':'卢','眾':'众','碩':'硕','祿':'禄','禎':'祯','禮':'礼','穎':'颖',
+  '穩':'稳','竇':'窦','節':'节','範':'范','簡':'简','紀':'纪','紅':'红','純':'纯','紹':'绍','結':'结',
+  '經':'经','維':'维','綸':'纶','綺':'绮','緯':'纬','繆':'缪','繼':'继','羅':'罗','義':'义','翬':'翚',
+  '翹':'翘','聖':'圣','聞':'闻','聰':'聪','聶':'聂','職':'职','臘':'腊','臺':'台','興':'兴','舉':'举',
+  '艷':'艳','荊':'荆','莊':'庄','華':'华','萬':'万','葉':'叶','蓮':'莲','蔣':'蒋','蕭':'萧','薈':'荟',
+  '薩':'萨','藍':'蓝','藝':'艺','藺':'蔺','蘇':'苏','蘋':'苹','蘭':'兰','術':'术','衛':'卫','襯':'衬',
+  '見':'见','觀':'观','記':'记','許':'许','詔':'诏','詠':'咏','詩':'诗','語':'语','誠':'诚','誼':'谊',
+  '談':'谈','諶':'谌','諺':'谚','諾':'诺','謀':'谋','謙':'谦','謝':'谢','譚':'谭','豐':'丰','豔':'艳',
+  '貝':'贝','貞':'贞','財':'财','貢':'贡','貫':'贯','貴':'贵','賀':'贺','賈':'贾','賓':'宾','賜':'赐',
+  '賢':'贤','賦':'赋','賴':'赖','賽':'赛','贇':'赟','贊':'赞','贏':'赢','赬':'赪','趙':'赵','躍':'跃',
+  '軍':'军','軒':'轩','軻':'轲','輝':'辉','轎':'轿','農':'农','連':'连','進':'进','運':'运','達':'达',
+  '遠':'远','邊':'边','鄒':'邹','鄔':'邬','鄧':'邓','鄭':'郑','鄰':'邻','鄺':'邝','釗':'钊','釧':'钏',
+  '釵':'钗','鈞':'钧','鈴':'铃','鈺':'钰','鉉':'铉','鉞':'钺','銀':'银','銓':'铨','銘':'铭','銳':'锐',
+  '鋒':'锋','鋮':'铖','鋼':'钢','錄':'录','錚':'铮','錡':'锜','錢':'钱','錦':'锦','錫':'锡','鍾':'钟',
+  '鎇':'镅','鎔':'镕','鎮':'镇','鐘':'钟','鐵':'铁','長':'长','閆':'闫','開':'开','閔':'闵','閻':'阎',
+  '闕':'阙','關':'关','闞':'阚','陳':'陈','陸':'陆','陽':'阳','雙':'双','雲':'云','靄':'霭','靈':'灵',
+  '靚':'靓','靜':'静','鞏':'巩','韋':'韦','韓':'韩','韜':'韬','韞':'韫','韻':'韵','頂':'顶','順':'顺',
+  '頌':'颂','頤':'颐','頴':'颕','顏':'颜','顧':'顾','風':'风','飛':'飞','餘':'余','馬':'马','馮':'冯',
+  '駒':'驹','駱':'骆','駿':'骏','騰':'腾','驄':'骢','驊':'骅','驥':'骥','魯':'鲁','鮑':'鲍','鮮':'鲜',
+  '鯤':'鲲','鳳':'凤','鳴':'鸣','鴛':'鸳','鴻':'鸿','鵬':'鹏','鶴':'鹤','鸝':'鹂','麗':'丽','麥':'麦',
+  '黃':'黄','齊':'齐','齡':'龄','龍':'龙','龐':'庞','龔':'龚',
+};
+
+function toSimplified(str) {
+  if (!str) return '';
+  var result = '';
+  for (var i = 0; i < str.length; i++) {
+    result += trad2simp[str[i]] || str[i];
+  }
+  return result;
+}
+
+// ==================== 员工查询 ====================
+var employeeSearchResults = [];
+var employeeDisplayCount = 0;
+
+function searchEmployee() {
+  var q = document.getElementById('employeeSearchInput').value.trim();
+  var empty = document.getElementById('employeeEmpty');
+  var cards = document.getElementById('employeeCards');
+  var countEl = document.getElementById('employeeResultCount');
+  var loadMore = document.getElementById('employeeLoadMore');
+
+  if (!q || q.length < 1) {
+    resetEmployee();
+    return;
+  }
+
+  if (typeof EMPLOYEES_DATA === 'undefined') {
+    empty.style.display = 'block';
+    empty.querySelector('p').textContent = '数据加载中，请稍候...';
+    cards.innerHTML = '';
+    countEl.style.display = 'none';
+    loadMore.style.display = 'none';
+    return;
+  }
+
+  var ql = q.toLowerCase();
+  var qs = toSimplified(ql); // 简体版搜索词
+  employeeSearchResults = EMPLOYEES_DATA.filter(function(e) {
+    // 工号精确匹配
+    if (e.id && String(e.id).toLowerCase().indexOf(ql) !== -1) return true;
+    // 姓名：同时匹配原始值 & 简体版
+    if (e.name) {
+      var n = e.name.toLowerCase();
+      if (n.indexOf(ql) !== -1) return true;
+      if (toSimplified(n).indexOf(qs) !== -1) return true;
+    }
+    if (e.ec_name) {
+      var ec = e.ec_name.toLowerCase();
+      if (ec.indexOf(ql) !== -1) return true;
+      if (toSimplified(ec).indexOf(qs) !== -1) return true;
+    }
+    if (e.en_name && e.en_name.toLowerCase().indexOf(ql) !== -1) return true;
+    return false;
+  });
+
+  employeeDisplayCount = 0;
+  empty.style.display = employeeSearchResults.length === 0 ? 'block' : 'none';
+  if (employeeSearchResults.length === 0) {
+    empty.querySelector('p').textContent = '未找到匹配的员工';
+  }
+  countEl.style.display = employeeSearchResults.length > 0 ? 'block' : 'none';
+  countEl.textContent = '找到 ' + employeeSearchResults.length + ' 条匹配结果';
+  loadMore.style.display = employeeSearchResults.length > 10 ? 'block' : 'none';
+
+  showMoreEmployees();
+}
+
+function showMoreEmployees() {
+  var cards = document.getElementById('employeeCards');
+  var loadMore = document.getElementById('employeeLoadMore');
+  var batchSize = 10;
+  var start = employeeDisplayCount;
+  var end = Math.min(start + batchSize, employeeSearchResults.length);
+
+  var html = '';
+  for (var i = start; i < end; i++) {
+    var e = employeeSearchResults[i];
+    var name = e.ec_name || e.name || '-';
+    var empId = e.id || '-';
+    var isActive = (e.status || '') === '在职';
+    var badgeClass = isActive ? '' : ' inactive';
+    var badgeText = e.status || '';
+
+    html += '<div class="emp-card">' +
+      '<div class="emp-header">' +
+        '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
+        '<div>' +
+          '<div class="emp-name">' + name + '</div>' +
+          '<div class="emp-id">工号：' + empId + '</div>' +
+        '</div>' +
+        (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
+      '</div>' +
+      '<div class="emp-details">' +
+        buildDetail('部门(100层)', e.dept) +
+        buildDetail('部门(99层)', e.dept_99) +
+        buildDetail('职位', e.title) +
+        buildDetail('职等', e.grade) +
+        buildDetail('职系', e.job_series) +
+        buildDetail('事业体', e.business_unit) +
+        buildDetail('工作城市', e.city) +
+        buildDetail('主管标记', e.is_manager) +
+        buildDetail('手机', e.phone) +
+        buildDetail('分机', e.ext) +
+        buildDetail('邮箱', e.email) +
+        buildDetail(e.is_overseas === 'TRUE' ? '派驻地联络地址' : '通讯地址', (e.is_overseas === 'TRUE' ? (e.dispatch_addr || e.address) : e.address)) +
+        buildDetail('到职日期', e.join_date) +
+        buildDetail('司龄(年)', e.tenure) +
+        (e.leave_date && e.status !== '在职' ? '<div class="leave-date-row"><span class="dl">离职日期：</span><span class="dv leave-date-val">' + e.leave_date + '</span></div>' : '') +
+        (e.leave_reason && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">离职原因：</span><span class="dv">' + e.leave_reason + '</span></div>' : '') +
+        buildDetail('领薪公司', e.company) +
+        buildDetail('考核主管', e.perf_mgr) +
+        (function() {
+          if (!e.emerg_name) return '';
+          var names = e.emerg_name.split(' / ');
+          var phones = (e.emerg_phone||'').split(' / ');
+          var rels = (e.emerg_rel||'').split(' / ');
+          var lines = '';
+          for (var i = 0; i < names.length; i++) {
+            var rel = rels[i] ? ' (' + rels[i] + ')' : '';
+            var ph = phones[i] || '';
+            if (ph) ph = ' ' + ph;
+            var label = i === 0 ? '<span class="dl">紧急联络人：</span>' : '<span class="dl"></span>';
+            lines += '<div>' + label + '<span class="dv">' + names[i].trim() + rel + '</span><span class="dv">' + ph + '</span></div>';
+          }
+          return lines;
+        })() +
+        buildDetail('任用别', e.hire_type) +
+        buildDetail('国籍', e.nationality) +
+        buildDetail('性别', e.gender) +
+        buildDetail('年龄', e.age) +
+        buildDetail('生日', e.birthday) +
+              '</div>' +
+    '</div>';
+  }
+
+  if (start === 0) {
+    cards.innerHTML = html;
+  } else {
+    cards.innerHTML += html;
+  }
+  employeeDisplayCount = end;
+  loadMore.style.display = end < employeeSearchResults.length ? 'block' : 'none';
+}
+
+function buildDetail(label, val) {
+  if (val === null || val === undefined || val === '') return '';
+  return '<div><span class="dl">' + label + '：</span><span class="dv">' + val + '</span></div>';
+}
+
+function resetEmployee() {
+  document.getElementById('employeeSearchInput').value = '';
+  employeeSearchResults = [];
+  employeeDisplayCount = 0;
+  document.getElementById('employeeResultCount').style.display = 'none';
+  document.getElementById('employeeLoadMore').style.display = 'none';
+  document.getElementById('employeeCards').innerHTML = '';
+  var empty = document.getElementById('employeeEmpty');
+  empty.style.display = 'block';
+  empty.querySelector('p').textContent = '请输入工号或姓名搜索员工资料';
+}
+
+// ==================== PWA Service Worker ====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(function() {
+    console.log('SW registered');
+  }).catch(function(err) {
+    console.log('SW failed:', err);
+  });
+}
+</script>
+
+</body>
+</html>
