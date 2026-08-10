@@ -3066,8 +3066,12 @@ function toggleSection(section) {
 })();
 
 // ==================== PWA Service Worker ====================
+// 自毁式 SW：清除所有缓存后自动注销，解决旧版缓存问题
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(function() {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+  navigator.serviceWorker.register('sw.js?v=reset').then(function() {
     console.log('SW registered');
   }).catch(function(err) {
     console.log('SW failed:', err);
