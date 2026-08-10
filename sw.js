@@ -1,4 +1,4 @@
-var CACHE_NAME = 'work-platform-v3';
+var CACHE_NAME = 'work-platform-v4';
 var urlsToCache = [
   'index.html',
   'data/employees-data.js',
