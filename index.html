@@ -135,7 +135,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: margin-bottom 0.3s;
   }
+  .section-title:hover .collapse-arrow { color: var(--primary); }
   .section-title::before {
     content: '';
     width: 4px;
@@ -143,6 +147,16 @@
     background: var(--primary);
     border-radius: 2px;
   }
+  .collapse-arrow {
+    font-size: 14px;
+    margin-left: auto;
+    color: var(--text-secondary);
+    transition: transform 0.25s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .section.collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section.collapsed .section-title { margin-bottom: 0; }
+  .section.collapsed > *:not(.section-title) { display: none; }
 
   .quick-cards {
     display: grid;
@@ -1213,7 +1227,7 @@
 
   <!-- 快捷入口 -->
   <section class="section">
-    <h2 class="section-title">快捷入口</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">快捷入口<span class="collapse-arrow">▼</span></h2>
     <div class="quick-cards">
       <a class="quick-card" href="https://app.powerbi.com/groups/me/apps/5d160a1a-e16f-4b6a-bdb2-19fe69dad938/dashboards/4d7813b1-b732-4fb5-bd47-fcbac5b8715a?ctid=de047c79-d4d9-4af3-91de-bc44b0581490&experience=power-bi" target="_blank" rel="noopener">
         <div class="card-icon blue">📊</div>
@@ -1332,7 +1346,7 @@
 
   <!-- 员工花名册查询 -->
   <section class="section">
-    <h2 class="section-title">员工花名册查询</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">员工花名册查询<span class="collapse-arrow">▼</span></h2>
     <div class="employee-section">
       <div class="employee-search-bar">
         <div class="employee-search-wrapper">
@@ -1359,7 +1373,7 @@
 
   <!-- ===== 待办事项 ===== -->
   <section class="section" id="todoSection">
-    <h2 class="section-title">📝 待办事项</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">📝 待办事项<span class="collapse-arrow">▼</span></h2>
 
     <!-- 用户选择 -->
     <div class="todo-user-bar">
@@ -1462,7 +1476,7 @@
 
   <!-- HR法令查询 -->
   <section class="section">
-    <h2 class="section-title">HR法令查询</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">HR法令查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
         <div class="city-tabs" id="cityTabs">
@@ -1491,7 +1505,7 @@
 
   <!-- 劳动争议案件查询 -->
   <section class="section">
-    <h2 class="section-title">劳动争议案件查询</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">劳动争议案件查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
         <h3>📋 最新劳动争议典型案例及法规适配</h3>
@@ -3030,6 +3044,26 @@ pullFromCloud();
 renderTodoList();
 updateTodoStats();
 updateSyncUI();
+
+// ==================== 板块折叠 ====================
+function toggleSection(section) {
+  section.classList.toggle('collapsed');
+  var collapsed = {};
+  try { collapsed = JSON.parse(localStorage.getItem('wpgholdings_collapsed') || '{}'); } catch(e) {}
+  var id = section.querySelector('.section-title').textContent.replace(/[▼◀▶▲ ]/g,'').trim();
+  collapsed[id] = section.classList.contains('collapsed');
+  localStorage.setItem('wpgholdings_collapsed', JSON.stringify(collapsed));
+}
+
+(function restoreCollapse() {
+  try {
+    var collapsed = JSON.parse(localStorage.getItem('wpgholdings_collapsed') || '{}');
+    document.querySelectorAll('.section').forEach(function(s) {
+      var id = (s.querySelector('.section-title')?.textContent || '').replace(/[▼◀▶▲ ]/g,'').trim();
+      if (collapsed[id]) s.classList.add('collapsed');
+    });
+  } catch(e) {}
+})();
 
 // ==================== PWA Service Worker ====================
 if ('serviceWorker' in navigator) {
