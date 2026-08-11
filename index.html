@@ -18,7 +18,7 @@ var EMPLOYEES_DATA = null;
 var TOTAL_CHUNKS = 10;
 var DATA_BASE = location.hostname.indexOf('github.io') !== -1
   ? 'data/'
-  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/';
+  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@d7124c3/data/';
 (function loadEmployeeData(idx) {
   if (idx > TOTAL_CHUNKS) {
     mergeEmployeeData();
