@@ -12,24 +12,28 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <script>
-// 分块加载花名册数据（10块，每块~530KB，避免CDN截断）
+// 分块加载花名册数据
+// GitHub Pages: 本地加载 / Surge等: 从 jsDelivr CDN 加载（避免Surge截断）
 var EMPLOYEES_DATA = null;
 var TOTAL_CHUNKS = 10;
+var DATA_BASE = location.hostname.indexOf('github.io') !== -1
+  ? 'data/'
+  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/';
 (function loadEmployeeData(idx) {
   if (idx > TOTAL_CHUNKS) {
     mergeEmployeeData();
     return;
   }
   var s = document.createElement('script');
-  s.src = 'data/employees-data-part' + idx + '.js?v=3';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=4';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
-    console.error('花名册数据分块' + idx + '加载失败，重试中...');
+    console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = 'data/employees-data-part' + idx + '.js?v=3&retry=1';
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=4&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
-      console.error('花名册数据分块' + idx + '重试失败，跳过');
+      console.error('花名册分块' + idx + '重试失败，跳过');
       loadEmployeeData(idx + 1);
     };
     document.head.appendChild(r);
