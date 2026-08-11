@@ -12,22 +12,21 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <script>
-// 分块加载花名册数据（避免大文件被CDN截断）
+// 分块加载花名册数据（10块，每块~530KB，避免CDN截断）
 var EMPLOYEES_DATA = null;
+var TOTAL_CHUNKS = 10;
 (function loadEmployeeData(idx) {
-  if (idx > 5) {
-    // 所有分块加载完毕，直接合并数据
+  if (idx > TOTAL_CHUNKS) {
     mergeEmployeeData();
     return;
   }
   var s = document.createElement('script');
-  s.src = 'data/employees-data-part' + idx + '.js?v=2';
+  s.src = 'data/employees-data-part' + idx + '.js?v=3';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册数据分块' + idx + '加载失败，重试中...');
-    // 重试一次
     var r = document.createElement('script');
-    r.src = 'data/employees-data-part' + idx + '.js?v=2&retry=1';
+    r.src = 'data/employees-data-part' + idx + '.js?v=3&retry=1';
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册数据分块' + idx + '重试失败，跳过');
@@ -37,21 +36,18 @@ var EMPLOYEES_DATA = null;
   };
   document.head.appendChild(s);
 })(1);
-// 合并分块数据的函数，在所有分块加载后调用
 function mergeEmployeeData() {
   if (EMPLOYEES_DATA) return;
   var parts = [];
-  for (var i = 1; i <= 5; i++) {
+  for (var i = 1; i <= TOTAL_CHUNKS; i++) {
     var p = window['EMPLOYEES_DATA_P' + i];
     if (p && p.length) parts.push(p);
   }
   EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
   var el = document.getElementById('employeeCount');
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
-  // 通知已合并（给 DOMContentLoaded 回调兜底）
   window._employeesMerged = true;
 }
-document.addEventListener('employees-ready', mergeEmployeeData);
 </script>
 <style>
   :root {
