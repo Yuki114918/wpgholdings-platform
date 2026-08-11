@@ -25,12 +25,12 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=6';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=7';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=6&r=' + Date.now();
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=7&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册分块' + idx + '重试失败，跳过');
@@ -2468,7 +2468,11 @@ function showMoreEmployees() {
       '</div>' +
       '<div class="emp-details">' +
         buildDetail('部门(100层)', e.dept_100) +
+        buildDetail('部门主管(100层)', e.mgr100) +
+        buildDetail('兼任主管(100层)', e.conc100) +
         buildDetail('部门(99层)', e.dept_99) +
+        buildDetail('部门主管(99层)', e.mgr99) +
+        buildDetail('兼任主管(99层)', e.conc99) +
         buildDetail('职位', e.title) +
         buildDetail('职等', e.grade) +
         buildDetail('职系', e.job_series) +
