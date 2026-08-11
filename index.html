@@ -25,12 +25,12 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=5';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=6';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=5&r=' + Date.now();
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=6&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册分块' + idx + '重试失败，跳过');
@@ -1009,6 +1009,26 @@ function mergeEmployeeData() {
   }
   .emp-card .emp-details .dl { color: var(--text-secondary); }
   .emp-card .emp-details .dv { color: var(--text); font-weight: 500; }
+  .emp-card .emp-details .perf-details {
+    grid-column: 1 / -1;
+    margin: 4px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f8fafc;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .emp-card .emp-details .perf-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .emp-card .emp-details .perf-item {
+    padding: 3px 0;
+    border-top: 1px dashed #e5e7eb;
+    line-height: 1.5;
+  }
+  .emp-card .emp-details .perf-item:first-of-type { border-top: none; }
 
   /* Peoplus Modal */
   .peoplus-overlay {
@@ -2447,7 +2467,7 @@ function showMoreEmployees() {
         (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
       '</div>' +
       '<div class="emp-details">' +
-        buildDetail('部门(100层)', e.dept) +
+        buildDetail('部门(100层)', e.dept_100) +
         buildDetail('部门(99层)', e.dept_99) +
         buildDetail('职位', e.title) +
         buildDetail('职等', e.grade) +
@@ -2464,6 +2484,8 @@ function showMoreEmployees() {
         buildDetail('司龄(年)', e.tenure) +
         (e.leave_date && e.status !== '在职' ? '<div class="leave-date-row"><span class="dl">离职日期：</span><span class="dv leave-date-val">' + e.leave_date + '</span></div>' : '') +
         (e.leave_reason && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">离职原因：</span><span class="dv">' + e.leave_reason + '</span></div>' : '') +
+        (e.event_reason && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">事件理由：</span><span class="dv">' + e.event_reason + '</span></div>' : '') +
+        (e.interview_by && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">访谈对象：</span><span class="dv">' + e.interview_by + '</span></div>' : '') +
         buildDetail('领薪公司', e.company) +
         buildDetail('考核主管', e.perf_mgr) +
         (function() {
@@ -2476,10 +2498,25 @@ function showMoreEmployees() {
             var rel = rels[i] ? ' (' + rels[i] + ')' : '';
             var ph = phones[i] || '';
             if (ph) ph = ' ' + ph;
-            var label = i === 0 ? '<span class="dl">紧急联络人：</span>' : '<span class="dl"></span>';
+            var label = i === 0 ? '<span class="dl">紧急联络资料：</span>' : '<span class="dl"></span>';
             lines += '<div>' + label + '<span class="dv">' + names[i].trim() + rel + '</span><span class="dv">' + ph + '</span></div>';
           }
           return lines;
+        })() +
+        (function() {
+          if (!e.perf || !e.perf.length) return '';
+          var items = e.perf.map(function(p) {
+            var period = (p.start_date || '') + (p.end_date ? '~' + p.end_date : '');
+            var parts = [];
+            if (p.score_name) parts.push(p.score_name);
+            if (period) parts.push('(' + period + ')');
+            var line = parts.join(' ');
+            if (p.score) line += ' 评分:' + p.score;
+            if (p.perf_score) line += ' 績效:' + p.perf_score;
+            if (p.score_label) line += ' [' + p.score_label + ']';
+            return '<div class="perf-item">' + line + '</div>';
+          }).join('');
+          return '<details class="perf-details"><summary>绩效考核记录（' + e.perf.length + ' 笔）</summary>' + items + '</details>';
         })() +
         buildDetail('任用别', e.hire_type) +
         buildDetail('国籍', e.nationality) +
