@@ -11,7 +11,48 @@
 <meta name="apple-mobile-web-app-title" content="工作平台">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<script src="data/employees-data.js?v=2"></script>
+<script>
+// 分块加载花名册数据（避免大文件被CDN截断）
+var EMPLOYEES_DATA = null;
+(function loadEmployeeData(idx) {
+  if (idx > 5) {
+    // 所有分块加载完毕，派发事件
+    if (document.readyState !== 'loading') {
+      var ev = new Event('employees-ready');
+      document.dispatchEvent(ev);
+    }
+    return;
+  }
+  var s = document.createElement('script');
+  s.src = 'data/employees-data-part' + idx + '.js?v=1';
+  s.onload = function() { loadEmployeeData(idx + 1); };
+  s.onerror = function() {
+    console.error('花名册数据分块' + idx + '加载失败，重试中...');
+    // 重试一次
+    var r = document.createElement('script');
+    r.src = 'data/employees-data-part' + idx + '.js?v=1&retry=1';
+    r.onload = function() { loadEmployeeData(idx + 1); };
+    r.onerror = function() {
+      console.error('花名册数据分块' + idx + '重试失败，跳过');
+      loadEmployeeData(idx + 1);
+    };
+    document.head.appendChild(r);
+  };
+  document.head.appendChild(s);
+})(1);
+// 合并分块数据的函数，在所有分块加载后调用
+function mergeEmployeeData() {
+  if (EMPLOYEES_DATA) return;
+  var parts = [];
+  for (var i = 1; i <= 5; i++) {
+    var p = window['EMPLOYEES_DATA_P' + i];
+    if (p && p.length) parts.push(p);
+  }
+  EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
+  document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
+}
+document.addEventListener('employees-ready', mergeEmployeeData);
+</script>
 <style>
   :root {
     --primary: #2563eb;
@@ -1670,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 动态更新员工总数
   try {
-    if (typeof EMPLOYEES_DATA !== 'undefined') {
+    if (EMPLOYEES_DATA && EMPLOYEES_DATA.length) {
       document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
     }
   } catch (e) { console.error('员工数更新失败:', e); }
@@ -2339,7 +2380,7 @@ function searchEmployee() {
     return;
   }
 
-  if (typeof EMPLOYEES_DATA === 'undefined') {
+  if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) {
     empty.style.display = 'block';
     empty.querySelector('p').textContent = '数据加载中，请稍候...';
     cards.innerHTML = '';
