@@ -16,11 +16,8 @@
 var EMPLOYEES_DATA = null;
 (function loadEmployeeData(idx) {
   if (idx > 5) {
-    // 所有分块加载完毕，派发事件
-    if (document.readyState !== 'loading') {
-      var ev = new Event('employees-ready');
-      document.dispatchEvent(ev);
-    }
+    // 所有分块加载完毕，直接合并数据
+    mergeEmployeeData();
     return;
   }
   var s = document.createElement('script');
@@ -49,7 +46,10 @@ function mergeEmployeeData() {
     if (p && p.length) parts.push(p);
   }
   EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
-  document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
+  var el = document.getElementById('employeeCount');
+  if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
+  // 通知已合并（给 DOMContentLoaded 回调兜底）
+  window._employeesMerged = true;
 }
 document.addEventListener('employees-ready', mergeEmployeeData);
 </script>
@@ -1709,9 +1709,9 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchWeather();
   } catch (e) { console.error('天气初始化失败:', e); }
 
-  // 动态更新员工总数
+  // 动态更新员工总数（兜底：如果分块数据已合并但DOM未就绪时漏更新）
   try {
-    if (EMPLOYEES_DATA && EMPLOYEES_DATA.length) {
+    if (window._employeesMerged && EMPLOYEES_DATA && EMPLOYEES_DATA.length) {
       document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
     }
   } catch (e) { console.error('员工数更新失败:', e); }
