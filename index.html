@@ -25,12 +25,12 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=4';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=5';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=4&r=' + Date.now();
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=5&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册分块' + idx + '重试失败，跳过');
@@ -2454,6 +2454,7 @@ function showMoreEmployees() {
         buildDetail('职系', e.job_series) +
         buildDetail('事业体', e.business_unit) +
         buildDetail('工作城市', e.city) +
+        buildDetail('工作子区域', e.sub_region) +
         buildDetail('主管标记', e.is_manager) +
         buildDetail('手机', e.phone) +
         buildDetail('分机', e.ext) +
