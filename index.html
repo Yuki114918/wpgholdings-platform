@@ -25,12 +25,12 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=10';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=11';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=10&r=' + Date.now();
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=11&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册分块' + idx + '重试失败，跳过');
@@ -2493,6 +2493,11 @@ function showMoreEmployees() {
         (e.interview_by && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">访谈对象：</span><span class="dv">' + e.interview_by + '</span></div>' : '') +
         buildDetail('领薪公司', e.company) +
         buildDetail('考核主管', e.perf_mgr) +
+        buildDetail('学历', e.education) +
+        buildDetail('毕业年月', e.grad_date) +
+        buildDetail('就学状况', e.study_status) +
+        buildDetail('学校名称', e.school) +
+        buildDetail('科系', e.major) +
         (function() {
           if (!e.emerg_name) return '';
           var names = e.emerg_name.split(' / ');
