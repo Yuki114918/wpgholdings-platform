@@ -2679,6 +2679,14 @@ function saveTodos() {
   try {
     localStorage.setItem(getTodoKey(), JSON.stringify(todoList));
   } catch (e) { console.error('待办存储失败:', e); }
+  // 同步已激活时，自动刷新同步码，使界面显示的码始终为最新数据。
+  // 这样改完待办后无需手动点「生成新同步码」，直接「复制」→ 另一端「连接」即可同步。
+  if (syncBlobId) {
+    syncBlobId = encodeTodos(todoList);
+    try { localStorage.setItem(getSyncKey(), syncBlobId); } catch (e) {}
+    var input = document.getElementById('syncCodeInput');
+    if (input && input.style.display !== 'none') input.value = syncBlobId;
+  }
 }
 function genId() { return 't' + Date.now() + Math.random().toString(36).substr(2, 6); }
 
@@ -2964,7 +2972,7 @@ function updateSyncUI() {
     genBtn.style.display = '';
     discBtn.style.display = '';
     copyBtn.style.display = '';
-    status.textContent = '已生成同步码，复制到其他设备粘贴即可同步';
+    status.textContent = '已同步：待办变更后此码会自动更新，复制到其他设备粘贴即可同步';
     status.className = 'todo-sync-status synced';
   } else {
     btn.textContent = '☁️ 同步设置';
