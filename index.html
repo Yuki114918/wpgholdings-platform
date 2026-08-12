@@ -778,6 +778,10 @@ function mergeEmployeeData() {
   .todo-sync-status { font-size: 11px; color: var(--text-secondary); }
   .todo-sync-status.synced { color: #059669; }
   .todo-sync-status.error { color: #dc2626; }
+  .todo-sync-panel { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .todo-sync-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .todo-sync-hint { font-size: 11px; color: var(--text-secondary); }
+  .todo-sync-adv { font-size: 11px; color: var(--primary); cursor: pointer; text-decoration: underline; }
 
   /* 用户切换 */
   .todo-user-bar {
@@ -1450,15 +1454,35 @@ function mergeEmployeeData() {
       <button class="todo-user-add" id="todoUserAddBtn" onclick="showAddUserInput()">＋ 添加用户</button>
     </div>
 
-    <!-- 同步码（自包含，无需服务器） -->
+    <!-- 云端同步（JSONBin，免手动粘贴） -->
     <div class="todo-sync-area">
-      <button class="todo-sync-btn" id="syncBtn" onclick="toggleSyncUI()">☁️ 同步设置</button>
-      <textarea class="todo-sync-input" id="syncCodeInput" rows="2" placeholder="粘贴同步码，或点「生成新同步码」创建（同步码内嵌全部待办数据，可跨手机/电脑验证一致）..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();connectSync();}"></textarea>
-      <button class="todo-sync-btn" id="syncConnectBtn" onclick="connectSync()" style="display:none;">🔗 连接</button>
-      <button class="todo-sync-btn" id="syncGenerateBtn" onclick="generateSync()" style="display:none;">🆕 生成新同步码</button>
-      <button class="todo-sync-btn" id="syncCopyBtn" onclick="copySyncCode()" style="display:none;">📋 复制</button>
-      <button class="todo-sync-btn" id="syncDisconnectBtn" onclick="disconnectSync()" style="display:none;border-color:#ef4444;color:#ef4444;">✕ 断开同步</button>
-      <span class="todo-sync-status" id="syncStatus"></span>
+      <button class="todo-sync-btn" id="syncBtn" onclick="toggleSyncUI()">☁️ 云端同步</button>
+      <div class="todo-sync-panel" id="syncPanel" style="display:none;">
+        <div id="syncSetup">
+          <input type="password" id="syncApiKey" class="todo-sync-input" style="display:block;" placeholder="粘贴 JSONBin API Key（X-Master-Key，仅存本机）" />
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" onclick="connectCloud()">🔗 连接 / 创建同步空间</button>
+            <a class="todo-sync-adv" href="javascript:void(0)" onclick="toggleOfflineCode()">或用离线同步码</a>
+          </div>
+          <span class="todo-sync-hint">免费获取：jsonbin.io → 注册 → API Keys（数据只存你自己的桶）</span>
+        </div>
+        <div id="syncConnected" style="display:none;">
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" id="syncRefreshBtn" onclick="refreshCloud()">🔄 刷新</button>
+            <button class="todo-sync-btn" id="syncAutoBtn" onclick="toggleAutoSync()">⏱ 自动：关</button>
+            <button class="todo-sync-btn" id="syncDisconnectBtn" onclick="disconnectCloud()" style="border-color:#ef4444;color:#ef4444;">✕ 断开</button>
+          </div>
+        </div>
+        <div id="offlineCodeArea" style="display:none;">
+          <textarea class="todo-sync-input" id="syncCodeInput" rows="2" style="display:block;" placeholder="离线同步码（WPG1...），无网络时跨设备粘贴验证一致用" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();connectSync();}"></textarea>
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" onclick="connectSync()">🔗 连接</button>
+            <button class="todo-sync-btn" onclick="generateSync()">🆕 生成</button>
+            <button class="todo-sync-btn" onclick="copySyncCode()">📋 复制</button>
+          </div>
+        </div>
+        <span class="todo-sync-status" id="syncStatus"></span>
+      </div>
     </div>
 
     <!-- 统计卡片 -->
@@ -2623,6 +2647,7 @@ function switchTodoUser(name) {
   renderTodoList();
   updateTodoStats();
   updateSyncUI();
+  if (isCloudConnected()) { pullCloud(true); if (autoSync) startAutoSync(); }
 }
 
 function showAddUserInput() {
@@ -2675,13 +2700,17 @@ function loadTodos() {
     todoList = raw ? JSON.parse(raw) : [];
   } catch (e) { todoList = []; }
 }
-function saveTodos() {
+function saveTodosLocalOnly() {
   try {
     localStorage.setItem(getTodoKey(), JSON.stringify(todoList));
   } catch (e) { console.error('待办存储失败:', e); }
-  // 同步已激活时，自动刷新同步码，使界面显示的码始终为最新数据。
-  // 这样改完待办后无需手动点「生成新同步码」，直接「复制」→ 另一端「连接」即可同步。
-  if (syncBlobId) {
+}
+function saveTodos() {
+  saveTodosLocalOnly();
+  // 已连接云端 → 自动上传；否则若离线同步码激活 → 自动刷新码
+  if (isCloudConnected()) {
+    pushCloud();
+  } else if (syncBlobId) {
     syncBlobId = encodeTodos(todoList);
     try { localStorage.setItem(getSyncKey(), syncBlobId); } catch (e) {}
     var input = document.getElementById('syncCodeInput');
@@ -2927,15 +2956,15 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ==================== 同步码（自包含，无需服务器）====================
-// 同步码本身内嵌待办数据：相同码 = 完全一致的数据，可跨设备（手机/电脑）验证一致性
+// ==================== 同步：云端（JSONBin）为主 + 离线码备用 ====================
 var SYNC_PREFIX = 'WPG1';
-var syncBlobId = '';  // 现在存放同步码字符串
+var syncBlobId = '';            // 离线同步码（无网络时的备用方案）
+var autoSyncTimer = null;
 
+// ---- 离线同步码（保留） ----
 function getSyncKey() { return 'wpgholdings_sync_' + (currentUser || 'default'); }
 function saveSyncBlobId(code) { syncBlobId = code; localStorage.setItem(getSyncKey(), code); }
 function loadSyncBlobId() { syncBlobId = localStorage.getItem(getSyncKey()) || ''; }
-
 function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64ToUtf8(b64) { return decodeURIComponent(escape(atob(b64))); }
 function encodeTodos(list) {
@@ -2945,93 +2974,173 @@ function encodeTodos(list) {
 function decodeTodos(code) {
   code = (code || '').trim();
   if (code.indexOf(SYNC_PREFIX) === 0) code = code.slice(SYNC_PREFIX.length);
-  try {
-    var payload = JSON.parse(b64ToUtf8(code));
-    return payload.todos || [];
-  } catch (e) { return null; }
+  try { var payload = JSON.parse(b64ToUtf8(code)); return payload.todos || []; } catch (e) { return null; }
 }
 
+// ---- 云端状态（按用户隔离 Bin） ----
+function getCloudKey() { return localStorage.getItem('wpgholdings_cloudkey') || ''; }
+function getCloudBin() { return localStorage.getItem('wpgholdings_cloudbin_' + (currentUser || 'default')) || ''; }
+function getAutoSync() { return localStorage.getItem('wpgholdings_autosync_' + (currentUser || 'default')) === '1'; }
+function setCloudKey(k) { localStorage.setItem('wpgholdings_cloudkey', k); }
+function setCloudBin(b) { localStorage.setItem('wpgholdings_cloudbin_' + (currentUser || 'default'), b); }
+function setAutoSync(v) { localStorage.setItem('wpgholdings_autosync_' + (currentUser || 'default'), v ? '1' : '0'); }
+function isCloudConnected() { return !!getCloudBin() && !!getCloudKey(); }
+
+function cloudApi(path, method, body) {
+  var url = 'https://api.jsonbin.io/v3' + path;
+  var opt = { method: method, headers: { 'Content-Type': 'application/json', 'X-Master-Key': getCloudKey() } };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  return fetch(url, opt).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+// 连接 / 首次自动创建桶
+function connectCloud() {
+  var key = document.getElementById('syncApiKey').value.trim();
+  var status = document.getElementById('syncStatus');
+  if (!key) { status.textContent='请先粘贴 API Key'; status.className='todo-sync-status error'; return; }
+  setCloudKey(key);
+  status.textContent='连接中…'; status.className='todo-sync-status';
+  var after = function(){
+    return pullCloud(true).then(function(){
+      status.textContent='✓ 已连接云端'; status.className='todo-sync-status synced';
+      updateSyncUI();
+      if (getAutoSync()) startAutoSync();
+    }).catch(function(e){
+      status.textContent='连接后拉取失败：'+e.message; status.className='todo-sync-status error';
+    });
+  };
+  var bin = getCloudBin();
+  if (bin) { after(); return; }
+  cloudApi('/b', 'POST', { users: {}, _meta: 'wpgholdings-todo' }).then(function(res){
+    var id = res && res.metadata && res.metadata.id;
+    if (!id) throw new Error('未获取到 Bin ID');
+    setCloudBin(id);
+    after();
+  }).catch(function(e){
+    status.textContent='连接失败：'+e.message; status.className='todo-sync-status error';
+  });
+}
+
+// 上传当前用户待办（保留其他用户数据）
+function pushCloud() {
+  if (!isCloudConnected()) return Promise.resolve();
+  var bin = getCloudBin();
+  return cloudApi('/b/' + bin + '/latest', 'GET').then(function(res){
+    var rec = (res && res.record) || {};
+    var users = rec.users || {};
+    users[currentUser || 'default'] = { todos: todoList, ts: Date.now() };
+    return cloudApi('/b/' + bin, 'PUT', { users: users, _meta: 'wpgholdings-todo' });
+  }).catch(function(e){ console.warn('pushCloud 失败:', e); });
+}
+
+// 合并：云端为准，保留本地独有（未推送成功）的项
+function mergeTodos(remote) {
+  var map = {};
+  remote.forEach(function(t){ if (t && t.id) map[t.id] = t; });
+  (todoList || []).forEach(function(t){ if (t && t.id && !map[t.id]) map[t.id] = t; });
+  return Object.keys(map).map(function(k){ return map[k]; });
+}
+
+// 从云端拉取当前用户待办
+function pullCloud(silent) {
+  if (!isCloudConnected()) return Promise.resolve();
+  var bin = getCloudBin();
+  var status = document.getElementById('syncStatus');
+  return cloudApi('/b/' + bin + '/latest', 'GET').then(function(res){
+    var rec = (res && res.record) || {};
+    var users = rec.users || {};
+    var remote = (users[currentUser || 'default'] || {}).todos;
+    if (!remote) return;
+    todoList = mergeTodos(remote);
+    saveTodosLocalOnly();
+    renderTodoList(); updateTodoStats();
+    if (!silent) { status.textContent='✓ 已刷新，与云端一致'; status.className='todo-sync-status synced'; }
+  }).catch(function(e){
+    if (!silent) { status.textContent='刷新失败：'+e.message; status.className='todo-sync-status error'; }
+  });
+}
+function refreshCloud() { pullCloud(false); }
+
+function startAutoSync() {
+  stopAutoSync();
+  autoSyncTimer = setInterval(function(){ pullCloud(true); }, 30000);
+}
+function stopAutoSync() { if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; } }
+function toggleAutoSync() {
+  var on = !getAutoSync();
+  setAutoSync(on);
+  if (on) startAutoSync(); else stopAutoSync();
+  var btn = document.getElementById('syncAutoBtn');
+  if (btn) btn.textContent = '⏱ 自动：' + (on ? '开' : '关');
+  var status = document.getElementById('syncStatus');
+  status.textContent = on ? '已开启自动同步（每15秒拉取）' : '已关闭自动同步';
+  status.className = 'todo-sync-status';
+}
+
+function disconnectCloud() {
+  if (!confirm('断开云端同步？本机待办仍保留，但不再自动上传/刷新。')) return;
+  setCloudBin('');
+  stopAutoSync();
+  updateSyncUI();
+  var status = document.getElementById('syncStatus');
+  status.textContent = '已断开云端，待办保留在本机'; status.className='todo-sync-status';
+}
+
+function toggleOfflineCode() {
+  var a = document.getElementById('offlineCodeArea');
+  a.style.display = a.style.display === 'none' ? '' : 'none';
+}
+
+// ---- 云端同步 UI ----
 function updateSyncUI() {
   var btn = document.getElementById('syncBtn');
-  var input = document.getElementById('syncCodeInput');
-  var connectBtn = document.getElementById('syncConnectBtn');
-  var genBtn = document.getElementById('syncGenerateBtn');
-  var discBtn = document.getElementById('syncDisconnectBtn');
-  var copyBtn = document.getElementById('syncCopyBtn');
+  var setup = document.getElementById('syncSetup');
+  var connected = document.getElementById('syncConnected');
   var status = document.getElementById('syncStatus');
-
-  if (syncBlobId) {
-    btn.textContent = '☁️ 已同步';
+  var keyInput = document.getElementById('syncApiKey');
+  if (isCloudConnected()) {
+    btn.textContent = '☁️ 已连接云端';
     btn.className = 'todo-sync-btn connected';
-    btn.onclick = function() { selectSyncCode(); };
-    input.style.display = '';
-    input.classList.add('active');
-    input.readOnly = true;
-    input.value = syncBlobId;
-    connectBtn.style.display = 'none';
-    genBtn.style.display = '';
-    discBtn.style.display = '';
-    copyBtn.style.display = '';
-    status.textContent = '已同步：待办变更后此码会自动更新，复制到其他设备粘贴即可同步';
-    status.className = 'todo-sync-status synced';
+    setup.style.display = 'none';
+    connected.style.display = '';
+    var ab = document.getElementById('syncAutoBtn');
+    if (ab) ab.textContent = '⏱ 自动：' + (getAutoSync() ? '开' : '关');
   } else {
-    btn.textContent = '☁️ 同步设置';
+    btn.textContent = '☁️ 云端同步';
     btn.className = 'todo-sync-btn';
-    btn.onclick = function() { toggleSyncUI(); };
-    input.style.display = 'none';
-    input.classList.remove('active');
-    input.value = '';
-    input.readOnly = false;
-    connectBtn.style.display = 'none';
-    genBtn.style.display = 'none';
-    discBtn.style.display = 'none';
-    copyBtn.style.display = 'none';
-    status.textContent = '未同步';
-    status.className = 'todo-sync-status';
+    setup.style.display = '';
+    connected.style.display = 'none';
+    if (keyInput && getCloudKey()) keyInput.value = getCloudKey();
+    status.textContent = '未连接云端'; status.className = 'todo-sync-status';
   }
 }
 
 function toggleSyncUI() {
-  var input = document.getElementById('syncCodeInput');
-  var connectBtn = document.getElementById('syncConnectBtn');
-  var genBtn = document.getElementById('syncGenerateBtn');
-  var isOpen = input.classList.contains('active') && input.style.display !== 'none';
-  if (isOpen) {
-    input.classList.remove('active');
-    input.style.display = 'none';
-    input.value = '';
-    connectBtn.style.display = 'none';
-    genBtn.style.display = 'none';
-  } else {
-    input.classList.add('active');
-    input.style.display = '';
-    input.readOnly = false;
-    input.value = '';
-    input.focus();
-    connectBtn.style.display = '';
-    genBtn.style.display = '';
+  var panel = document.getElementById('syncPanel');
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : '';
+  if (!open) {
+    var keyInput = document.getElementById('syncApiKey');
+    if (keyInput && getCloudKey()) keyInput.value = getCloudKey();
   }
 }
 
+// ---- 离线同步码 UI（无网络时用） ----
 function generateSync() {
   var input = document.getElementById('syncCodeInput');
   var status = document.getElementById('syncStatus');
   try {
     var code = encodeTodos(todoList);
     saveSyncBlobId(code);
-    input.classList.add('active');
     input.style.display = '';
     input.readOnly = true;
     input.value = code;
-    document.getElementById('syncConnectBtn').style.display = 'none';
-    document.getElementById('syncGenerateBtn').style.display = '';
     updateSyncUI();
-    status.textContent = '✓ 同步码已生成，点「复制」到其他设备粘贴即可';
+    status.textContent = '✓ 离线码已生成，复制到其他设备粘贴即可（无网络时用）';
     status.className = 'todo-sync-status synced';
   } catch (e) {
     status.textContent = '生成失败：' + e.message;
     status.className = 'todo-sync-status error';
-    console.error('Generate sync failed:', e);
   }
 }
 
@@ -3040,47 +3149,33 @@ function connectSync() {
   var rawCode = input.value.trim();
   var status = document.getElementById('syncStatus');
   if (!rawCode) { status.textContent = '请粘贴同步码'; status.className = 'todo-sync-status error'; return; }
-
   var todos = decodeTodos(rawCode);
-  if (!todos) {
-    status.textContent = '同步码无效，请检查后重试';
-    status.className = 'todo-sync-status error';
-    return;
-  }
-  // 以同步码内容为准，保证同码同显
+  if (!todos) { status.textContent = '同步码无效，请检查后重试'; status.className = 'todo-sync-status error'; return; }
   todoList = todos;
   saveTodos();
   saveSyncBlobId(rawCode);
-  input.classList.remove('active');
-  input.style.display = '';
   input.readOnly = true;
-  document.getElementById('syncConnectBtn').style.display = 'none';
-  document.getElementById('syncGenerateBtn').style.display = '';
   updateSyncUI();
-  renderTodoList();
-  updateTodoStats();
+  renderTodoList(); updateTodoStats();
   status.textContent = '✓ 同步成功，本设备已与同步码完全一致';
   status.className = 'todo-sync-status synced';
 }
 
 function selectSyncCode() {
   var input = document.getElementById('syncCodeInput');
-  input.focus();
-  input.select();
+  if (!input) return;
+  input.focus(); input.select();
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(input.value).then(function() {
-      var status = document.getElementById('syncStatus');
-      status.textContent = '✓ 同步码已复制到剪贴板';
-    }).catch(function() {});
+      var s = document.getElementById('syncStatus');
+      if (s) s.textContent = '✓ 离线码已复制到剪贴板';
+    }).catch(function(){});
   }
 }
-
-function copySyncCode() {
-  selectSyncCode();
-}
+function copySyncCode() { selectSyncCode(); }
 
 function disconnectSync() {
-  if (!confirm('断开同步后，本设备将不再使用该同步码（待办数据仍保留在本地）。\n确定断开吗？')) return;
+  if (!confirm('断开离线同步码？本机待办仍保留。')) return;
   syncBlobId = '';
   localStorage.removeItem(getSyncKey());
   updateSyncUI();
@@ -3094,6 +3189,7 @@ loadTodos();
 renderTodoList();
 updateTodoStats();
 updateSyncUI();
+if (isCloudConnected() && getAutoSync()) startAutoSync();
 
 // ==================== 板块折叠 ====================
 function toggleSection(section) {
