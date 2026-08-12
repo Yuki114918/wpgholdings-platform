@@ -1454,17 +1454,19 @@ function mergeEmployeeData() {
       <button class="todo-user-add" id="todoUserAddBtn" onclick="showAddUserInput()">＋ 添加用户</button>
     </div>
 
-    <!-- 云端同步（JSONBin，免手动粘贴） -->
+    <!-- 云端同步（GitHub 私有仓库，免手动粘贴） -->
     <div class="todo-sync-area">
       <button class="todo-sync-btn" id="syncBtn" onclick="toggleSyncUI()">☁️ 云端同步</button>
       <div class="todo-sync-panel" id="syncPanel" style="display:none;">
         <div id="syncSetup">
-          <input type="password" id="syncApiKey" class="todo-sync-input" style="display:block;" placeholder="粘贴 JSONBin API Key（X-Master-Key，仅存本机）" />
+          <input type="password" id="syncApiKey" class="todo-sync-input" style="display:block;" placeholder="粘贴 GitHub Token（仅存本机，需 repo 权限）" />
+          <input type="text" id="syncRepo" class="todo-sync-input" style="display:block;" placeholder="仓库名（格式 owner/repo，如 Yuki114918/wpgholdings-todos）" />
           <div class="todo-sync-row">
-            <button class="todo-sync-btn" onclick="connectCloud()">🔗 连接 / 创建同步空间</button>
+            <button class="todo-sync-btn" onclick="createGithubRepo()">➕ 新建私有仓库</button>
+            <button class="todo-sync-btn" onclick="connectCloud()">🔗 连接</button>
             <a class="todo-sync-adv" href="javascript:void(0)" onclick="toggleOfflineCode()">或用离线同步码</a>
           </div>
-          <span class="todo-sync-hint">免费获取：jsonbin.io → 注册 → API Keys（数据只存你自己的桶）</span>
+          <span class="todo-sync-hint">用你自己的 GitHub 私有仓库存待办：免费、数据自控。Token 在 github.com → Settings → Developer settings → Personal access tokens 生成（勾 repo 权限）</span>
         </div>
         <div id="syncConnected" style="display:none;">
           <div class="todo-sync-row">
@@ -2956,7 +2958,7 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ==================== 同步：云端（JSONBin）为主 + 离线码备用 ====================
+// ==================== 同步：云端（GitHub 私有仓库）为主 + 离线码备用 ====================
 var SYNC_PREFIX = 'WPG1';
 var syncBlobId = '';            // 离线同步码（无网络时的备用方案）
 var autoSyncTimer = null;
@@ -2977,62 +2979,95 @@ function decodeTodos(code) {
   try { var payload = JSON.parse(b64ToUtf8(code)); return payload.todos || []; } catch (e) { return null; }
 }
 
-// ---- 云端状态（按用户隔离 Bin） ----
-function getCloudKey() { return localStorage.getItem('wpgholdings_cloudkey') || ''; }
-function getCloudBin() { return localStorage.getItem('wpgholdings_cloudbin_' + (currentUser || 'default')) || ''; }
+// ---- 云端状态（GitHub 私有仓库，数据存 todos/{user}.json） ----
+function getGithubToken() { return localStorage.getItem('wpgholdings_ghtoken') || ''; }
+function getGithubRepo() { return localStorage.getItem('wpgholdings_ghrepo') || ''; }
 function getAutoSync() { return localStorage.getItem('wpgholdings_autosync_' + (currentUser || 'default')) === '1'; }
-function setCloudKey(k) { localStorage.setItem('wpgholdings_cloudkey', k); }
-function setCloudBin(b) { localStorage.setItem('wpgholdings_cloudbin_' + (currentUser || 'default'), b); }
+function setGithubToken(k) { localStorage.setItem('wpgholdings_ghtoken', k); }
+function setGithubRepo(r) { localStorage.setItem('wpgholdings_ghrepo', r); }
 function setAutoSync(v) { localStorage.setItem('wpgholdings_autosync_' + (currentUser || 'default'), v ? '1' : '0'); }
-function isCloudConnected() { return !!getCloudBin() && !!getCloudKey(); }
+function isCloudConnected() { return !!getGithubRepo() && !!getGithubToken(); }
 
-function cloudApi(path, method, body) {
-  var url = 'https://api.jsonbin.io/v3' + path;
-  var opt = { method: method, headers: { 'Content-Type': 'application/json', 'X-Master-Key': getCloudKey() } };
+function githubApi(path, method, body) {
+  var opt = {
+    method: method,
+    headers: {
+      'Authorization': 'Bearer ' + getGithubToken(),
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    }
+  };
   if (body !== undefined) opt.body = JSON.stringify(body);
-  return fetch(url, opt).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+  return fetch('https://api.github.com' + path, opt).then(function(r){
+    if (r.status === 404) { var nf = new Error('NOT_FOUND'); nf.status = 404; throw nf; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
 }
 
-// 连接 / 首次自动创建桶
+// 连接 / 验证仓库可用
 function connectCloud() {
-  var key = document.getElementById('syncApiKey').value.trim();
+  var token = document.getElementById('syncApiKey').value.trim();
+  var repo = document.getElementById('syncRepo').value.trim();
   var status = document.getElementById('syncStatus');
-  if (!key) { status.textContent='请先粘贴 API Key'; status.className='todo-sync-status error'; return; }
-  setCloudKey(key);
+  if (!token) { status.textContent='请先粘贴 GitHub Token'; status.className='todo-sync-status error'; return; }
+  if (!repo || repo.indexOf('/') < 0) { status.textContent='请填写仓库名（格式 owner/repo）'; status.className='todo-sync-status error'; return; }
+  setGithubToken(token); setGithubRepo(repo);
   status.textContent='连接中…'; status.className='todo-sync-status';
-  var after = function(){
-    return pullCloud(true).then(function(){
-      return pushCloud();   // 拉取后把本机已有待办上传，确保首次连接即上云
-    }).then(function(){
-      status.textContent='✓ 已连接云端'; status.className='todo-sync-status synced';
-      updateSyncUI();
-      if (getAutoSync()) startAutoSync();
-    }).catch(function(e){
-      status.textContent='连接后拉取失败：'+e.message; status.className='todo-sync-status error';
-    });
-  };
-  var bin = getCloudBin();
-  if (bin) { after(); return; }
-  cloudApi('/b', 'POST', { users: {}, _meta: 'wpgholdings-todo' }).then(function(res){
-    var id = res && res.metadata && res.metadata.id;
-    if (!id) throw new Error('未获取到 Bin ID');
-    setCloudBin(id);
-    after();
+  githubApi('/repos/' + repo, 'GET').then(function(){
+    return pullCloud(true);
+  }).then(function(){
+    return pushCloud();   // 拉取后把本机已有待办上传，确保首次连接即上云
+  }).then(function(){
+    status.textContent='✓ 已连接云端'; status.className='todo-sync-status synced';
+    updateSyncUI();
+    if (getAutoSync()) startAutoSync();
   }).catch(function(e){
     status.textContent='连接失败：'+e.message; status.className='todo-sync-status error';
   });
 }
 
-// 上传当前用户待办（保留其他用户数据）
+// 一键新建私有仓库
+function createGithubRepo() {
+  var token = document.getElementById('syncApiKey').value.trim();
+  var status = document.getElementById('syncStatus');
+  if (!token) { status.textContent='请先粘贴 GitHub Token'; status.className='todo-sync-status error'; return; }
+  setGithubToken(token);
+  var name = 'wpgholdings-todos';
+  status.textContent='正在创建私有仓库…'; status.className='todo-sync-status';
+  githubApi('/user/repos', 'POST', { name: name, private: true, auto_init: true }).then(function(res){
+    var full = res.full_name;
+    setGithubRepo(full);
+    document.getElementById('syncRepo').value = full;
+    status.textContent='✓ 已创建私有仓库 '+full+'，点「连接」即可'; status.className='todo-sync-status synced';
+  }).catch(function(e){
+    status.textContent='创建失败：'+e.message+'（可能已存在，直接填仓库名连接即可）'; status.className='todo-sync-status error';
+  });
+}
+
+// 上传当前用户待办到 todos/{user}.json（文件不存在则自动创建）
 function pushCloud() {
   if (!isCloudConnected()) return Promise.resolve();
-  var bin = getCloudBin();
-  return cloudApi('/b/' + bin + '/latest', 'GET').then(function(res){
-    var rec = (res && res.record) || {};
-    var users = rec.users || {};
-    users[currentUser || 'default'] = { todos: todoList, ts: Date.now() };
-    return cloudApi('/b/' + bin, 'PUT', { users: users, _meta: 'wpgholdings-todo' });
-  }).catch(function(e){ console.warn('pushCloud 失败:', e); });
+  var filePath = '/repos/' + getGithubRepo() + '/contents/todos/' + encodeURIComponent(currentUser || 'default') + '.json';
+  var payload = { todos: todoList, ts: Date.now() };
+  var content = utf8ToB64(JSON.stringify(payload));
+  return githubApi(filePath, 'GET').then(function(res){
+    // 文件已存在，需带 sha 更新
+    return githubApi(filePath, 'PUT', {
+      message: 'sync todos ' + (currentUser || 'default'),
+      content: content,
+      sha: res.sha
+    });
+  }).catch(function(e){
+    if (e.status === 404) {
+      // 文件不存在，创建（不带 sha）
+      return githubApi(filePath, 'PUT', {
+        message: 'init todos ' + (currentUser || 'default'),
+        content: content
+      });
+    }
+    console.warn('pushCloud 失败:', e);
+  });
 }
 
 // 合并：云端为准，保留本地独有（未推送成功）的项
@@ -3046,18 +3081,18 @@ function mergeTodos(remote) {
 // 从云端拉取当前用户待办
 function pullCloud(silent) {
   if (!isCloudConnected()) return Promise.resolve();
-  var bin = getCloudBin();
+  var filePath = '/repos/' + getGithubRepo() + '/contents/todos/' + encodeURIComponent(currentUser || 'default') + '.json';
   var status = document.getElementById('syncStatus');
-  return cloudApi('/b/' + bin + '/latest', 'GET').then(function(res){
-    var rec = (res && res.record) || {};
-    var users = rec.users || {};
-    var remote = (users[currentUser || 'default'] || {}).todos;
-    if (!remote) return;
+  return githubApi(filePath, 'GET').then(function(res){
+    var raw = b64ToUtf8((res.content || '').replace(/\s/g, ''));
+    var rec = JSON.parse(raw);
+    var remote = rec.todos || [];
     todoList = mergeTodos(remote);
     saveTodosLocalOnly();
     renderTodoList(); updateTodoStats();
     if (!silent) { status.textContent='✓ 已刷新，与云端一致'; status.className='todo-sync-status synced'; }
   }).catch(function(e){
+    if (e.status === 404) { return pushCloud(); }  // 云端还没有本用户数据，推上去
     if (!silent) { status.textContent='刷新失败：'+e.message; status.className='todo-sync-status error'; }
   });
 }
@@ -3075,13 +3110,13 @@ function toggleAutoSync() {
   var btn = document.getElementById('syncAutoBtn');
   if (btn) btn.textContent = '⏱ 自动：' + (on ? '开' : '关');
   var status = document.getElementById('syncStatus');
-  status.textContent = on ? '已开启自动同步（每15秒拉取）' : '已关闭自动同步';
+  status.textContent = on ? '已开启自动同步（每30秒拉取）' : '已关闭自动同步';
   status.className = 'todo-sync-status';
 }
 
 function disconnectCloud() {
   if (!confirm('断开云端同步？本机待办仍保留，但不再自动上传/刷新。')) return;
-  setCloudBin('');
+  setGithubRepo('');
   stopAutoSync();
   updateSyncUI();
   var status = document.getElementById('syncStatus');
@@ -3112,7 +3147,9 @@ function updateSyncUI() {
     btn.className = 'todo-sync-btn';
     setup.style.display = '';
     connected.style.display = 'none';
-    if (keyInput && getCloudKey()) keyInput.value = getCloudKey();
+    if (keyInput && getGithubToken()) keyInput.value = getGithubToken();
+    var repoInput = document.getElementById('syncRepo');
+    if (repoInput && getGithubRepo()) repoInput.value = getGithubRepo();
     status.textContent = '未连接云端'; status.className = 'todo-sync-status';
   }
 }
@@ -3123,7 +3160,9 @@ function toggleSyncUI() {
   panel.style.display = open ? 'none' : '';
   if (!open) {
     var keyInput = document.getElementById('syncApiKey');
-    if (keyInput && getCloudKey()) keyInput.value = getCloudKey();
+    if (keyInput && getGithubToken()) keyInput.value = getGithubToken();
+    var repoInput = document.getElementById('syncRepo');
+    if (repoInput && getGithubRepo()) repoInput.value = getGithubRepo();
   }
 }
 
