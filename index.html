@@ -3002,6 +3002,8 @@ function connectCloud() {
   status.textContent='连接中…'; status.className='todo-sync-status';
   var after = function(){
     return pullCloud(true).then(function(){
+      return pushCloud();   // 拉取后把本机已有待办上传，确保首次连接即上云
+    }).then(function(){
       status.textContent='✓ 已连接云端'; status.className='todo-sync-status synced';
       updateSyncUI();
       if (getAutoSync()) startAutoSync();
