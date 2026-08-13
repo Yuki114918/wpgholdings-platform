@@ -51,6 +51,8 @@ function mergeEmployeeData() {
   var el = document.getElementById('employeeCount');
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
   buildEmployeeSearchIndex();
+  buildRosterSidebar();
+  buildDashboard();
   window._employeesMerged = true;
 }
 </script>
@@ -1230,6 +1232,100 @@ function mergeEmployeeData() {
     border-top: 1px solid var(--border);
     margin-top: 48px;
   }
+
+  /* ===== 花名册：侧边栏 + 主区 布局 ===== */
+  .roster-layout { display:flex; gap:16px; align-items:flex-start; }
+  .roster-sidebar {
+    width:232px; flex-shrink:0; position:sticky; top:96px;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:14px; max-height:calc(100vh - 120px); overflow:auto;
+  }
+  .roster-main { flex:1; min-width:0; }
+  .sidebar-group { margin-bottom:16px; }
+  .sidebar-group:last-child { margin-bottom:0; }
+  .sidebar-title {
+    font-size:11px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.5px; margin-bottom:8px; text-transform:uppercase;
+    border-left:3px solid var(--primary); padding-left:6px;
+  }
+  .sidebar-btn {
+    display:block; width:100%; text-align:left; padding:7px 10px; margin-bottom:6px;
+    border:1px solid var(--border); border-radius:8px; background:#fff; color:var(--text);
+    font-size:13px; cursor:pointer; transition:all .15s;
+  }
+  .sidebar-btn:hover { border-color:var(--primary); color:var(--primary); }
+  .sidebar-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .sidebar-btn .sb-hint { float:right; font-size:11px; opacity:.65; }
+  .sidebar-btn.active .sb-hint { opacity:.9; }
+  .facet-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .facet-chip {
+    padding:5px 10px; border-radius:14px; border:1px solid var(--border);
+    background:#fff; font-size:12px; cursor:pointer; transition:all .15s; color:var(--text);
+  }
+  .facet-chip:hover { border-color:var(--primary); color:var(--primary); }
+  .facet-chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .scope-select {
+    padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px;
+    background:#fff; color:var(--text); cursor:pointer; outline:none; max-width:170px;
+  }
+  .scope-select:focus { border-color:var(--primary); }
+  .active-filters { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 8px; }
+  .active-filter {
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:14px;
+    background:var(--primary-light); color:var(--primary); font-size:12px; border:1px solid var(--primary);
+  }
+  .active-filter b { cursor:pointer; font-weight:700; font-size:13px; line-height:1; }
+  .active-filter.clear { background:#fee2e2; color:#dc2626; border-color:#dc2626; cursor:pointer; }
+
+  /* 院校标签 */
+  .school-tag {
+    display:inline-block; padding:1px 6px; border-radius:6px; font-size:11px; font-weight:700;
+    margin-left:6px; vertical-align:middle;
+  }
+  .school-tag.t985 { background:#fef3c7; color:#b45309; }
+  .school-tag.t211 { background:#dbeafe; color:#1d4ed8; }
+  .emp-head-tags { margin-left:6px; display:inline-flex; gap:4px; }
+  .emp-head-tags .school-tag { margin-left:0; }
+
+  /* 卡片网格 */
+  .emp-cards-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+    gap:12px; padding:0 16px 16px;
+  }
+
+  /* ===== 人力数据看板 ===== */
+  .dash-summary { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+  .dash-stat {
+    flex:1; min-width:120px; background:var(--card-bg); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .dash-stat .ds-val { font-size:24px; font-weight:700; color:var(--primary); }
+  .dash-stat .ds-label { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+  .dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+  .dash-card {
+    background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:16px 18px;
+  }
+  .dash-card h3 {
+    font-size:14px; font-weight:600; margin-bottom:12px; color:var(--text);
+    display:flex; align-items:center; gap:6px;
+  }
+  .dash-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; cursor:pointer; }
+  .dash-bar-row:hover .dash-bar-label { color:var(--primary); }
+  .dash-bar-label {
+    width:104px; flex-shrink:0; font-size:12px; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;
+  }
+  .dash-bar-track { flex:1; background:#f1f5f9; border-radius:6px; height:18px; overflow:hidden; }
+  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:6px; transition:width .4s; }
+  .dash-bar-val { width:56px; flex-shrink:0; font-size:12px; color:var(--text-secondary); text-align:left; }
+  .dash-bar-row.active .dash-bar-fill { background:linear-gradient(90deg,#f59e0b,#d97706); }
+  .dash-bar-row.active .dash-bar-label { color:#d97706; font-weight:600; }
+
+  @media (max-width: 860px) {
+    .roster-layout { flex-direction:column; }
+    .roster-sidebar { width:100%; position:static; max-height:none; }
+  }
 </style>
 </head>
 <body>
@@ -1417,24 +1513,51 @@ function mergeEmployeeData() {
       <div class="employee-search-bar">
         <div class="employee-search-wrapper">
           <span style="font-size:20px;">🔍</span>
-          <input type="text" id="employeeSearchInput" placeholder="输入工号或姓名查询（支持模糊匹配）..." oninput="searchEmployee()">
+          <input type="text" id="employeeSearchInput" placeholder="输入关键字查询（姓名/工号精准，其余字段模糊）..." oninput="searchEmployee()">
+          <select id="employeeSearchScope" class="scope-select" onchange="searchEmployee()" title="选择搜索字段范围">
+            <option value="all">全部（模糊）</option>
+            <option value="name">姓名（精准）</option>
+            <option value="id">工号（精准）</option>
+            <option value="dept_99">部门(99层)</option>
+            <option value="title">职位</option>
+            <option value="city">工作城市</option>
+            <option value="business_unit">事业体</option>
+            <option value="sub_region">工作子区域</option>
+            <option value="school">毕业院校</option>
+            <option value="grade">职级</option>
+            <option value="education">学历</option>
+            <option value="major">科系</option>
+          </select>
           <button onclick="resetEmployee()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 18px;cursor:pointer;font-size:14px;white-space:nowrap;">↺ 返回</button>
         </div>
-        <div class="employee-stats" id="employeeStats">共 <strong id="employeeCount">0</strong> 条员工记录（含绩效考核主管）</div>
+        <div class="employee-stats" id="employeeStats">共 <strong id="employeeCount">0</strong> 条员工记录</div>
       </div>
-      <div class="employee-result-area" id="employeeResultArea">
-        <div class="empty-state" id="employeeEmpty">
-          <div class="empty-icon">👤</div>
-          <p>请输入工号或姓名搜索员工资料</p>
-          <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">示例：输入"0022"或"梁碧华"</p>
+      <div class="roster-layout">
+        <aside class="roster-sidebar" id="rosterSidebar"><!-- JS 动态填充 --></aside>
+        <div class="roster-main">
+          <div class="active-filters" id="activeFilters" style="display:none;"></div>
+          <div class="employee-result-area" id="employeeResultArea">
+            <div class="empty-state" id="employeeEmpty">
+              <div class="empty-icon">👤</div>
+              <p>请输入关键字搜索，或用左侧栏位快速筛选员工</p>
+              <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">示例：选「姓名(精准)」输入"梁碧华"，或点选左侧筛选条件</p>
+            </div>
+          </div>
+          <div id="employeeResultCount" style="display:none;padding:8px 16px;font-size:13px;color:var(--text-secondary);"></div>
+          <div id="employeeCards" class="emp-cards-grid"></div>
+          <div id="employeeLoadMore" style="display:none;text-align:center;padding:0 16px 16px;">
+            <button onclick="showMoreEmployees()" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 24px;cursor:pointer;font-size:14px;">加载更多结果...</button>
+          </div>
         </div>
       </div>
-      <div id="employeeResultCount" style="display:none;padding:8px 16px;font-size:13px;color:var(--text-secondary);"></div>
-      <div id="employeeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;padding:0 16px 16px;"></div>
-      <div id="employeeLoadMore" style="display:none;text-align:center;padding:0 16px 16px;">
-        <button onclick="showMoreEmployees()" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 24px;cursor:pointer;font-size:14px;">加载更多结果...</button>
-      </div>
     </div>
+  </section>
+
+  <!-- 人力数据交互看板 -->
+  <section class="section dashboard-section">
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">📊 人力数据看板<span class="collapse-arrow">▼</span></h2>
+    <div id="dashboardSummary" class="dash-summary"></div>
+    <div id="dashboardGrid" class="dash-grid"></div>
   </section>
 
   <!-- ===== 待办事项 ===== -->
@@ -2412,10 +2535,46 @@ function toSimplified(str) {
   return result;
 }
 
+// ==================== 985 / 211 院校识别 ====================
+// 规范校名（含常用简称），匹配时统一转简体并去除括号/空格后再双向包含判断
+var SCHOOL_985 = [
+  '清华大学','北京大学','中国人民大学','北京理工大学','北京航空航天大学','中国农业大学','北京师范大学','中央民族大学',
+  '复旦大学','上海交通大学','同济大学','华东师范大学','南京大学','东南大学','浙江大学','中国科学技术大学','厦门大学',
+  '山东大学','中国海洋大学','武汉大学','华中科技大学','中南大学','湖南大学','中山大学','华南理工大学','四川大学',
+  '电子科技大学','重庆大学','西安交通大学','西北工业大学','西北农林科技大学','兰州大学','吉林大学','哈尔滨工业大学',
+  '大连理工大学','东北大学','天津大学','南开大学','国防科技大学'
+];
+var SCHOOL_211 = [
+  '清华大学','北京大学','中国人民大学','北京理工大学','北京航空航天大学','中国农业大学','北京师范大学','中央民族大学',
+  '北京邮电大学','北京交通大学','北京科技大学','北京化工大学','北京工业大学','北京林业大学','华北电力大学','中国传媒大学',
+  '中央音乐学院','对外经济贸易大学','北京中医药大学','北京外国语大学','中国政法大学','中央财经大学','中国矿业大学(北京)',
+  '中国石油大学(北京)','中国地质大学(北京)','北京体育大学','天津大学','南开大学','天津医科大学','河北工业大学','太原理工大学',
+  '内蒙古大学','大连理工大学','东北大学','大连海事大学','辽宁大学','吉林大学','东北师范大学','延边大学','哈尔滨工业大学',
+  '哈尔滨工程大学','东北农业大学','东北林业大学','复旦大学','上海交通大学','同济大学','华东师范大学','华东理工大学','东华大学',
+  '上海大学','上海财经大学','上海外国语大学','南京大学','东南大学','苏州大学','南京航空航天大学','南京理工大学','河海大学',
+  '南京农业大学','中国药科大学','江南大学','南京师范大学','浙江大学','中国科学技术大学','合肥工业大学','安徽大学','厦门大学',
+  '福州大学','南昌大学','山东大学','中国海洋大学','中国石油大学(华东)','郑州大学','武汉大学','华中科技大学','武汉理工大学',
+  '中国地质大学(武汉)','华中农业大学','华中师范大学','中南财经政法大学','湖南大学','中南大学','湖南师范大学','国防科技大学',
+  '中山大学','华南理工大学','暨南大学','华南师范大学','广西大学','海南大学','重庆大学','西南大学','四川大学','电子科技大学',
+  '西南交通大学','西南财经大学','四川农业大学','贵州大学','云南大学','西藏大学','西安交通大学','西北工业大学','西北农林科技大学',
+  '西北大学','西安电子科技大学','长安大学','陕西师范大学','空军军医大学','兰州大学','青海大学','宁夏大学','新疆大学','石河子大学'
+];
+function _normSchool(s){ return toSimplified(String(s == null ? '' : s)).replace(/[()（）]/g,'').replace(/\s/g,''); }
+var _985_TOKENS = SCHOOL_985.map(_normSchool);
+var _211_TOKENS = SCHOOL_211.map(_normSchool);
+function getSchoolTags(school){
+  var s = _normSchool(school);
+  if (!s) return { is985:false, is211:false };
+  var is985 = _985_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
+  var is211 = _211_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
+  return { is985:is985, is211:is211 };
+}
+
 // ==================== 员工查询 ====================
 var employeeSearchResults = [];
 var employeeDisplayCount = 0;
 var EMP_SEARCH_INDEX = null;
+var rosterFilters = {}; // 维度 -> 值（单选，跨维度 AND）
 
 // 将整条员工记录（含对象/数组，如工作经历、绩效）递归拼成可搜索文本
 function employeeSearchText(e) {
@@ -2435,7 +2594,11 @@ function buildEmployeeSearchIndex() {
   if (!EMPLOYEES_DATA) return;
   EMP_SEARCH_INDEX = EMPLOYEES_DATA.map(function(e) {
     var t = employeeSearchText(e);
-    return t + ' ' + toSimplified(t);
+    var tags = getSchoolTags(e.school);
+    e._is985 = tags.is985;
+    e._is211 = tags.is211;
+    var tagTxt = (tags.is985 ? ' 985' : '') + (tags.is211 ? ' 211' : '');
+    return t + ' ' + toSimplified(t) + tagTxt;
   });
 }
 function getEmployeeSearchIndex() {
@@ -2443,15 +2606,29 @@ function getEmployeeSearchIndex() {
   return EMP_SEARCH_INDEX || [];
 }
 
-function searchEmployee() {
-  var q = document.getElementById('employeeSearchInput').value.trim();
+function getFieldValue(e, field) {
+  if (field === 'name') return [e.ec_name, e.name, e.en_name].filter(Boolean).join(' ');
+  return e[field] != null ? String(e[field]) : '';
+}
+
+function runRosterSearch() {
+  var q = (document.getElementById('employeeSearchInput').value || '').trim();
+  var scope = document.getElementById('employeeSearchScope').value;
   var empty = document.getElementById('employeeEmpty');
   var cards = document.getElementById('employeeCards');
   var countEl = document.getElementById('employeeResultCount');
   var loadMore = document.getElementById('employeeLoadMore');
+  var filterKeys = Object.keys(rosterFilters);
 
-  if (!q || q.length < 1) {
-    resetEmployee();
+  // 无查询且无筛选：回到初始引导态
+  if (!q && filterKeys.length === 0) {
+    employeeSearchResults = [];
+    employeeDisplayCount = 0;
+    empty.style.display = 'block';
+    empty.querySelector('p').textContent = '请输入关键字搜索，或用左侧栏位快速筛选员工';
+    countEl.style.display = 'none';
+    loadMore.style.display = 'none';
+    cards.innerHTML = '';
     return;
   }
 
@@ -2464,15 +2641,58 @@ function searchEmployee() {
     return;
   }
 
+  var hasQuery = !!q;
   var ql = q.toLowerCase();
   var qs = toSimplified(ql); // 简体版搜索词
-  // 全字段模糊搜索：将整条员工记录（含工作经历/绩效等）拼成一个可搜索文本
   var idx = getEmployeeSearchIndex();
+
   employeeSearchResults = EMPLOYEES_DATA.filter(function(e, i) {
-    var text = idx[i] || '';
-    if (text.indexOf(ql) !== -1) return true;       // 原始文本匹配
-    if (text.indexOf(qs) !== -1) return true;        // 简体版匹配
-    return false;
+    // ① 维度筛选（跨维度 AND）
+    for (var d = 0; d < filterKeys.length; d++) {
+      var dim = filterKeys[d], want = rosterFilters[dim];
+      if (dim === 'schoolTag') {
+        if (want === '985' && !e._is985) return false;
+        if (want === '211' && !e._is211) return false;
+        if (want === '985211' && !(e._is985 && e._is211)) return false;
+        if (want === 'normal' && !(e.school && !(e._is985 || e._is211))) return false;
+        if (want === 'noschool' && e.school) return false;
+      } else if (dim === 'status') {
+        if ((e.status || '') !== want) return false;
+      } else if (dim === 'gender') {
+        if ((e.gender || '') !== want) return false;
+      } else if (dim === 'hire_type') {
+        if ((e.hire_type || '') !== want) return false;
+      } else if (dim === 'city') {
+        if ((e.city || '') !== want) return false;
+      } else if (dim === 'business_unit') {
+        if ((e.business_unit || '') !== want) return false;
+      } else if (dim === 'grade') {
+        if ((e.grade || '') !== want) return false;
+      } else {
+        if (getFieldValue(e, dim) !== want) return false;
+      }
+    }
+    // ② 文本查询
+    if (!hasQuery) return true;
+    if (scope === 'id') {
+      var idN = String(e.id || '');
+      return idN === q || (Number(idN) === Number(q) && q !== '' && !isNaN(Number(q)));
+    }
+    if (scope === 'name') {
+      var names = [e.ec_name, e.name, e.en_name].filter(Boolean)
+        .map(function(x) { return toSimplified(String(x)).toLowerCase(); });
+      return names.indexOf(qs) !== -1 || names.indexOf(ql) !== -1;
+    }
+    if (scope === 'all') {
+      var text = idx[i] || '';
+      return text.indexOf(ql) !== -1 || text.indexOf(qs) !== -1; // 简繁双向
+    }
+    // 指定字段：模糊匹配（简繁双向）
+    var fv = getFieldValue(e, scope);
+    var ft = fv.toLowerCase();
+    var fs = toSimplified(ft);
+    return ft.indexOf(ql) !== -1 || fs.indexOf(qs) !== -1 ||
+           ft.indexOf(qs) !== -1 || fs.indexOf(ql) !== -1;
   });
 
   employeeDisplayCount = 0;
@@ -2486,6 +2706,8 @@ function searchEmployee() {
 
   showMoreEmployees();
 }
+
+function searchEmployee() { runRosterSearch(); }
 
 function showMoreEmployees() {
   var cards = document.getElementById('employeeCards');
@@ -2502,12 +2724,18 @@ function showMoreEmployees() {
     var isActive = (e.status || '') === '在职';
     var badgeClass = isActive ? '' : ' inactive';
     var badgeText = isActive ? (e.status || '') : '离职访谈';
+    var headTags = (e._is985 || e._is211)
+      ? '<span class="emp-head-tags">' +
+          (e._is985 ? '<span class="school-tag t985">985</span>' : '') +
+          (e._is211 ? '<span class="school-tag t211">211</span>' : '') +
+        '</span>'
+      : '';
 
     html += '<div class="emp-card">' +
       '<div class="emp-header">' +
         '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
         '<div>' +
-          '<div class="emp-name">' + name + '</div>' +
+          '<div class="emp-name">' + name + headTags + '</div>' +
           '<div class="emp-id">工号：' + empId + '</div>' +
         '</div>' +
         (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
@@ -2541,7 +2769,13 @@ function showMoreEmployees() {
         buildDetail('学历', e.education) +
         buildDetail('毕业年月', e.grad_date) +
         buildDetail('就学状况', e.study_status) +
-        buildDetail('学校名称', e.school) +
+        (function() {
+          if (!e.school) return '';
+          var st = getSchoolTags(e.school);
+          var tags = (st.is985 ? '<span class="school-tag t985">985</span>' : '') +
+                     (st.is211 ? '<span class="school-tag t211">211</span>' : '');
+          return '<div><span class="dl">学校名称：</span><span class="dv">' + e.school + '</span>' + tags + '</div>';
+        })() +
         buildDetail('科系', e.major) +
         (function() {
           if (!e.emerg_name) return '';
@@ -2612,14 +2846,157 @@ function buildDetail(label, val) {
 
 function resetEmployee() {
   document.getElementById('employeeSearchInput').value = '';
-  employeeSearchResults = [];
-  employeeDisplayCount = 0;
-  document.getElementById('employeeResultCount').style.display = 'none';
-  document.getElementById('employeeLoadMore').style.display = 'none';
-  document.getElementById('employeeCards').innerHTML = '';
-  var empty = document.getElementById('employeeEmpty');
-  empty.style.display = 'block';
-  empty.querySelector('p').textContent = '请输入工号或姓名搜索员工资料';
+  runRosterSearch();
+}
+
+// ==================== 侧边栏 / 看板 / 维度筛选 ====================
+function buildRosterSidebar() {
+  var side = document.getElementById('rosterSidebar');
+  if (!side) return;
+  var html = '';
+  html += '<div class="sidebar-group"><div class="sidebar-title">快速定位（搜索字段）</div>';
+  var scopes = [['name','姓名（精准）'],['id','工号（精准）'],['dept_99','部门'],['title','职位'],['city','城市'],['business_unit','事业体'],['school','毕业院校']];
+  scopes.forEach(function(s){
+    html += '<button class="sidebar-btn" data-scope="'+s[0]+'" onclick="setSearchScope(\''+s[0]+'\')">'+s[1]+'<span class="sb-hint">'+(s[0]==='name'||s[0]==='id'?'精准':'模糊')+'</span></button>';
+  });
+  html += '</div>';
+  var facets = [
+    {dim:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']]},
+    {dim:'gender', title:'性别', vals:[['男','男'],['女','女']]},
+    {dim:'hire_type', title:'用工类型', vals:[['正職','正職'],['派遣','派遣'],['兼職','兼職']]},
+    {dim:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']]}
+  ];
+  facets.forEach(function(f){
+    html += '<div class="sidebar-group"><div class="sidebar-title">'+f.title+'</div><div class="facet-chips">';
+    f.vals.forEach(function(v){
+      html += '<span class="facet-chip" data-dim="'+f.dim+'" data-val="'+v[0]+'" onclick="toggleRosterFilter(\''+f.dim+'\',\''+v[0]+'\')">'+v[1]+'</span>';
+    });
+    html += '</div></div>';
+  });
+  side.innerHTML = html;
+  updateRosterFilterUI();
+}
+
+function setSearchScope(scope){
+  var sel = document.getElementById('employeeSearchScope');
+  if (sel) sel.value = scope;
+  var btns = document.querySelectorAll('.sidebar-btn[data-scope]');
+  for (var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-scope')===scope);
+  var inp = document.getElementById('employeeSearchInput');
+  if (inp) inp.focus();
+}
+
+function toggleRosterFilter(dim, val){
+  if (rosterFilters[dim] === val) delete rosterFilters[dim];
+  else rosterFilters[dim] = val;
+  updateRosterFilterUI();
+  buildDashboard();
+  runRosterSearch();
+}
+
+function clearRosterFilters(){
+  rosterFilters = {};
+  updateRosterFilterUI();
+  buildDashboard();
+  runRosterSearch();
+}
+
+function updateRosterFilterUI(){
+  var chips = document.querySelectorAll('.facet-chip');
+  for (var i=0;i<chips.length;i++){
+    var c = chips[i];
+    c.classList.toggle('active', rosterFilters[c.getAttribute('data-dim')] === c.getAttribute('data-val'));
+  }
+  var bar = document.getElementById('activeFilters');
+  if (!bar) return;
+  var keys = Object.keys(rosterFilters);
+  if (!keys.length){ bar.innerHTML=''; bar.style.display='none'; return; }
+  bar.style.display='flex';
+  var labelMap = {status:'状态',gender:'性别',hire_type:'用工',schoolTag:'院校',city:'城市',business_unit:'事业体',grade:'职级',dept_99:'部门',title:'职位',sub_region:'子区域',education:'学历',major:'科系'};
+  var dispMap = {985:'985',211:'211',985211:'985+211',normal:'普通院校',noschool:'无院校'};
+  var html = '';
+  keys.forEach(function(k){
+    var v = rosterFilters[k];
+    var disp = (k==='schoolTag') ? (dispMap[v]||v) : v;
+    html += '<span class="active-filter">'+labelMap[k]+'：'+disp+' <b onclick="toggleRosterFilter(\''+k+'\',\''+v+'\')">✕</b></span>';
+  });
+  html += '<span class="active-filter clear" onclick="clearRosterFilters()">清除全部 ✕</span>';
+  bar.innerHTML = html;
+}
+
+function buildDashboard(){
+  var sumEl = document.getElementById('dashboardSummary');
+  var gridEl = document.getElementById('dashboardGrid');
+  if (!sumEl || !gridEl || !EMPLOYEES_DATA) return;
+  var D = EMPLOYEES_DATA;
+  var total = D.length;
+  var active = D.filter(function(e){ return (e.status||'')==='在职'; }).length;
+  var cnt985 = D.filter(function(e){ return e._is985; }).length;
+  var cnt211 = D.filter(function(e){ return e._is211; }).length;
+  var male = D.filter(function(e){ return (e.gender||'')==='男'; }).length;
+  var female = D.filter(function(e){ return (e.gender||'')==='女'; }).length;
+  var summary = [
+    {val:total.toLocaleString(), label:'员工总数'},
+    {val:active.toLocaleString(), label:'在职人数'},
+    {val:cnt985.toLocaleString(), label:'985院校'},
+    {val:cnt211.toLocaleString(), label:'211院校'},
+    {val:male.toLocaleString(), label:'男性'},
+    {val:female.toLocaleString(), label:'女性'}
+  ];
+  sumEl.innerHTML = summary.map(function(s){return '<div class="dash-stat"><div class="ds-val">'+s.val+'</div><div class="ds-label">'+s.label+'</div></div>';}).join('');
+
+  var dims = [
+    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']]},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true},
+    {key:'gender', title:'性别', vals:[['男','男'],['女','女']]},
+    {key:'hire_type', title:'用工类型', vals:null},
+    {key:'business_unit', title:'事业体 Top8', vals:null, top:8},
+    {key:'dept_99', title:'部门(99层) Top8', vals:null, top:8},
+    {key:'city', title:'工作城市 Top8', vals:null, top:8},
+    {key:'grade', title:'职级 Top8', vals:null, top:8}
+  ];
+  var grid = '';
+  dims.forEach(function(dim){
+    var counts;
+    if (dim.vals) {
+      counts = dim.vals.map(function(v){ return {label:v[1], val:v[0], cnt: countByDim(D, dim.key, v[0])}; });
+    } else {
+      var map = {};
+      D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
+      counts = Object.keys(map).map(function(k){return {label:k, val:k, cnt:map[k]};});
+      counts.sort(function(a,b){return b.cnt-a.cnt;});
+      if (dim.top) counts = counts.slice(0, dim.top);
+    }
+    var max = counts.reduce(function(m,c){return Math.max(m,c.cnt);},1);
+    var bars = counts.map(function(c){
+      var pct = (c.cnt/max*100).toFixed(1);
+      var activeCls = (rosterFilters[dim.key]===c.val) ? ' active' : '';
+      var esc = String(c.val).replace(/'/g,"\\'");
+      return '<div class="dash-bar-row'+activeCls+'" onclick="toggleRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击筛选：'+c.label+'">'+
+        '<div class="dash-bar-label" title="'+c.label+'">'+c.label+'</div>'+
+        '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;"></div></div>'+
+        '<div class="dash-bar-val">'+c.cnt.toLocaleString()+'</div></div>';
+    }).join('');
+    grid += '<div class="dash-card"><h3>'+dim.title+'</h3>'+bars+'</div>';
+  });
+  gridEl.innerHTML = grid;
+}
+
+function getDimValue(e, key){
+  if (key==='schoolTag') return null;
+  return e[key] != null ? String(e[key]) : '';
+}
+
+function countByDim(D, key, val){
+  if (key==='schoolTag') {
+    if (val==='985') return D.filter(function(e){return e._is985;}).length;
+    if (val==='211') return D.filter(function(e){return e._is211;}).length;
+    if (val==='985211') return D.filter(function(e){return e._is985 && e._is211;}).length;
+    if (val==='normal') return D.filter(function(e){return e.school && !(e._is985||e._is211);}).length;
+    if (val==='noschool') return D.filter(function(e){return !e.school;}).length;
+    return 0;
+  }
+  return D.filter(function(e){ return (e[key]||'')===val; }).length;
 }
 
 // ==================== 待办事项 ====================

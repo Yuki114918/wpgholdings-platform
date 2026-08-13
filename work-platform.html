@@ -11,7 +11,51 @@
 <meta name="apple-mobile-web-app-title" content="工作平台">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<script src="data/employees-data.js"></script>
+<script>
+// 分块加载花名册数据
+// GitHub Pages: 本地加载 / Surge等: 从 jsDelivr CDN 加载（避免Surge截断）
+var EMPLOYEES_DATA = null;
+var TOTAL_CHUNKS = 10;
+var DATA_BASE = location.hostname.indexOf('github.io') !== -1
+  ? 'data/'
+  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@5017167/data/';
+(function loadEmployeeData(idx) {
+  if (idx > TOTAL_CHUNKS) {
+    mergeEmployeeData();
+    return;
+  }
+  var s = document.createElement('script');
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12';
+  s.onload = function() { loadEmployeeData(idx + 1); };
+  s.onerror = function() {
+    console.error('花名册分块' + idx + '加载失败，重试...');
+    var r = document.createElement('script');
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12&r=' + Date.now();
+    r.onload = function() { loadEmployeeData(idx + 1); };
+    r.onerror = function() {
+      console.error('花名册分块' + idx + '重试失败，跳过');
+      loadEmployeeData(idx + 1);
+    };
+    document.head.appendChild(r);
+  };
+  document.head.appendChild(s);
+})(1);
+function mergeEmployeeData() {
+  if (EMPLOYEES_DATA) return;
+  var parts = [];
+  for (var i = 1; i <= TOTAL_CHUNKS; i++) {
+    var p = window['EMPLOYEES_DATA_P' + i];
+    if (p && p.length) parts.push(p);
+  }
+  EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
+  var el = document.getElementById('employeeCount');
+  if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
+  buildEmployeeSearchIndex();
+  buildRosterSidebar();
+  buildDashboard();
+  window._employeesMerged = true;
+}
+</script>
 <style>
   :root {
     --primary: #2563eb;
@@ -93,6 +137,35 @@
   }
   .work-status-bar .ws-calendar-link:hover { background: #1d4ed8; }
 
+  /* Weather panel */
+  .weather-panel {
+    position: absolute; top: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%); z-index: 1000;
+    min-width: 220px; background: #fff; border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.15); border: 1px solid var(--border);
+    padding: 12px; font-size: 14px; color: var(--text-primary);
+  }
+  .weather-panel-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 600; margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .weather-close { cursor: pointer; font-size: 18px; line-height: 1; color: var(--text-secondary); }
+  .weather-close:hover { color: var(--text-primary); }
+  .weather-current {
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    background: #f0f7ff; margin-bottom: 10px; transition: background .2s;
+  }
+  .weather-current:hover { background: #e0efff; }
+  .weather-cities {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .weather-city {
+    text-align: center; padding: 7px 0; border-radius: 6px;
+    background: #f5f5f5; cursor: pointer; transition: background .2s;
+  }
+  .weather-city:hover { background: #e5e5e5; }
+
   /* Main Container */
   .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
 
@@ -106,7 +179,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: margin-bottom 0.3s;
   }
+  .section-title:hover .collapse-arrow { color: var(--primary); }
   .section-title::before {
     content: '';
     width: 4px;
@@ -114,6 +191,16 @@
     background: var(--primary);
     border-radius: 2px;
   }
+  .collapse-arrow {
+    font-size: 14px;
+    margin-left: auto;
+    color: var(--text-secondary);
+    transition: transform 0.25s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .section.collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .section.collapsed .section-title { margin-bottom: 0; }
+  .section.collapsed > *:not(.section-title) { display: none; }
 
   .quick-cards {
     display: grid;
@@ -474,6 +561,320 @@
   }
   .modal .close-btn:hover { color: var(--text); }
 
+  /* ===== 待办事项 ===== */
+  .todo-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .todo-stats-cards {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .todo-stat-card {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 100px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .todo-stat-card:hover { transform: translateY(-1px); }
+  .todo-stat-card .stat-num { font-size: 28px; line-height: 1.2; }
+  .todo-stat-card .stat-label { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+  .todo-stat-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .todo-stat-pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  .todo-stat-done { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .todo-stat-total { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+  .todo-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .todo-add-btn:hover { background: var(--primary-dark); }
+
+  .todo-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .todo-filter-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+  }
+  .todo-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .todo-filter-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .todo-form {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    padding: 20px;
+    display: none;
+    margin-bottom: 16px;
+  }
+  .todo-form.active { display: block; }
+  .todo-form-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .todo-form-row:last-child { margin-bottom: 0; }
+  .todo-form input, .todo-form textarea, .todo-form select {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .todo-form input:focus, .todo-form textarea:focus, .todo-form select:focus { border-color: var(--primary); }
+  .todo-form input[type="text"] { flex: 1; min-width: 200px; }
+  .todo-form textarea { width: 100%; min-height: 60px; resize: vertical; }
+  .todo-form select { min-width: 120px; }
+  .todo-form-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .todo-form-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .todo-btn-save { background: var(--primary); color: #fff; }
+  .todo-btn-save:hover { background: var(--primary-dark); }
+  .todo-btn-cancel { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+  .todo-btn-cancel:hover { background: #e2e8f0; }
+
+  .todo-list { display: flex; flex-direction: column; gap: 8px; }
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .todo-item:hover { border-color: #bfdbfe; box-shadow: var(--shadow-md); }
+  .todo-item.done { opacity: 0.6; }
+  .todo-item.done .todo-title { text-decoration: line-through; }
+
+  .todo-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s;
+    color: transparent;
+  }
+  .todo-item.done .todo-checkbox {
+    border-color: var(--success);
+    background: var(--success);
+    color: #fff;
+  }
+
+  .todo-content { flex: 1; min-width: 0; }
+  .todo-title { font-weight: 500; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .todo-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .todo-meta { font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .todo-priority {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .priority-urgent { background: #fef2f2; color: #dc2626; }
+  .priority-normal { background: #fffbeb; color: #d97706; }
+  .priority-low { background: #f1f5f9; color: #64748b; }
+
+  .todo-category {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: #eff6ff;
+    color: #2563eb;
+  }
+  .todo-due { font-size: 12px; }
+  .todo-due.overdue { color: #dc2626; font-weight: 600; }
+  .todo-due.today { color: #d97706; font-weight: 600; }
+
+  .todo-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .todo-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+  }
+  .todo-actions button:hover { background: #f1f5f9; }
+  .todo-actions .btn-del:hover { background: #fef2f2; color: #dc2626; }
+
+  .todo-empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
+  .todo-empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* 云端同步 */
+  .todo-sync-area { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .todo-sync-btn { padding: 6px 14px; border: 1px solid var(--primary); background: #fff; color: var(--primary); border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+  .todo-sync-btn:hover { background: var(--primary); color: #fff; }
+  .todo-sync-btn.connected { background: #ecfdf5; border-color: #10b981; color: #059669; }
+  .todo-sync-btn.connected:hover { background: #10b981; color: #fff; }
+  .todo-sync-input { flex: 1; min-width: 160px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; outline: none; display: none; font-family: monospace; resize: vertical; line-height: 1.45; }
+  .todo-sync-input.active { display: block; }
+  .todo-sync-status { font-size: 11px; color: var(--text-secondary); }
+  .todo-sync-status.synced { color: #059669; }
+  .todo-sync-status.error { color: #dc2626; }
+  .todo-sync-panel { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .todo-sync-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .todo-sync-hint { font-size: 11px; color: var(--text-secondary); }
+  .todo-sync-adv { font-size: 11px; color: var(--primary); cursor: pointer; text-decoration: underline; }
+
+  /* 用户切换 */
+  .todo-user-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .todo-user-bar .user-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .todo-user-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .todo-user-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .todo-user-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .todo-user-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .todo-user-chip .chip-del {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-left: 2px;
+    padding: 0 2px;
+    border-radius: 50%;
+    line-height: 1;
+  }
+  .todo-user-chip .chip-del:hover { opacity: 1; background: rgba(255,255,255,0.3); }
+  .todo-user-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px dashed var(--border);
+    background: #fff;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .todo-user-add:hover { border-color: var(--primary); color: var(--primary); }
+  .todo-user-input-group {
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+  .todo-user-input-group.active { display: inline-flex; }
+  .todo-user-input-group input {
+    padding: 5px 10px;
+    border: 1px solid var(--primary);
+    border-radius: 16px;
+    font-size: 13px;
+    outline: none;
+    width: 120px;
+  }
+  .todo-user-input-group button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .user-btn-ok { background: var(--primary); color: #fff; }
+  .user-btn-ok:hover { background: var(--primary-dark); }
+  .user-btn-cancel { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+
   /* Responsive */
   @media (max-width: 768px) {
     .container { padding: 16px; }
@@ -615,6 +1016,26 @@
   }
   .emp-card .emp-details .dl { color: var(--text-secondary); }
   .emp-card .emp-details .dv { color: var(--text); font-weight: 500; }
+  .emp-card .emp-details .perf-details {
+    grid-column: 1 / -1;
+    margin: 4px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f8fafc;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .emp-card .emp-details .perf-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .emp-card .emp-details .perf-item {
+    padding: 3px 0;
+    border-top: 1px dashed #e5e7eb;
+    line-height: 1.5;
+  }
+  .emp-card .emp-details .perf-item:first-of-type { border-top: none; }
 
   /* Peoplus Modal */
   .peoplus-overlay {
@@ -811,6 +1232,100 @@
     border-top: 1px solid var(--border);
     margin-top: 48px;
   }
+
+  /* ===== 花名册：侧边栏 + 主区 布局 ===== */
+  .roster-layout { display:flex; gap:16px; align-items:flex-start; }
+  .roster-sidebar {
+    width:232px; flex-shrink:0; position:sticky; top:96px;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:14px; max-height:calc(100vh - 120px); overflow:auto;
+  }
+  .roster-main { flex:1; min-width:0; }
+  .sidebar-group { margin-bottom:16px; }
+  .sidebar-group:last-child { margin-bottom:0; }
+  .sidebar-title {
+    font-size:11px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:.5px; margin-bottom:8px; text-transform:uppercase;
+    border-left:3px solid var(--primary); padding-left:6px;
+  }
+  .sidebar-btn {
+    display:block; width:100%; text-align:left; padding:7px 10px; margin-bottom:6px;
+    border:1px solid var(--border); border-radius:8px; background:#fff; color:var(--text);
+    font-size:13px; cursor:pointer; transition:all .15s;
+  }
+  .sidebar-btn:hover { border-color:var(--primary); color:var(--primary); }
+  .sidebar-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .sidebar-btn .sb-hint { float:right; font-size:11px; opacity:.65; }
+  .sidebar-btn.active .sb-hint { opacity:.9; }
+  .facet-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .facet-chip {
+    padding:5px 10px; border-radius:14px; border:1px solid var(--border);
+    background:#fff; font-size:12px; cursor:pointer; transition:all .15s; color:var(--text);
+  }
+  .facet-chip:hover { border-color:var(--primary); color:var(--primary); }
+  .facet-chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .scope-select {
+    padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px;
+    background:#fff; color:var(--text); cursor:pointer; outline:none; max-width:170px;
+  }
+  .scope-select:focus { border-color:var(--primary); }
+  .active-filters { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 8px; }
+  .active-filter {
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:14px;
+    background:var(--primary-light); color:var(--primary); font-size:12px; border:1px solid var(--primary);
+  }
+  .active-filter b { cursor:pointer; font-weight:700; font-size:13px; line-height:1; }
+  .active-filter.clear { background:#fee2e2; color:#dc2626; border-color:#dc2626; cursor:pointer; }
+
+  /* 院校标签 */
+  .school-tag {
+    display:inline-block; padding:1px 6px; border-radius:6px; font-size:11px; font-weight:700;
+    margin-left:6px; vertical-align:middle;
+  }
+  .school-tag.t985 { background:#fef3c7; color:#b45309; }
+  .school-tag.t211 { background:#dbeafe; color:#1d4ed8; }
+  .emp-head-tags { margin-left:6px; display:inline-flex; gap:4px; }
+  .emp-head-tags .school-tag { margin-left:0; }
+
+  /* 卡片网格 */
+  .emp-cards-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+    gap:12px; padding:0 16px 16px;
+  }
+
+  /* ===== 人力数据看板 ===== */
+  .dash-summary { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; }
+  .dash-stat {
+    flex:1; min-width:120px; background:var(--card-bg); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow);
+  }
+  .dash-stat .ds-val { font-size:24px; font-weight:700; color:var(--primary); }
+  .dash-stat .ds-label { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+  .dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+  .dash-card {
+    background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:16px 18px;
+  }
+  .dash-card h3 {
+    font-size:14px; font-weight:600; margin-bottom:12px; color:var(--text);
+    display:flex; align-items:center; gap:6px;
+  }
+  .dash-bar-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; cursor:pointer; }
+  .dash-bar-row:hover .dash-bar-label { color:var(--primary); }
+  .dash-bar-label {
+    width:104px; flex-shrink:0; font-size:12px; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;
+  }
+  .dash-bar-track { flex:1; background:#f1f5f9; border-radius:6px; height:18px; overflow:hidden; }
+  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:6px; transition:width .4s; }
+  .dash-bar-val { width:56px; flex-shrink:0; font-size:12px; color:var(--text-secondary); text-align:left; }
+  .dash-bar-row.active .dash-bar-fill { background:linear-gradient(90deg,#f59e0b,#d97706); }
+  .dash-bar-row.active .dash-bar-label { color:#d97706; font-weight:600; }
+
+  @media (max-width: 860px) {
+    .roster-layout { flex-direction:column; }
+    .roster-sidebar { width:100%; position:static; max-height:none; }
+  }
 </style>
 </head>
 <body>
@@ -818,7 +1333,7 @@
 <!-- Header -->
 <header class="header">
   <div class="header-inner">
-    <h1 style="cursor:pointer" onclick="scrollToTop()" title="点击返回顶部">🏢 开放式工作平台</h1>
+    <h1 style="cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="scrollToTop()" title="点击返回顶部"><img src="ihr-logo.png" alt="IHR" style="height:36px;width:auto;"> 开放式工作平台</h1>
     <span class="header-time" id="headerTime"></span>
   </div>
 </header>
@@ -835,16 +1350,48 @@
     <span class="ws-timer" id="wsTimer">--</span>
   </div>
   <div class="ws-divider"></div>
+  <div class="ws-item" id="weatherWidget" title="点击切换城市" onclick="toggleWeatherPanel(event)" style="cursor:pointer; position:relative;">
+    <span id="weatherIcon">🌤️</span>
+    <span class="ws-value" id="weatherTemp">--°</span>
+    <span class="ws-label" id="weatherCity">获取位置...</span>
+    <div id="weatherPanel" class="weather-panel" style="display:none;" onclick="event.stopPropagation();">
+      <div class="weather-panel-header">
+        <span>🌤️ 选择城市</span>
+        <span class="weather-close" onclick="hideWeatherPanel()">×</span>
+      </div>
+      <div class="weather-current" onclick="fetchWeatherByGPS(); hideWeatherPanel();">
+        📍 自动定位（GPS）
+      </div>
+      <div class="weather-cities">
+        <div class="weather-city" onclick="selectCity('上海')">上海</div>
+        <div class="weather-city" onclick="selectCity('北京')">北京</div>
+        <div class="weather-city" onclick="selectCity('深圳')">深圳</div>
+        <div class="weather-city" onclick="selectCity('杭州')">杭州</div>
+        <div class="weather-city" onclick="selectCity('武汉')">武汉</div>
+        <div class="weather-city" onclick="selectCity('厦门')">厦门</div>
+        <div class="weather-city" onclick="selectCity('青岛')">青岛</div>
+        <div class="weather-city" onclick="selectCity('成都')">成都</div>
+        <div class="weather-city" onclick="selectCity('苏州')">苏州</div>
+      </div>
+    </div>
+  </div>
+  <div class="ws-divider"></div>
   <a class="ws-calendar-link" href="https://outlook.cloud.microsoft/calendar/view/month" target="_blank" rel="noopener">📅 行事曆</a>
+  <div class="ws-divider"></div>
+  <div class="ws-item" style="cursor:pointer;gap:4px;" onclick="scrollToSection('todoSection')" title="点击跳转到待办事项">
+    <span>📝</span>
+    <span class="ws-value" id="todoStats">0 待办</span>
+    <span class="ws-label" id="todoUrgentStats" style="color:#dc2626;"></span>
+  </div>
 </div>
 
 <div class="container">
 
   <!-- 快捷入口 -->
   <section class="section">
-    <h2 class="section-title">快捷入口</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">快捷入口<span class="collapse-arrow">▼</span></h2>
     <div class="quick-cards">
-      <a class="quick-card" href="https://app.powerbi.com/Redirect?action=OpenReport&appId=5d160a1a-e16f-4b6a-bdb2-19fe69dad938&reportObjectId=3e67ebea-36e0-4b23-b890-0b459955888a&ctid=de047c79-d4d9-4af3-91de-bc44b0581490&reportPage=ace67697260e6b55c256&pbi_source=appShareLink&portalSessionId=295bb883-c3cd-4e8a-b760-c63abd9d5d48" target="_blank" rel="noopener">
+      <a class="quick-card" href="https://app.powerbi.com/groups/me/apps/5d160a1a-e16f-4b6a-bdb2-19fe69dad938/dashboards/4d7813b1-b732-4fb5-bd47-fcbac5b8715a?ctid=de047c79-d4d9-4af3-91de-bc44b0581490&experience=power-bi" target="_blank" rel="noopener">
         <div class="card-icon blue">📊</div>
         <div class="card-info">
           <h3>数位中心</h3>
@@ -894,6 +1441,15 @@
         <div class="card-info">
           <h3>单据审批</h3>
           <p>Flow 审批流程 · 单据查阅与签核</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
+      <a class="quick-card" href="https://www.jiandaoyun.com/dashboard/app/6a0588da14a6671d09abb566#/app/6a0588da14a6671d09abb566/dash/6a0c1d04eb66937633a8e480" target="_blank" rel="noopener">
+        <div class="card-icon purple">📈</div>
+        <div class="card-info">
+          <h3>简道云仪表盘</h3>
+          <p>jiandaoyun.com · 数据分析看板</p>
         </div>
         <span class="card-arrow">→</span>
       </a>
@@ -950,22 +1506,202 @@
     </div>
   </section>
 
+  <!-- 员工花名册查询 -->
+  <section class="section">
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">员工花名册查询<span class="collapse-arrow">▼</span></h2>
+    <div class="employee-section">
+      <div class="employee-search-bar">
+        <div class="employee-search-wrapper">
+          <span style="font-size:20px;">🔍</span>
+          <input type="text" id="employeeSearchInput" placeholder="输入关键字查询（姓名/工号精准，其余字段模糊）..." oninput="searchEmployee()">
+          <select id="employeeSearchScope" class="scope-select" onchange="searchEmployee()" title="选择搜索字段范围">
+            <option value="all">全部（模糊）</option>
+            <option value="name">姓名（精准）</option>
+            <option value="id">工号（精准）</option>
+            <option value="dept_99">部门(99层)</option>
+            <option value="title">职位</option>
+            <option value="city">工作城市</option>
+            <option value="business_unit">事业体</option>
+            <option value="sub_region">工作子区域</option>
+            <option value="school">毕业院校</option>
+            <option value="grade">职级</option>
+            <option value="education">学历</option>
+            <option value="major">科系</option>
+          </select>
+          <button onclick="resetEmployee()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 18px;cursor:pointer;font-size:14px;white-space:nowrap;">↺ 返回</button>
+        </div>
+        <div class="employee-stats" id="employeeStats">共 <strong id="employeeCount">0</strong> 条员工记录</div>
+      </div>
+      <div class="roster-layout">
+        <aside class="roster-sidebar" id="rosterSidebar"><!-- JS 动态填充 --></aside>
+        <div class="roster-main">
+          <div class="active-filters" id="activeFilters" style="display:none;"></div>
+          <div class="employee-result-area" id="employeeResultArea">
+            <div class="empty-state" id="employeeEmpty">
+              <div class="empty-icon">👤</div>
+              <p>请输入关键字搜索，或用左侧栏位快速筛选员工</p>
+              <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">示例：选「姓名(精准)」输入"梁碧华"，或点选左侧筛选条件</p>
+            </div>
+          </div>
+          <div id="employeeResultCount" style="display:none;padding:8px 16px;font-size:13px;color:var(--text-secondary);"></div>
+          <div id="employeeCards" class="emp-cards-grid"></div>
+          <div id="employeeLoadMore" style="display:none;text-align:center;padding:0 16px 16px;">
+            <button onclick="showMoreEmployees()" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 24px;cursor:pointer;font-size:14px;">加载更多结果...</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 人力数据交互看板 -->
+  <section class="section dashboard-section">
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">📊 人力数据看板<span class="collapse-arrow">▼</span></h2>
+    <div id="dashboardSummary" class="dash-summary"></div>
+    <div id="dashboardGrid" class="dash-grid"></div>
+  </section>
+
+  <!-- ===== 待办事项 ===== -->
+  <section class="section" id="todoSection">
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">📝 待办事项<span class="collapse-arrow">▼</span></h2>
+
+    <!-- 用户选择 -->
+    <div class="todo-user-bar">
+      <span class="user-label">👤 当前用户：</span>
+      <div class="todo-user-select" id="todoUserSelect">
+        <!-- 动态填充 -->
+      </div>
+      <div class="todo-user-input-group" id="todoUserInputGroup">
+        <input type="text" id="todoNewUserName" placeholder="输入姓名..." maxlength="20" onkeydown="if(event.key==='Enter')addTodoUser()">
+        <button class="user-btn-ok" onclick="addTodoUser()">✓ 确认</button>
+        <button class="user-btn-cancel" onclick="cancelAddUser()">取消</button>
+      </div>
+      <button class="todo-user-add" id="todoUserAddBtn" onclick="showAddUserInput()">＋ 添加用户</button>
+    </div>
+
+    <!-- 云端同步（GitHub 私有仓库，免手动粘贴） -->
+    <div class="todo-sync-area">
+      <button class="todo-sync-btn" id="syncBtn" onclick="toggleSyncUI()">☁️ 云端同步</button>
+      <div class="todo-sync-panel" id="syncPanel" style="display:none;">
+        <div id="syncSetup">
+          <input type="password" id="syncApiKey" class="todo-sync-input" style="display:block;" placeholder="粘贴 GitHub Token（仅存本机，需 repo 权限）" />
+          <input type="text" id="syncRepo" class="todo-sync-input" style="display:block;" placeholder="仓库名（格式 owner/repo，如 Yuki114918/wpgholdings-todos）" />
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" onclick="createGithubRepo()">➕ 新建私有仓库</button>
+            <button class="todo-sync-btn" onclick="connectCloud()">🔗 连接</button>
+            <a class="todo-sync-adv" href="javascript:void(0)" onclick="toggleOfflineCode()">或用离线同步码</a>
+          </div>
+          <span class="todo-sync-hint">云端已预置，打开即同步。输入你的用户名后点「刷新」即可与手机/电脑端保持一致。</span>
+        </div>
+        <div id="syncConnected" style="display:none;">
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" id="syncRefreshBtn" onclick="refreshCloud()">🔄 刷新</button>
+            <button class="todo-sync-btn" id="syncAutoBtn" onclick="toggleAutoSync()">⏱ 自动：关</button>
+            <button class="todo-sync-btn" id="syncDisconnectBtn" onclick="disconnectCloud()" style="border-color:#ef4444;color:#ef4444;">✕ 断开</button>
+          </div>
+        </div>
+        <div id="offlineCodeArea" style="display:none;">
+          <textarea class="todo-sync-input" id="syncCodeInput" rows="2" style="display:block;" placeholder="离线同步码（WPG1...），无网络时跨设备粘贴验证一致用" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();connectSync();}"></textarea>
+          <div class="todo-sync-row">
+            <button class="todo-sync-btn" onclick="connectSync()">🔗 连接</button>
+            <button class="todo-sync-btn" onclick="generateSync()">🆕 生成</button>
+            <button class="todo-sync-btn" onclick="copySyncCode()">📋 复制</button>
+          </div>
+        </div>
+        <span class="todo-sync-status" id="syncStatus"></span>
+      </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="todo-header-bar">
+      <div class="todo-stats-cards">
+        <div class="todo-stat-card todo-stat-urgent">
+          <div class="stat-num" id="statUrgent">0</div>
+          <div class="stat-label">🚨 紧急</div>
+        </div>
+        <div class="todo-stat-card todo-stat-pending">
+          <div class="stat-num" id="statPending">0</div>
+          <div class="stat-label">📋 待完成</div>
+        </div>
+        <div class="todo-stat-card todo-stat-done">
+          <div class="stat-num" id="statDone">0</div>
+          <div class="stat-label">✅ 已完成</div>
+        </div>
+        <div class="todo-stat-card todo-stat-total">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">📊 总计</div>
+        </div>
+      </div>
+      <button class="todo-add-btn" onclick="showTodoForm()">＋ 添加待办</button>
+    </div>
+
+    <!-- 筛选 + 搜索 -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+      <div class="todo-filters">
+        <button class="todo-filter-btn active" data-filter="all" onclick="setTodoFilter('all', this)">全部</button>
+        <button class="todo-filter-btn" data-filter="pending" onclick="setTodoFilter('pending', this)">待完成</button>
+        <button class="todo-filter-btn" data-filter="done" onclick="setTodoFilter('done', this)">已完成</button>
+        <button class="todo-filter-btn" data-filter="urgent" onclick="setTodoFilter('urgent', this)">紧急</button>
+      </div>
+      <input type="text" id="todoSearchInput" placeholder="🔍 搜索待办..." style="flex:1;min-width:180px;padding:8px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;outline:none;" oninput="renderTodoList()">
+    </div>
+
+    <!-- 添加/编辑表单 -->
+    <div class="todo-form" id="todoForm">
+      <div class="todo-form-row">
+        <input type="text" id="todoTitleInput" placeholder="待办事项标题 *" maxlength="100">
+        <select id="todoPriorityInput">
+          <option value="urgent">🚨 紧急</option>
+          <option value="normal" selected>⚡ 普通</option>
+          <option value="low">🔹 低优先</option>
+        </select>
+        <select id="todoCategoryInput">
+          <option value="">分类（可选）</option>
+          <option value="HR人事">HR人事</option>
+          <option value="薪资">薪资</option>
+          <option value="招聘">招聘</option>
+          <option value="行政">行政</option>
+          <option value="财务">财务</option>
+          <option value="法务">法务</option>
+          <option value="IT">IT</option>
+          <option value="其他">其他</option>
+        </select>
+        <input type="date" id="todoDueInput" style="min-width:140px;">
+      </div>
+      <div class="todo-form-row">
+        <textarea id="todoDescInput" placeholder="详细描述（可选）" maxlength="500"></textarea>
+      </div>
+      <div class="todo-form-row todo-form-actions">
+        <button class="todo-btn-save" onclick="saveTodo()">💾 保存</button>
+        <button class="todo-btn-cancel" onclick="hideTodoForm()">取消</button>
+        <span style="font-size:12px;color:var(--text-secondary);margin-left:auto;" id="todoFormHint"></span>
+      </div>
+    </div>
+
+    <!-- 待办列表 -->
+    <div class="todo-list" id="todoList"></div>
+    <div class="todo-empty" id="todoEmpty">
+      <div class="empty-icon">📝</div>
+      <p>暂无待办事项</p>
+      <p style="font-size:13px;margin-top:4px;">点击「＋ 添加待办」开始记录</p>
+    </div>
+  </section>
+
   <!-- HR法令查询 -->
   <section class="section">
-    <h2 class="section-title">HR法令查询</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">HR法令查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
         <div class="city-tabs" id="cityTabs">
-          <button class="city-tab active" data-city="national">🇨🇳 全国法规</button>
-          <button class="city-tab" data-city="shanghai">上海</button>
-          <button class="city-tab" data-city="beijing">北京</button>
-          <button class="city-tab" data-city="shenzhen">深圳</button>
-          <button class="city-tab" data-city="wuhan">武汉</button>
-          <button class="city-tab" data-city="xiamen">厦门</button>
-          <button class="city-tab" data-city="qingdao">青岛</button>
-          <button class="city-tab" data-city="hangzhou">杭州</button>
-          <button class="city-tab" data-city="chengdu">成都</button>
-          <button class="city-tab" data-city="suzhou">苏州</button>
+          <button class="city-tab active" data-city="national" onclick="switchCity('national')">🇨🇳 全国法规</button>
+          <button class="city-tab" data-city="shanghai" onclick="switchCity('shanghai')">上海</button>
+          <button class="city-tab" data-city="beijing" onclick="switchCity('beijing')">北京</button>
+          <button class="city-tab" data-city="shenzhen" onclick="switchCity('shenzhen')">深圳</button>
+          <button class="city-tab" data-city="wuhan" onclick="switchCity('wuhan')">武汉</button>
+          <button class="city-tab" data-city="xiamen" onclick="switchCity('xiamen')">厦门</button>
+          <button class="city-tab" data-city="qingdao" onclick="switchCity('qingdao')">青岛</button>
+          <button class="city-tab" data-city="hangzhou" onclick="switchCity('hangzhou')">杭州</button>
+          <button class="city-tab" data-city="chengdu" onclick="switchCity('chengdu')">成都</button>
+          <button class="city-tab" data-city="suzhou" onclick="switchCity('suzhou')">苏州</button>
         </div>
         <div class="legal-search">
           <input type="text" id="legalSearchInput" placeholder="搜索法规关键词...">
@@ -981,7 +1717,7 @@
 
   <!-- 劳动争议案件查询 -->
   <section class="section">
-    <h2 class="section-title">劳动争议案件查询</h2>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">劳动争议案件查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
         <h3>📋 最新劳动争议典型案例及法规适配</h3>
@@ -1035,34 +1771,6 @@
           <div class="empty-icon">🔍</div>
           <p>点击上方查询按钮查看劳动争议案件</p>
         </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- 员工花名册查询 -->
-  <section class="section">
-    <h2 class="section-title">员工花名册查询</h2>
-    <div class="employee-section">
-      <div class="employee-search-bar">
-        <div class="employee-search-wrapper">
-          <span style="font-size:20px;">🔍</span>
-          <input type="text" id="employeeSearchInput" placeholder="输入工号或姓名查询（支持模糊匹配）..." oninput="searchEmployee()">
-          <button onclick="resetEmployee()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 18px;cursor:pointer;font-size:14px;white-space:nowrap;">↺ 返回</button>
-        </div>
-        <div class="employee-stats" id="employeeStats">共 <strong id="employeeCount">0</strong> 条员工记录（含绩效考核主管）</div>
-      </div>
-      <div class="employee-result-area" id="employeeResultArea">
-        <div class="empty-state" id="employeeEmpty">
-          <div class="empty-icon">👤</div>
-          <p>请输入工号或姓名搜索员工资料</p>
-          <p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">示例：输入"0022"或"梁碧华"</p>
-        </div>
-      </div>
-      <div id="employeeResultCount" style="display:none;padding:8px 16px;font-size:13px;color:var(--text-secondary);"></div>
-      <div id="employeeCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;padding:0 16px 16px;"></div>
-      <div id="employeeLoadMore" style="display:none;text-align:center;padding:0 16px 16px;">
-        <button onclick="showMoreEmployees()" style="background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:8px;padding:8px 24px;cursor:pointer;font-size:14px;">加载更多结果...</button>
       </div>
     </div>
   </section>
@@ -1150,41 +1858,69 @@
   </div>
 </div>
 
-<script src="data/legal-data.js"></script>
+<script src="data/legal-data.js?v=4"></script>
 <script>
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
-  updateTime();
-  setInterval(updateTime, 1000);
-  renderNationalLaws();
-  renderCases(caseData);
+  try {
+    updateTime();
+    setInterval(updateTime, 1000);
+  } catch (e) { console.error('时间初始化失败:', e); }
 
-  // 动态更新员工总数
-  if (typeof EMPLOYEES_DATA !== 'undefined') {
-    document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
+  try {
+    renderNationalLaws();
+  } catch (e) { console.error('全国法规渲染失败:', e); }
+
+  try {
+    // 如果 caseData 未定义，使用空数组兜底
+    renderCases(typeof caseData !== 'undefined' ? caseData : []);
+  } catch (e) { console.error('案例渲染失败:', e); }
+
+  try {
+    fetchWeather();
+  } catch (e) { console.error('天气初始化失败:', e); }
+
+  // 动态更新员工总数（兜底：如果分块数据已合并但DOM未就绪时漏更新）
+  try {
+    if (window._employeesMerged && EMPLOYEES_DATA && EMPLOYEES_DATA.length) {
+      document.getElementById('employeeCount').textContent = EMPLOYEES_DATA.length.toLocaleString();
+    }
+  } catch (e) { console.error('员工数更新失败:', e); }
+
+  // 城市切换（事件委托，作为兜底）
+  const cityTabs = document.getElementById('cityTabs');
+  if (cityTabs) {
+    cityTabs.addEventListener('click', (e) => {
+      const btn = e.target.closest('.city-tab');
+      if (btn) switchCity(btn.dataset.city);
+    });
   }
 
-  // 城市切换
-  document.getElementById('cityTabs').addEventListener('click', (e) => {
-    if (e.target.classList.contains('city-tab')) {
-      document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
-      e.target.classList.add('active');
-      if (e.target.dataset.city === 'national') {
-            renderNationalLaws();
-          } else {
-            renderCityData(e.target.dataset.city);
-          }
-    }
-  });
-
   // 键盘搜索
-  document.getElementById('legalSearchInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') searchLegal();
-  });
-  document.getElementById('caseSearchInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') searchCases();
-  });
+  try {
+    const legalInput = document.getElementById('legalSearchInput');
+    if (legalInput) legalInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchLegal(); });
+    const caseInput = document.getElementById('caseSearchInput');
+    if (caseInput) caseInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchCases(); });
+  } catch (e) { console.error('搜索事件绑定失败:', e); }
 });
+
+// 城市切换函数（每个标签直接 onclick 调用，移动端最可靠）
+function switchCity(cityKey) {
+  try {
+    document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+    const target = document.querySelector('.city-tab[data-city="' + cityKey + '"]');
+    if (target) target.classList.add('active');
+    if (cityKey === 'national') {
+      renderNationalLaws();
+    } else {
+      renderCityData(cityKey);
+    }
+  } catch (e) {
+    console.error('切换城市失败:', e);
+    alert('切换失败，请刷新页面重试');
+  }
+}
 
 function updateTime() {
   const now = new Date();
@@ -1195,6 +1931,196 @@ function updateTime() {
   document.getElementById('headerTime').textContent = str;
   updateWorkTimer();
 }
+
+// ==================== 天气 ====================
+const WEATHER_ICONS = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌦️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️',
+  66: '🌨️', 67: '🌨️',
+  71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
+  80: '🌦️', 81: '🌦️', 82: '🌦️',
+  85: '🌨️', 86: '🌨️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️'
+};
+
+function getWeatherEmoji(code) {
+  return WEATHER_ICONS[code] || '🌡️';
+}
+
+let lastWeatherFetch = 0;
+let currentWeatherLat = null;
+let currentWeatherLon = null;
+
+function setWeatherLoading(text) {
+  document.getElementById('weatherIcon').textContent = '⏳';
+  document.getElementById('weatherTemp').textContent = '--°';
+  document.getElementById('weatherCity').textContent = text || '获取中...';
+}
+
+function setWeatherData(code, temp, city) {
+  document.getElementById('weatherIcon').textContent = getWeatherEmoji(code);
+  document.getElementById('weatherTemp').textContent = Math.round(temp) + '°';
+  document.getElementById('weatherCity').textContent = city;
+}
+
+function setWeatherError(text) {
+  document.getElementById('weatherIcon').textContent = '🌤️';
+  document.getElementById('weatherTemp').textContent = '--°';
+  document.getElementById('weatherCity').textContent = text || '定位失败';
+}
+
+async function fetchWeatherRaw(lat, lon, cityName) {
+  const weatherRes = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
+  );
+  const weatherData = await weatherRes.json();
+  const w = weatherData.current_weather;
+  setWeatherData(w.weathercode, w.temperature, cityName || '当前位置');
+  currentWeatherLat = lat;
+  currentWeatherLon = lon;
+}
+
+// 通过城市名称获取天气
+async function selectCity(cityName) {
+  hideWeatherPanel();
+  setWeatherLoading(cityName);
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=zh&format=json`
+    );
+    const geoData = await geoRes.json();
+    if (!geoData.results || geoData.results.length === 0) {
+      throw new Error('未找到城市');
+    }
+    const r = geoData.results[0];
+    await fetchWeatherRaw(r.latitude, r.longitude, cityName);
+    localStorage.setItem('weatherCity', cityName);
+    localStorage.removeItem('weatherUseGPS');
+  } catch (e) {
+    console.log('城市天气失败:', e.message);
+    setWeatherError('获取失败');
+  }
+}
+
+// GPS 定位
+async function fetchWeatherByGPS() {
+  setWeatherLoading('定位中...');
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('不支持定位'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        timeout: 10000, maximumAge: 600000
+      });
+    });
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // 反查城市名
+    let cityName = '';
+    try {
+      const geoRes = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=zh`
+      );
+      const geoData = await geoRes.json();
+      cityName = geoData.city || geoData.locality || '';
+      cityName = cityName.replace(/市$/, '').replace(/区$/, '');
+    } catch (e) {
+      cityName = '当前位置';
+    }
+
+    await fetchWeatherRaw(lat, lon, cityName || '当前位置');
+    localStorage.setItem('weatherUseGPS', 'true');
+    localStorage.removeItem('weatherCity');
+  } catch (e) {
+    console.log('GPS定位失败:', e.message);
+    // GPS 失败，自动降级到 IP 定位
+    await fetchWeatherByIP();
+  }
+}
+
+// IP 定位（GPS 失败时的兜底）
+async function fetchWeatherByIP() {
+  setWeatherLoading('IP定位中...');
+  try {
+    // 优先尝试 ipapi.co
+    let data = null;
+    try {
+      const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+      data = await res.json();
+    } catch (e) {}
+
+    // ipapi.co 失败则尝试 ipinfo.io
+    if (!data || data.error) {
+      const res = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+      const info = await res.json();
+      if (info.loc) {
+        const [lat, lon] = info.loc.split(',').map(Number);
+        const cityName = (info.city || '').replace(/市$/, '');
+        await fetchWeatherRaw(lat, lon, cityName || '当前位置');
+        localStorage.setItem('weatherCity', cityName || '当前位置');
+        localStorage.removeItem('weatherUseGPS');
+        return;
+      }
+    } else {
+      await fetchWeatherRaw(data.latitude, data.longitude, (data.city || '当前位置').replace(/市$/, ''));
+      localStorage.setItem('weatherCity', (data.city || '当前位置').replace(/市$/, ''));
+      localStorage.removeItem('weatherUseGPS');
+      return;
+    }
+
+    throw new Error('IP定位不可用');
+  } catch (e) {
+    console.log('IP定位失败:', e.message);
+    // 最终兜底：默认上海
+    await selectCity('上海');
+  }
+}
+
+// 入口：根据用户上次选择或默认 GPS
+async function fetchWeather() {
+  const now = Date.now();
+  if (now - lastWeatherFetch < 120000) { // 2 分钟内不重复请求
+    return;
+  }
+  lastWeatherFetch = now;
+
+  const savedCity = localStorage.getItem('weatherCity');
+  const useGPS = localStorage.getItem('weatherUseGPS') === 'true';
+
+  if (savedCity && !useGPS) {
+    await selectCity(savedCity);
+  } else {
+    await fetchWeatherByGPS();
+  }
+}
+
+function toggleWeatherPanel(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('weatherPanel');
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+}
+
+function hideWeatherPanel() {
+  document.getElementById('weatherPanel').style.display = 'none';
+}
+
+// 点击页面其他地方关闭天气面板
+document.addEventListener('click', function(e) {
+  const widget = document.getElementById('weatherWidget');
+  if (widget && !widget.contains(e.target)) {
+    hideWeatherPanel();
+  }
+});
+
+// 每 30 分钟刷新一次天气
+setInterval(fetchWeather, 1800000);
 
 // Work countdown timer (8:30-17:30, Mon-Fri)
 function updateWorkTimer() {
@@ -1609,23 +2535,104 @@ function toSimplified(str) {
   return result;
 }
 
+// ==================== 985 / 211 院校识别 ====================
+// 规范校名（含常用简称），匹配时统一转简体并去除括号/空格后再双向包含判断
+var SCHOOL_985 = [
+  '清华大学','北京大学','中国人民大学','北京理工大学','北京航空航天大学','中国农业大学','北京师范大学','中央民族大学',
+  '复旦大学','上海交通大学','同济大学','华东师范大学','南京大学','东南大学','浙江大学','中国科学技术大学','厦门大学',
+  '山东大学','中国海洋大学','武汉大学','华中科技大学','中南大学','湖南大学','中山大学','华南理工大学','四川大学',
+  '电子科技大学','重庆大学','西安交通大学','西北工业大学','西北农林科技大学','兰州大学','吉林大学','哈尔滨工业大学',
+  '大连理工大学','东北大学','天津大学','南开大学','国防科技大学'
+];
+var SCHOOL_211 = [
+  '清华大学','北京大学','中国人民大学','北京理工大学','北京航空航天大学','中国农业大学','北京师范大学','中央民族大学',
+  '北京邮电大学','北京交通大学','北京科技大学','北京化工大学','北京工业大学','北京林业大学','华北电力大学','中国传媒大学',
+  '中央音乐学院','对外经济贸易大学','北京中医药大学','北京外国语大学','中国政法大学','中央财经大学','中国矿业大学(北京)',
+  '中国石油大学(北京)','中国地质大学(北京)','北京体育大学','天津大学','南开大学','天津医科大学','河北工业大学','太原理工大学',
+  '内蒙古大学','大连理工大学','东北大学','大连海事大学','辽宁大学','吉林大学','东北师范大学','延边大学','哈尔滨工业大学',
+  '哈尔滨工程大学','东北农业大学','东北林业大学','复旦大学','上海交通大学','同济大学','华东师范大学','华东理工大学','东华大学',
+  '上海大学','上海财经大学','上海外国语大学','南京大学','东南大学','苏州大学','南京航空航天大学','南京理工大学','河海大学',
+  '南京农业大学','中国药科大学','江南大学','南京师范大学','浙江大学','中国科学技术大学','合肥工业大学','安徽大学','厦门大学',
+  '福州大学','南昌大学','山东大学','中国海洋大学','中国石油大学(华东)','郑州大学','武汉大学','华中科技大学','武汉理工大学',
+  '中国地质大学(武汉)','华中农业大学','华中师范大学','中南财经政法大学','湖南大学','中南大学','湖南师范大学','国防科技大学',
+  '中山大学','华南理工大学','暨南大学','华南师范大学','广西大学','海南大学','重庆大学','西南大学','四川大学','电子科技大学',
+  '西南交通大学','西南财经大学','四川农业大学','贵州大学','云南大学','西藏大学','西安交通大学','西北工业大学','西北农林科技大学',
+  '西北大学','西安电子科技大学','长安大学','陕西师范大学','空军军医大学','兰州大学','青海大学','宁夏大学','新疆大学','石河子大学'
+];
+function _normSchool(s){ return toSimplified(String(s == null ? '' : s)).replace(/[()（）]/g,'').replace(/\s/g,''); }
+var _985_TOKENS = SCHOOL_985.map(_normSchool);
+var _211_TOKENS = SCHOOL_211.map(_normSchool);
+function getSchoolTags(school){
+  var s = _normSchool(school);
+  if (!s) return { is985:false, is211:false };
+  var is985 = _985_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
+  var is211 = _211_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
+  return { is985:is985, is211:is211 };
+}
+
 // ==================== 员工查询 ====================
 var employeeSearchResults = [];
 var employeeDisplayCount = 0;
+var EMP_SEARCH_INDEX = null;
+var rosterFilters = {}; // 维度 -> 值（单选，跨维度 AND）
 
-function searchEmployee() {
-  var q = document.getElementById('employeeSearchInput').value.trim();
+// 将整条员工记录（含对象/数组，如工作经历、绩效）递归拼成可搜索文本
+function employeeSearchText(e) {
+  var parts = [];
+  (function collect(v) {
+    if (v === null || v === undefined) return;
+    if (typeof v === 'string') { if (v) parts.push(v); }
+    else if (typeof v === 'number') { parts.push(String(v)); }
+    else if (Array.isArray(v)) { v.forEach(collect); }
+    else if (typeof v === 'object') { for (var k in v) collect(v[k]); }
+  })(e);
+  return parts.join(' ').toLowerCase();
+}
+
+// 预计算一次：每条员工的「原文 + 简体版」合并文本，搜索时只做 indexOf
+function buildEmployeeSearchIndex() {
+  if (!EMPLOYEES_DATA) return;
+  EMP_SEARCH_INDEX = EMPLOYEES_DATA.map(function(e) {
+    var t = employeeSearchText(e);
+    var tags = getSchoolTags(e.school);
+    e._is985 = tags.is985;
+    e._is211 = tags.is211;
+    var tagTxt = (tags.is985 ? ' 985' : '') + (tags.is211 ? ' 211' : '');
+    return t + ' ' + toSimplified(t) + tagTxt;
+  });
+}
+function getEmployeeSearchIndex() {
+  if (!EMP_SEARCH_INDEX && EMPLOYEES_DATA) buildEmployeeSearchIndex();
+  return EMP_SEARCH_INDEX || [];
+}
+
+function getFieldValue(e, field) {
+  if (field === 'name') return [e.ec_name, e.name, e.en_name].filter(Boolean).join(' ');
+  return e[field] != null ? String(e[field]) : '';
+}
+
+function runRosterSearch() {
+  var q = (document.getElementById('employeeSearchInput').value || '').trim();
+  var scope = document.getElementById('employeeSearchScope').value;
   var empty = document.getElementById('employeeEmpty');
   var cards = document.getElementById('employeeCards');
   var countEl = document.getElementById('employeeResultCount');
   var loadMore = document.getElementById('employeeLoadMore');
+  var filterKeys = Object.keys(rosterFilters);
 
-  if (!q || q.length < 1) {
-    resetEmployee();
+  // 无查询且无筛选：回到初始引导态
+  if (!q && filterKeys.length === 0) {
+    employeeSearchResults = [];
+    employeeDisplayCount = 0;
+    empty.style.display = 'block';
+    empty.querySelector('p').textContent = '请输入关键字搜索，或用左侧栏位快速筛选员工';
+    countEl.style.display = 'none';
+    loadMore.style.display = 'none';
+    cards.innerHTML = '';
     return;
   }
 
-  if (typeof EMPLOYEES_DATA === 'undefined') {
+  if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) {
     empty.style.display = 'block';
     empty.querySelector('p').textContent = '数据加载中，请稍候...';
     cards.innerHTML = '';
@@ -1634,24 +2641,58 @@ function searchEmployee() {
     return;
   }
 
+  var hasQuery = !!q;
   var ql = q.toLowerCase();
   var qs = toSimplified(ql); // 简体版搜索词
-  employeeSearchResults = EMPLOYEES_DATA.filter(function(e) {
-    // 工号精确匹配
-    if (e.id && String(e.id).toLowerCase().indexOf(ql) !== -1) return true;
-    // 姓名：同时匹配原始值 & 简体版
-    if (e.name) {
-      var n = e.name.toLowerCase();
-      if (n.indexOf(ql) !== -1) return true;
-      if (toSimplified(n).indexOf(qs) !== -1) return true;
+  var idx = getEmployeeSearchIndex();
+
+  employeeSearchResults = EMPLOYEES_DATA.filter(function(e, i) {
+    // ① 维度筛选（跨维度 AND）
+    for (var d = 0; d < filterKeys.length; d++) {
+      var dim = filterKeys[d], want = rosterFilters[dim];
+      if (dim === 'schoolTag') {
+        if (want === '985' && !e._is985) return false;
+        if (want === '211' && !e._is211) return false;
+        if (want === '985211' && !(e._is985 && e._is211)) return false;
+        if (want === 'normal' && !(e.school && !(e._is985 || e._is211))) return false;
+        if (want === 'noschool' && e.school) return false;
+      } else if (dim === 'status') {
+        if ((e.status || '') !== want) return false;
+      } else if (dim === 'gender') {
+        if ((e.gender || '') !== want) return false;
+      } else if (dim === 'hire_type') {
+        if ((e.hire_type || '') !== want) return false;
+      } else if (dim === 'city') {
+        if ((e.city || '') !== want) return false;
+      } else if (dim === 'business_unit') {
+        if ((e.business_unit || '') !== want) return false;
+      } else if (dim === 'grade') {
+        if ((e.grade || '') !== want) return false;
+      } else {
+        if (getFieldValue(e, dim) !== want) return false;
+      }
     }
-    if (e.ec_name) {
-      var ec = e.ec_name.toLowerCase();
-      if (ec.indexOf(ql) !== -1) return true;
-      if (toSimplified(ec).indexOf(qs) !== -1) return true;
+    // ② 文本查询
+    if (!hasQuery) return true;
+    if (scope === 'id') {
+      var idN = String(e.id || '');
+      return idN === q || (Number(idN) === Number(q) && q !== '' && !isNaN(Number(q)));
     }
-    if (e.en_name && e.en_name.toLowerCase().indexOf(ql) !== -1) return true;
-    return false;
+    if (scope === 'name') {
+      var names = [e.ec_name, e.name, e.en_name].filter(Boolean)
+        .map(function(x) { return toSimplified(String(x)).toLowerCase(); });
+      return names.indexOf(qs) !== -1 || names.indexOf(ql) !== -1;
+    }
+    if (scope === 'all') {
+      var text = idx[i] || '';
+      return text.indexOf(ql) !== -1 || text.indexOf(qs) !== -1; // 简繁双向
+    }
+    // 指定字段：模糊匹配（简繁双向）
+    var fv = getFieldValue(e, scope);
+    var ft = fv.toLowerCase();
+    var fs = toSimplified(ft);
+    return ft.indexOf(ql) !== -1 || fs.indexOf(qs) !== -1 ||
+           ft.indexOf(qs) !== -1 || fs.indexOf(ql) !== -1;
   });
 
   employeeDisplayCount = 0;
@@ -1665,6 +2706,8 @@ function searchEmployee() {
 
   showMoreEmployees();
 }
+
+function searchEmployee() { runRosterSearch(); }
 
 function showMoreEmployees() {
   var cards = document.getElementById('employeeCards');
@@ -1680,25 +2723,36 @@ function showMoreEmployees() {
     var empId = e.id || '-';
     var isActive = (e.status || '') === '在职';
     var badgeClass = isActive ? '' : ' inactive';
-    var badgeText = e.status || '';
+    var badgeText = isActive ? (e.status || '') : '离职访谈';
+    var headTags = (e._is985 || e._is211)
+      ? '<span class="emp-head-tags">' +
+          (e._is985 ? '<span class="school-tag t985">985</span>' : '') +
+          (e._is211 ? '<span class="school-tag t211">211</span>' : '') +
+        '</span>'
+      : '';
 
     html += '<div class="emp-card">' +
       '<div class="emp-header">' +
         '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
         '<div>' +
-          '<div class="emp-name">' + name + '</div>' +
+          '<div class="emp-name">' + name + headTags + '</div>' +
           '<div class="emp-id">工号：' + empId + '</div>' +
         '</div>' +
         (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
       '</div>' +
       '<div class="emp-details">' +
-        buildDetail('部门(100层)', e.dept) +
+        buildDetail('部门(100层)', e.dept_100) +
+        buildDetail('部门主管(100层)', e.mgr100) +
+        buildDetail('兼任主管(100层)', e.conc100) +
         buildDetail('部门(99层)', e.dept_99) +
+        buildDetail('部门主管(99层)', e.mgr99) +
+        buildDetail('兼任主管(99层)', e.conc99) +
         buildDetail('职位', e.title) +
         buildDetail('职等', e.grade) +
         buildDetail('职系', e.job_series) +
         buildDetail('事业体', e.business_unit) +
         buildDetail('工作城市', e.city) +
+        buildDetail('工作子区域', e.sub_region) +
         buildDetail('主管标记', e.is_manager) +
         buildDetail('手机', e.phone) +
         buildDetail('分机', e.ext) +
@@ -1708,8 +2762,21 @@ function showMoreEmployees() {
         buildDetail('司龄(年)', e.tenure) +
         (e.leave_date && e.status !== '在职' ? '<div class="leave-date-row"><span class="dl">离职日期：</span><span class="dv leave-date-val">' + e.leave_date + '</span></div>' : '') +
         (e.leave_reason && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">离职原因：</span><span class="dv">' + e.leave_reason + '</span></div>' : '') +
+        (e.event_reason && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">事件理由：</span><span class="dv">' + e.event_reason + '</span></div>' : '') +
+        (e.interview_by && e.status !== '在职' ? '<div class="leave-reason-row"><span class="dl">访谈对象：</span><span class="dv">' + e.interview_by + '</span></div>' : '') +
         buildDetail('领薪公司', e.company) +
         buildDetail('考核主管', e.perf_mgr) +
+        buildDetail('学历', e.education) +
+        buildDetail('毕业年月', e.grad_date) +
+        buildDetail('就学状况', e.study_status) +
+        (function() {
+          if (!e.school) return '';
+          var st = getSchoolTags(e.school);
+          var tags = (st.is985 ? '<span class="school-tag t985">985</span>' : '') +
+                     (st.is211 ? '<span class="school-tag t211">211</span>' : '');
+          return '<div><span class="dl">学校名称：</span><span class="dv">' + e.school + '</span>' + tags + '</div>';
+        })() +
+        buildDetail('科系', e.major) +
         (function() {
           if (!e.emerg_name) return '';
           var names = e.emerg_name.split(' / ');
@@ -1720,10 +2787,39 @@ function showMoreEmployees() {
             var rel = rels[i] ? ' (' + rels[i] + ')' : '';
             var ph = phones[i] || '';
             if (ph) ph = ' ' + ph;
-            var label = i === 0 ? '<span class="dl">紧急联络人：</span>' : '<span class="dl"></span>';
+            var label = i === 0 ? '<span class="dl">紧急联络资料：</span>' : '<span class="dl"></span>';
             lines += '<div>' + label + '<span class="dv">' + names[i].trim() + rel + '</span><span class="dv">' + ph + '</span></div>';
           }
           return lines;
+        })() +
+        (function() {
+          if (!e.perf || !e.perf.length) return '';
+          var perfSorted = e.perf.slice().sort(function(a, b) {
+            return (b.start_date || '').localeCompare(a.start_date || '');
+          });
+          var items = perfSorted.map(function(p) {
+            var period = (p.start_date || '') + (p.end_date ? '~' + p.end_date : '');
+            var parts = [];
+            if (p.score_name) parts.push(p.score_name);
+            if (period) parts.push('(' + period + ')');
+            var line = parts.join(' ');
+            if (p.score) line += ' 评分:' + p.score;
+            if (p.perf_score) line += ' 績效:' + p.perf_score;
+            if (p.score_label) line += ' [' + p.score_label + ']';
+            return '<div class="perf-item">' + line + '</div>';
+          }).join('');
+          return '<details class="perf-details"><summary>绩效考核记录（' + e.perf.length + ' 笔，按年份排序）</summary>' + items + '</details>';
+        })() +
+        (function() {
+          if (!e.work_experience || !e.work_experience.length) return '';
+          var items = e.work_experience.map(function(w) {
+            var period = (w.start || '') + (w.end ? ' ~ ' + w.end : '');
+            var head = [w.company, w.title, w.dept, w.city].filter(function(x){ return x; }).join(' · ');
+            var line = head + (period ? '  (' + period + ')' : '');
+            if (w.content) line += '<br><span class="we-content">工作内容：' + w.content + '</span>';
+            return '<div class="we-item">' + line + '</div>';
+          }).join('');
+          return '<details class="perf-details" open><summary>工作经历（' + e.work_experience.length + ' 段，按入职倒序）</summary>' + items + '</details>';
         })() +
         buildDetail('任用别', e.hire_type) +
         buildDetail('国籍', e.nationality) +
@@ -1750,19 +2846,860 @@ function buildDetail(label, val) {
 
 function resetEmployee() {
   document.getElementById('employeeSearchInput').value = '';
-  employeeSearchResults = [];
-  employeeDisplayCount = 0;
-  document.getElementById('employeeResultCount').style.display = 'none';
-  document.getElementById('employeeLoadMore').style.display = 'none';
-  document.getElementById('employeeCards').innerHTML = '';
-  var empty = document.getElementById('employeeEmpty');
-  empty.style.display = 'block';
-  empty.querySelector('p').textContent = '请输入工号或姓名搜索员工资料';
+  runRosterSearch();
 }
 
+// ==================== 侧边栏 / 看板 / 维度筛选 ====================
+function buildRosterSidebar() {
+  var side = document.getElementById('rosterSidebar');
+  if (!side) return;
+  var html = '';
+  html += '<div class="sidebar-group"><div class="sidebar-title">快速定位（搜索字段）</div>';
+  var scopes = [['name','姓名（精准）'],['id','工号（精准）'],['dept_99','部门'],['title','职位'],['city','城市'],['business_unit','事业体'],['school','毕业院校']];
+  scopes.forEach(function(s){
+    html += '<button class="sidebar-btn" data-scope="'+s[0]+'" onclick="setSearchScope(\''+s[0]+'\')">'+s[1]+'<span class="sb-hint">'+(s[0]==='name'||s[0]==='id'?'精准':'模糊')+'</span></button>';
+  });
+  html += '</div>';
+  var facets = [
+    {dim:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']]},
+    {dim:'gender', title:'性别', vals:[['男','男'],['女','女']]},
+    {dim:'hire_type', title:'用工类型', vals:[['正職','正職'],['派遣','派遣'],['兼職','兼職']]},
+    {dim:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']]}
+  ];
+  facets.forEach(function(f){
+    html += '<div class="sidebar-group"><div class="sidebar-title">'+f.title+'</div><div class="facet-chips">';
+    f.vals.forEach(function(v){
+      html += '<span class="facet-chip" data-dim="'+f.dim+'" data-val="'+v[0]+'" onclick="toggleRosterFilter(\''+f.dim+'\',\''+v[0]+'\')">'+v[1]+'</span>';
+    });
+    html += '</div></div>';
+  });
+  side.innerHTML = html;
+  updateRosterFilterUI();
+}
+
+function setSearchScope(scope){
+  var sel = document.getElementById('employeeSearchScope');
+  if (sel) sel.value = scope;
+  var btns = document.querySelectorAll('.sidebar-btn[data-scope]');
+  for (var i=0;i<btns.length;i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-scope')===scope);
+  var inp = document.getElementById('employeeSearchInput');
+  if (inp) inp.focus();
+}
+
+function toggleRosterFilter(dim, val){
+  if (rosterFilters[dim] === val) delete rosterFilters[dim];
+  else rosterFilters[dim] = val;
+  updateRosterFilterUI();
+  buildDashboard();
+  runRosterSearch();
+}
+
+function clearRosterFilters(){
+  rosterFilters = {};
+  updateRosterFilterUI();
+  buildDashboard();
+  runRosterSearch();
+}
+
+function updateRosterFilterUI(){
+  var chips = document.querySelectorAll('.facet-chip');
+  for (var i=0;i<chips.length;i++){
+    var c = chips[i];
+    c.classList.toggle('active', rosterFilters[c.getAttribute('data-dim')] === c.getAttribute('data-val'));
+  }
+  var bar = document.getElementById('activeFilters');
+  if (!bar) return;
+  var keys = Object.keys(rosterFilters);
+  if (!keys.length){ bar.innerHTML=''; bar.style.display='none'; return; }
+  bar.style.display='flex';
+  var labelMap = {status:'状态',gender:'性别',hire_type:'用工',schoolTag:'院校',city:'城市',business_unit:'事业体',grade:'职级',dept_99:'部门',title:'职位',sub_region:'子区域',education:'学历',major:'科系'};
+  var dispMap = {985:'985',211:'211',985211:'985+211',normal:'普通院校',noschool:'无院校'};
+  var html = '';
+  keys.forEach(function(k){
+    var v = rosterFilters[k];
+    var disp = (k==='schoolTag') ? (dispMap[v]||v) : v;
+    html += '<span class="active-filter">'+labelMap[k]+'：'+disp+' <b onclick="toggleRosterFilter(\''+k+'\',\''+v+'\')">✕</b></span>';
+  });
+  html += '<span class="active-filter clear" onclick="clearRosterFilters()">清除全部 ✕</span>';
+  bar.innerHTML = html;
+}
+
+function buildDashboard(){
+  var sumEl = document.getElementById('dashboardSummary');
+  var gridEl = document.getElementById('dashboardGrid');
+  if (!sumEl || !gridEl || !EMPLOYEES_DATA) return;
+  var D = EMPLOYEES_DATA;
+  var total = D.length;
+  var active = D.filter(function(e){ return (e.status||'')==='在职'; }).length;
+  var cnt985 = D.filter(function(e){ return e._is985; }).length;
+  var cnt211 = D.filter(function(e){ return e._is211; }).length;
+  var male = D.filter(function(e){ return (e.gender||'')==='男'; }).length;
+  var female = D.filter(function(e){ return (e.gender||'')==='女'; }).length;
+  var summary = [
+    {val:total.toLocaleString(), label:'员工总数'},
+    {val:active.toLocaleString(), label:'在职人数'},
+    {val:cnt985.toLocaleString(), label:'985院校'},
+    {val:cnt211.toLocaleString(), label:'211院校'},
+    {val:male.toLocaleString(), label:'男性'},
+    {val:female.toLocaleString(), label:'女性'}
+  ];
+  sumEl.innerHTML = summary.map(function(s){return '<div class="dash-stat"><div class="ds-val">'+s.val+'</div><div class="ds-label">'+s.label+'</div></div>';}).join('');
+
+  var dims = [
+    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']]},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true},
+    {key:'gender', title:'性别', vals:[['男','男'],['女','女']]},
+    {key:'hire_type', title:'用工类型', vals:null},
+    {key:'business_unit', title:'事业体 Top8', vals:null, top:8},
+    {key:'dept_99', title:'部门(99层) Top8', vals:null, top:8},
+    {key:'city', title:'工作城市 Top8', vals:null, top:8},
+    {key:'grade', title:'职级 Top8', vals:null, top:8}
+  ];
+  var grid = '';
+  dims.forEach(function(dim){
+    var counts;
+    if (dim.vals) {
+      counts = dim.vals.map(function(v){ return {label:v[1], val:v[0], cnt: countByDim(D, dim.key, v[0])}; });
+    } else {
+      var map = {};
+      D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
+      counts = Object.keys(map).map(function(k){return {label:k, val:k, cnt:map[k]};});
+      counts.sort(function(a,b){return b.cnt-a.cnt;});
+      if (dim.top) counts = counts.slice(0, dim.top);
+    }
+    var max = counts.reduce(function(m,c){return Math.max(m,c.cnt);},1);
+    var bars = counts.map(function(c){
+      var pct = (c.cnt/max*100).toFixed(1);
+      var activeCls = (rosterFilters[dim.key]===c.val) ? ' active' : '';
+      var esc = String(c.val).replace(/'/g,"\\'");
+      return '<div class="dash-bar-row'+activeCls+'" onclick="toggleRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击筛选：'+c.label+'">'+
+        '<div class="dash-bar-label" title="'+c.label+'">'+c.label+'</div>'+
+        '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;"></div></div>'+
+        '<div class="dash-bar-val">'+c.cnt.toLocaleString()+'</div></div>';
+    }).join('');
+    grid += '<div class="dash-card"><h3>'+dim.title+'</h3>'+bars+'</div>';
+  });
+  gridEl.innerHTML = grid;
+}
+
+function getDimValue(e, key){
+  if (key==='schoolTag') return null;
+  return e[key] != null ? String(e[key]) : '';
+}
+
+function countByDim(D, key, val){
+  if (key==='schoolTag') {
+    if (val==='985') return D.filter(function(e){return e._is985;}).length;
+    if (val==='211') return D.filter(function(e){return e._is211;}).length;
+    if (val==='985211') return D.filter(function(e){return e._is985 && e._is211;}).length;
+    if (val==='normal') return D.filter(function(e){return e.school && !(e._is985||e._is211);}).length;
+    if (val==='noschool') return D.filter(function(e){return !e.school;}).length;
+    return 0;
+  }
+  return D.filter(function(e){ return (e[key]||'')===val; }).length;
+}
+
+// ==================== 待办事项 ====================
+var todoList = [];
+var todoFilter = 'all';
+var editingId = null;
+var currentUser = '';
+var userList = [];
+var USERS_KEY = 'wpgholdings_todo_users';
+
+function getTodoKey() {
+  return 'wpgholdings_todos_' + (currentUser || 'default');
+}
+
+function loadUserList() {
+  try {
+    var raw = localStorage.getItem(USERS_KEY);
+    userList = raw ? JSON.parse(raw) : [];
+  } catch (e) { userList = []; }
+  if (userList.length === 0) {
+    userList = ['Yuki'];
+    saveUserList();
+  }
+  // 恢复上次用户
+  var lastUser = localStorage.getItem('wpgholdings_todo_lastuser') || '';
+  if (lastUser && userList.indexOf(lastUser) !== -1) {
+    currentUser = lastUser;
+  } else {
+    currentUser = userList[0];
+  }
+}
+
+function saveUserList() {
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(userList));
+  } catch (e) { console.error('用户列表存储失败:', e); }
+}
+
+function renderUserChips() {
+  var container = document.getElementById('todoUserSelect');
+  var html = '';
+  userList.forEach(function(u) {
+    var activeClass = u === currentUser ? ' active' : '';
+    var delBtn = userList.length > 1 ? '<span class="chip-del" onclick="event.stopPropagation();deleteTodoUser(\'' + escapeHtml(u) + '\')">×</span>' : '';
+    html += '<span class="todo-user-chip' + activeClass + '" onclick="switchTodoUser(\'' + escapeHtml(u) + '\')">' + escapeHtml(u) + delBtn + '</span>';
+  });
+  container.innerHTML = html;
+}
+
+function switchTodoUser(name) {
+  if (name === currentUser) return;
+  currentUser = name;
+  localStorage.setItem('wpgholdings_todo_lastuser', name);
+  loadSyncBlobId();
+  renderUserChips();
+  loadTodos();
+  renderTodoList();
+  updateTodoStats();
+  updateSyncUI();
+  if (isCloudConnected()) { pullCloud(true); if (autoSync) startAutoSync(); }
+}
+
+function showAddUserInput() {
+  document.getElementById('todoUserInputGroup').classList.add('active');
+  document.getElementById('todoUserAddBtn').style.display = 'none';
+  document.getElementById('todoNewUserName').value = '';
+  document.getElementById('todoNewUserName').focus();
+}
+
+function cancelAddUser() {
+  document.getElementById('todoUserInputGroup').classList.remove('active');
+  document.getElementById('todoUserAddBtn').style.display = '';
+}
+
+function addTodoUser() {
+  var name = document.getElementById('todoNewUserName').value.trim();
+  if (!name) { alert('请输入用户名'); return; }
+  if (userList.indexOf(name) !== -1) { alert('该用户已存在'); return; }
+  userList.push(name);
+  saveUserList();
+  currentUser = name;
+  localStorage.setItem('wpgholdings_todo_lastuser', name);
+  cancelAddUser();
+  renderUserChips();
+  loadTodos();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function deleteTodoUser(name) {
+  if (userList.length <= 1) { alert('至少保留一个用户'); return; }
+  if (!confirm('确定删除用户「' + name + '」及其所有待办事项吗？')) return;
+  // 删除该用户的数据
+  try { localStorage.removeItem('wpgholdings_todos_' + name); } catch (e) {}
+  userList = userList.filter(function(u) { return u !== name; });
+  saveUserList();
+  if (currentUser === name) {
+    currentUser = userList[0];
+    localStorage.setItem('wpgholdings_todo_lastuser', currentUser);
+    loadTodos();
+  }
+  renderUserChips();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function loadTodos() {
+  try {
+    var raw = localStorage.getItem(getTodoKey());
+    todoList = raw ? JSON.parse(raw) : [];
+  } catch (e) { todoList = []; }
+}
+function saveTodosLocalOnly() {
+  try {
+    localStorage.setItem(getTodoKey(), JSON.stringify(todoList));
+  } catch (e) { console.error('待办存储失败:', e); }
+}
+function saveTodos() {
+  saveTodosLocalOnly();
+  // 已连接云端 → 自动上传；否则若离线同步码激活 → 自动刷新码
+  if (isCloudConnected()) {
+    pushCloud();
+  } else if (syncBlobId) {
+    syncBlobId = encodeTodos(todoList);
+    try { localStorage.setItem(getSyncKey(), syncBlobId); } catch (e) {}
+    var input = document.getElementById('syncCodeInput');
+    if (input && input.style.display !== 'none') input.value = syncBlobId;
+  }
+}
+function genId() { return 't' + Date.now() + Math.random().toString(36).substr(2, 6); }
+
+function showTodoForm(editId) {
+  var form = document.getElementById('todoForm');
+  document.getElementById('todoTitleInput').value = '';
+  document.getElementById('todoDescInput').value = '';
+  document.getElementById('todoPriorityInput').value = 'normal';
+  document.getElementById('todoCategoryInput').value = '';
+  document.getElementById('todoDueInput').value = '';
+  document.getElementById('todoFormHint').textContent = '';
+  editingId = null;
+
+  if (editId) {
+    var item = todoList.find(function(t) { return t.id === editId; });
+    if (item) {
+      document.getElementById('todoTitleInput').value = item.title;
+      document.getElementById('todoDescInput').value = item.desc || '';
+      document.getElementById('todoPriorityInput').value = item.priority;
+      document.getElementById('todoCategoryInput').value = item.category || '';
+      document.getElementById('todoDueInput').value = item.due || '';
+      document.getElementById('todoFormHint').textContent = '✏️ 正在编辑';
+      editingId = editId;
+    }
+  }
+  form.classList.add('active');
+  document.getElementById('todoTitleInput').focus();
+  scrollToSection('todoForm');
+}
+
+function hideTodoForm() {
+  document.getElementById('todoForm').classList.remove('active');
+  editingId = null;
+}
+
+function saveTodo() {
+  var title = document.getElementById('todoTitleInput').value.trim();
+  if (!title) { alert('请输入待办事项标题'); return; }
+
+  if (editingId) {
+    var item = todoList.find(function(t) { return t.id === editingId; });
+    if (item) {
+      item.title = title;
+      item.desc = document.getElementById('todoDescInput').value.trim();
+      item.priority = document.getElementById('todoPriorityInput').value;
+      item.category = document.getElementById('todoCategoryInput').value;
+      item.due = document.getElementById('todoDueInput').value;
+    }
+  } else {
+    todoList.push({
+      id: genId(),
+      title: title,
+      desc: document.getElementById('todoDescInput').value.trim(),
+      priority: document.getElementById('todoPriorityInput').value,
+      category: document.getElementById('todoCategoryInput').value,
+      due: document.getElementById('todoDueInput').value,
+      completed: false,
+      completedAt: null,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  saveTodos();
+  hideTodoForm();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function toggleTodo(id) {
+  var item = todoList.find(function(t) { return t.id === id; });
+  if (!item) return;
+  item.completed = !item.completed;
+  item.completedAt = item.completed ? new Date().toISOString() : null;
+  saveTodos();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function deleteTodo(id) {
+  if (!confirm('确定要删除这条待办事项吗？')) return;
+  todoList = todoList.filter(function(t) { return t.id !== id; });
+  saveTodos();
+  renderTodoList();
+  updateTodoStats();
+}
+
+function setTodoFilter(filter, btn) {
+  todoFilter = filter;
+  document.querySelectorAll('.todo-filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderTodoList();
+}
+
+function getFilteredTodos() {
+  var keyword = (document.getElementById('todoSearchInput').value || '').trim().toLowerCase();
+  return todoList.filter(function(t) {
+    if (todoFilter === 'urgent' && t.priority !== 'urgent') return false;
+    if (todoFilter === 'done' && !t.completed) return false;
+    if (todoFilter === 'pending' && t.completed) return false;
+    if (keyword) {
+      var inTitle = t.title.toLowerCase().indexOf(keyword) !== -1;
+      var inDesc = (t.desc || '').toLowerCase().indexOf(keyword) !== -1;
+      var inCat = (t.category || '').toLowerCase().indexOf(keyword) !== -1;
+      if (!inTitle && !inDesc && !inCat) return false;
+    }
+    return true;
+  });
+}
+
+function isOverdue(dueStr) {
+  if (!dueStr) return false;
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var due = new Date(dueStr + 'T00:00:00');
+  return due < today;
+}
+function isToday(dueStr) {
+  if (!dueStr) return false;
+  var today = new Date();
+  var yyyy = today.getFullYear();
+  var mm = String(today.getMonth() + 1).padStart(2, '0');
+  var dd = String(today.getDate()).padStart(2, '0');
+  return dueStr === yyyy + '-' + mm + '-' + dd;
+}
+
+function formatDue(dueStr) {
+  if (!dueStr) return '';
+  var d = new Date(dueStr + 'T00:00:00');
+  var m = d.getMonth() + 1;
+  var day = d.getDate();
+  return m + '/' + day;
+}
+
+function renderTodoList() {
+  var list = document.getElementById('todoList');
+  var empty = document.getElementById('todoEmpty');
+  var items = getFilteredTodos();
+
+  // 排序：未完成在前，紧急优先，按截止日期近的在前
+  items.sort(function(a, b) {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    var pOrder = { urgent: 0, normal: 1, low: 2 };
+    if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
+    if (a.due && b.due) return a.due.localeCompare(b.due);
+    if (a.due) return -1;
+    if (b.due) return 1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
+  if (items.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  var html = '';
+  items.forEach(function(t) {
+    var doneClass = t.completed ? ' done' : '';
+    var checkMark = t.completed ? '✓' : '';
+    var descHtml = t.desc ? '<div class="todo-desc">' + escapeHtml(t.desc) + '</div>' : '';
+    var catHtml = t.category ? '<span class="todo-category">' + escapeHtml(t.category) + '</span>' : '';
+    var prioClass = 'priority-' + t.priority;
+    var prioLabel = { urgent: '🚨 紧急', normal: '⚡ 普通', low: '🔹 低' }[t.priority];
+    var dueClass = '';
+    var dueText = '';
+    if (t.due && !t.completed) {
+      if (isOverdue(t.due)) { dueClass = ' overdue'; dueText = '⚠️ ' + formatDue(t.due) + ' 已过期'; }
+      else if (isToday(t.due)) { dueClass = ' today'; dueText = '🔔 ' + formatDue(t.due) + ' 今天'; }
+      else { dueText = '📅 ' + formatDue(t.due); }
+    } else if (t.due) {
+      dueText = '📅 ' + formatDue(t.due);
+    }
+
+    var metaHtml = '';
+    if (prioLabel || catHtml || dueText || t.completedAt) {
+      metaHtml = '<div class="todo-meta">';
+      if (prioLabel) metaHtml += '<span class="todo-priority ' + prioClass + '">' + prioLabel + '</span>';
+      if (catHtml) metaHtml += catHtml;
+      if (dueText) metaHtml += '<span class="todo-due' + dueClass + '">' + dueText + '</span>';
+      if (t.completedAt) metaHtml += '<span>✅ ' + formatDateShort(t.completedAt) + ' 完成</span>';
+      metaHtml += '</div>';
+    }
+
+    html += '<div class="todo-item' + doneClass + '">' +
+      '<div class="todo-checkbox" onclick="toggleTodo(\'' + t.id + '\')">' + checkMark + '</div>' +
+      '<div class="todo-content" ondblclick="showTodoForm(\'' + t.id + '\')" title="双击编辑" style="cursor:default;">' +
+        '<div class="todo-title">' + escapeHtml(t.title) + '</div>' +
+        descHtml +
+        metaHtml +
+      '</div>' +
+      '<div class="todo-actions">' +
+        '<button title="编辑" onclick="showTodoForm(\'' + t.id + '\')">✏️</button>' +
+        '<button class="btn-del" title="删除" onclick="deleteTodo(\'' + t.id + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function updateTodoStats() {
+  var total = todoList.length;
+  var done = todoList.filter(function(t) { return t.completed; }).length;
+  var pending = total - done;
+  var urgent = todoList.filter(function(t) { return !t.completed && t.priority === 'urgent'; }).length;
+
+  document.getElementById('statUrgent').textContent = urgent;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statTotal').textContent = total;
+
+  // 顶部状态栏
+  var statsEl = document.getElementById('todoStats');
+  var urgEl = document.getElementById('todoUrgentStats');
+  if (total === 0) {
+    statsEl.textContent = '0 待办';
+    urgEl.textContent = '';
+  } else {
+    statsEl.textContent = pending + ' 待办';
+    urgEl.textContent = urgent > 0 ? '🚨' + urgent : '';
+  }
+}
+
+function scrollToSection(id) {
+  var el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function formatDateShort(isoStr) {
+  if (!isoStr) return '';
+  var d = new Date(isoStr);
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ==================== 同步：云端（GitHub 私有仓库）为主 + 离线码备用 ====================
+var SYNC_PREFIX = 'WPG1';
+var syncBlobId = '';            // 离线同步码（无网络时的备用方案）
+var autoSyncTimer = null;
+
+// ---- 离线同步码（保留） ----
+function getSyncKey() { return 'wpgholdings_sync_' + (currentUser || 'default'); }
+function saveSyncBlobId(code) { syncBlobId = code; localStorage.setItem(getSyncKey(), code); }
+function loadSyncBlobId() { syncBlobId = localStorage.getItem(getSyncKey()) || ''; }
+function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
+function b64ToUtf8(b64) { return decodeURIComponent(escape(atob(b64))); }
+function encodeTodos(list) {
+  var payload = JSON.stringify({ v: 2, ts: Date.now(), todos: list });
+  return SYNC_PREFIX + utf8ToB64(payload);
+}
+function decodeTodos(code) {
+  code = (code || '').trim();
+  if (code.indexOf(SYNC_PREFIX) === 0) code = code.slice(SYNC_PREFIX.length);
+  try { var payload = JSON.parse(b64ToUtf8(code)); return payload.todos || []; } catch (e) { return null; }
+}
+
+// ---- 云端状态（GitHub 私有仓库，数据存 todos/{user}.json） ----
+// 配置从 Secret Gist 加载：公开代码不含 Token，团队成员打开即同步
+var SYNC_CONFIG_GIST = 'https://gist.githubusercontent.com/Yuki114918/__GIST_ID__/raw/sync-config.json';
+var DEFAULT_GITHUB_TOKEN = '';
+var DEFAULT_GITHUB_REPO  = 'Yuki114918/wpgholdings-todos';
+function getGithubToken() { return localStorage.getItem('wpgholdings_ghtoken') || DEFAULT_GITHUB_TOKEN; }
+function getGithubRepo() { return localStorage.getItem('wpgholdings_ghrepo') || DEFAULT_GITHUB_REPO; }
+function getAutoSync() { return localStorage.getItem('wpgholdings_autosync_' + (currentUser || 'default')) === '1'; }
+function setGithubToken(k) { localStorage.setItem('wpgholdings_ghtoken', k); }
+function setGithubRepo(r) { localStorage.setItem('wpgholdings_ghrepo', r); }
+function setAutoSync(v) { localStorage.setItem('wpgholdings_autosync_' + (currentUser || 'default'), v ? '1' : '0'); }
+function isCloudConnected() { return !!getGithubRepo() && !!getGithubToken(); }
+
+function githubApi(path, method, body) {
+  var opt = {
+    method: method,
+    headers: {
+      'Authorization': 'Bearer ' + getGithubToken(),
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    }
+  };
+  if (body !== undefined) opt.body = JSON.stringify(body);
+  return fetch('https://api.github.com' + path, opt).then(function(r){
+    if (r.status === 404) { var nf = new Error('NOT_FOUND'); nf.status = 404; throw nf; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+// 连接 / 验证仓库可用
+function connectCloud() {
+  var token = document.getElementById('syncApiKey').value.trim();
+  var repo = document.getElementById('syncRepo').value.trim();
+  var status = document.getElementById('syncStatus');
+  if (!token) { status.textContent='请先粘贴 GitHub Token'; status.className='todo-sync-status error'; return; }
+  if (!repo || repo.indexOf('/') < 0) { status.textContent='请填写仓库名（格式 owner/repo）'; status.className='todo-sync-status error'; return; }
+  setGithubToken(token); setGithubRepo(repo);
+  status.textContent='连接中…'; status.className='todo-sync-status';
+  githubApi('/repos/' + repo, 'GET').then(function(){
+    return pullCloud(true);
+  }).then(function(){
+    return pushCloud();   // 拉取后把本机已有待办上传，确保首次连接即上云
+  }).then(function(){
+    status.textContent='✓ 已连接云端'; status.className='todo-sync-status synced';
+    updateSyncUI();
+    if (getAutoSync()) startAutoSync();
+  }).catch(function(e){
+    status.textContent='连接失败：'+e.message; status.className='todo-sync-status error';
+  });
+}
+
+// 一键新建私有仓库
+function createGithubRepo() {
+  var token = document.getElementById('syncApiKey').value.trim();
+  var status = document.getElementById('syncStatus');
+  if (!token) { status.textContent='请先粘贴 GitHub Token'; status.className='todo-sync-status error'; return; }
+  setGithubToken(token);
+  var name = 'wpgholdings-todos';
+  status.textContent='正在创建私有仓库…'; status.className='todo-sync-status';
+  githubApi('/user/repos', 'POST', { name: name, private: true, auto_init: true }).then(function(res){
+    var full = res.full_name;
+    setGithubRepo(full);
+    document.getElementById('syncRepo').value = full;
+    status.textContent='✓ 已创建私有仓库 '+full+'，点「连接」即可'; status.className='todo-sync-status synced';
+  }).catch(function(e){
+    status.textContent='创建失败：'+e.message+'（可能已存在，直接填仓库名连接即可）'; status.className='todo-sync-status error';
+  });
+}
+
+// 上传当前用户待办到 todos/{user}.json（文件不存在则自动创建）
+function pushCloud() {
+  if (!isCloudConnected()) return Promise.resolve();
+  var filePath = '/repos/' + getGithubRepo() + '/contents/todos/' + encodeURIComponent(currentUser || 'default') + '.json';
+  var payload = { todos: todoList, ts: Date.now() };
+  var content = utf8ToB64(JSON.stringify(payload));
+  return githubApi(filePath, 'GET').then(function(res){
+    // 文件已存在，需带 sha 更新
+    return githubApi(filePath, 'PUT', {
+      message: 'sync todos ' + (currentUser || 'default'),
+      content: content,
+      sha: res.sha
+    });
+  }).catch(function(e){
+    if (e.status === 404) {
+      // 文件不存在，创建（不带 sha）
+      return githubApi(filePath, 'PUT', {
+        message: 'init todos ' + (currentUser || 'default'),
+        content: content
+      });
+    }
+    console.warn('pushCloud 失败:', e);
+  });
+}
+
+// 合并：云端为准，保留本地独有（未推送成功）的项
+function mergeTodos(remote) {
+  var map = {};
+  remote.forEach(function(t){ if (t && t.id) map[t.id] = t; });
+  (todoList || []).forEach(function(t){ if (t && t.id && !map[t.id]) map[t.id] = t; });
+  return Object.keys(map).map(function(k){ return map[k]; });
+}
+
+// 从云端拉取当前用户待办
+function pullCloud(silent) {
+  if (!isCloudConnected()) return Promise.resolve();
+  var filePath = '/repos/' + getGithubRepo() + '/contents/todos/' + encodeURIComponent(currentUser || 'default') + '.json';
+  var status = document.getElementById('syncStatus');
+  return githubApi(filePath, 'GET').then(function(res){
+    var raw = b64ToUtf8((res.content || '').replace(/\s/g, ''));
+    var rec = JSON.parse(raw);
+    var remote = rec.todos || [];
+    todoList = mergeTodos(remote);
+    saveTodosLocalOnly();
+    renderTodoList(); updateTodoStats();
+    if (!silent) { status.textContent='✓ 已刷新，与云端一致'; status.className='todo-sync-status synced'; }
+  }).catch(function(e){
+    if (e.status === 404) { return pushCloud(); }  // 云端还没有本用户数据，推上去
+    if (!silent) { status.textContent='刷新失败：'+e.message; status.className='todo-sync-status error'; }
+  });
+}
+function refreshCloud() { pullCloud(false); }
+
+function startAutoSync() {
+  stopAutoSync();
+  autoSyncTimer = setInterval(function(){ pullCloud(true); }, 30000);
+}
+function stopAutoSync() { if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; } }
+function toggleAutoSync() {
+  var on = !getAutoSync();
+  setAutoSync(on);
+  if (on) startAutoSync(); else stopAutoSync();
+  var btn = document.getElementById('syncAutoBtn');
+  if (btn) btn.textContent = '⏱ 自动：' + (on ? '开' : '关');
+  var status = document.getElementById('syncStatus');
+  status.textContent = on ? '已开启自动同步（每30秒拉取）' : '已关闭自动同步';
+  status.className = 'todo-sync-status';
+}
+
+function disconnectCloud() {
+  if (!confirm('断开云端同步？本机待办仍保留，但不再自动上传/刷新。')) return;
+  setGithubRepo('');
+  stopAutoSync();
+  updateSyncUI();
+  var status = document.getElementById('syncStatus');
+  status.textContent = '已断开云端，待办保留在本机'; status.className='todo-sync-status';
+}
+
+function toggleOfflineCode() {
+  var a = document.getElementById('offlineCodeArea');
+  a.style.display = a.style.display === 'none' ? '' : 'none';
+}
+
+// ---- 云端同步 UI ----
+function updateSyncUI() {
+  var btn = document.getElementById('syncBtn');
+  var setup = document.getElementById('syncSetup');
+  var connected = document.getElementById('syncConnected');
+  var status = document.getElementById('syncStatus');
+  var keyInput = document.getElementById('syncApiKey');
+  if (isCloudConnected()) {
+    btn.textContent = '☁️ 已连接云端';
+    btn.className = 'todo-sync-btn connected';
+    setup.style.display = 'none';
+    connected.style.display = '';
+    var ab = document.getElementById('syncAutoBtn');
+    if (ab) ab.textContent = '⏱ 自动：' + (getAutoSync() ? '开' : '关');
+  } else {
+    btn.textContent = '☁️ 云端同步';
+    btn.className = 'todo-sync-btn';
+    setup.style.display = '';
+    connected.style.display = 'none';
+    if (keyInput && getGithubToken()) keyInput.value = getGithubToken();
+    var repoInput = document.getElementById('syncRepo');
+    if (repoInput && getGithubRepo()) repoInput.value = getGithubRepo();
+    status.textContent = '未连接云端'; status.className = 'todo-sync-status';
+  }
+}
+
+function toggleSyncUI() {
+  var panel = document.getElementById('syncPanel');
+  var open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : '';
+  if (!open) {
+    var keyInput = document.getElementById('syncApiKey');
+    if (keyInput && getGithubToken()) keyInput.value = getGithubToken();
+    var repoInput = document.getElementById('syncRepo');
+    if (repoInput && getGithubRepo()) repoInput.value = getGithubRepo();
+  }
+}
+
+// ---- 离线同步码 UI（无网络时用） ----
+function generateSync() {
+  var input = document.getElementById('syncCodeInput');
+  var status = document.getElementById('syncStatus');
+  try {
+    var code = encodeTodos(todoList);
+    saveSyncBlobId(code);
+    input.style.display = '';
+    input.readOnly = true;
+    input.value = code;
+    updateSyncUI();
+    status.textContent = '✓ 离线码已生成，复制到其他设备粘贴即可（无网络时用）';
+    status.className = 'todo-sync-status synced';
+  } catch (e) {
+    status.textContent = '生成失败：' + e.message;
+    status.className = 'todo-sync-status error';
+  }
+}
+
+function connectSync() {
+  var input = document.getElementById('syncCodeInput');
+  var rawCode = input.value.trim();
+  var status = document.getElementById('syncStatus');
+  if (!rawCode) { status.textContent = '请粘贴同步码'; status.className = 'todo-sync-status error'; return; }
+  var todos = decodeTodos(rawCode);
+  if (!todos) { status.textContent = '同步码无效，请检查后重试'; status.className = 'todo-sync-status error'; return; }
+  todoList = todos;
+  saveTodos();
+  saveSyncBlobId(rawCode);
+  input.readOnly = true;
+  updateSyncUI();
+  renderTodoList(); updateTodoStats();
+  status.textContent = '✓ 同步成功，本设备已与同步码完全一致';
+  status.className = 'todo-sync-status synced';
+}
+
+function selectSyncCode() {
+  var input = document.getElementById('syncCodeInput');
+  if (!input) return;
+  input.focus(); input.select();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(input.value).then(function() {
+      var s = document.getElementById('syncStatus');
+      if (s) s.textContent = '✓ 离线码已复制到剪贴板';
+    }).catch(function(){});
+  }
+}
+function copySyncCode() { selectSyncCode(); }
+
+function disconnectSync() {
+  if (!confirm('断开离线同步码？本机待办仍保留。')) return;
+  syncBlobId = '';
+  localStorage.removeItem(getSyncKey());
+  updateSyncUI();
+}
+
+// ==================== 初始化 ====================
+loadUserList();
+loadSyncBlobId();
+renderUserChips();
+loadTodos();
+renderTodoList();
+updateTodoStats();
+updateSyncUI();
+
+// 从 Secret Gist 加载共享配置（Token），团队成员打开即同步
+function loadSyncConfig() {
+  return fetch(SYNC_CONFIG_GIST).then(function(r){
+    if (!r.ok) throw new Error('CONFIG ' + r.status);
+    return r.json();
+  }).then(function(cfg){
+    if (cfg && cfg.github_token) DEFAULT_GITHUB_TOKEN = cfg.github_token;
+    if (cfg && cfg.github_repo) DEFAULT_GITHUB_REPO = cfg.github_repo;
+  });
+}
+
+// 有默认云端配置时自动连接（团队成员打开即同步）
+function autoConnectIfConfigured() {
+  if (isCloudConnected()) {
+    updateSyncUI();
+    if (getAutoSync()) startAutoSync();
+    return;
+  }
+  if (!DEFAULT_GITHUB_TOKEN) return; // 等 Gist 加载
+  setGithubToken(DEFAULT_GITHUB_TOKEN);
+  setGithubRepo(DEFAULT_GITHUB_REPO);
+  updateSyncUI();
+  var sp = document.getElementById('syncPanel');
+  if (sp) sp.style.display = '';
+  setTimeout(function(){ pullCloud(true).then(function(){ if (getAutoSync()) startAutoSync(); }).catch(function(){}); }, 500);
+}
+
+loadSyncConfig()
+  .then(autoConnectIfConfigured)
+  .catch(function(e){ console.warn('同步配置加载失败（可手动连接）:', e); });
+
+// ==================== 板块折叠 ====================
+function toggleSection(section) {
+  section.classList.toggle('collapsed');
+  var collapsed = {};
+  try { collapsed = JSON.parse(localStorage.getItem('wpgholdings_collapsed') || '{}'); } catch(e) {}
+  var id = section.querySelector('.section-title').textContent.replace(/[▼◀▶▲ ]/g,'').trim();
+  collapsed[id] = section.classList.contains('collapsed');
+  localStorage.setItem('wpgholdings_collapsed', JSON.stringify(collapsed));
+}
+
+(function restoreCollapse() {
+  try {
+    var collapsed = JSON.parse(localStorage.getItem('wpgholdings_collapsed') || '{}');
+    document.querySelectorAll('.section').forEach(function(s) {
+      var id = (s.querySelector('.section-title')?.textContent || '').replace(/[▼◀▶▲ ]/g,'').trim();
+      if (collapsed[id]) s.classList.add('collapsed');
+    });
+  } catch(e) {}
+})();
+
 // ==================== PWA Service Worker ====================
+// 自毁式 SW：清除所有缓存后自动注销，解决旧版缓存问题
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(function() {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+  navigator.serviceWorker.register('sw.js?v=reset').then(function() {
     console.log('SW registered');
   }).catch(function(err) {
     console.log('SW failed:', err);
