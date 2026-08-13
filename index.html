@@ -952,6 +952,15 @@ function mergeEmployeeData() {
   }
   .employee-search-wrapper input:focus { border-color: var(--primary); }
   .employee-stats { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
+  .dim-filter-chip {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: 12px;
+    background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary);
+    border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+    user-select: none;
+  }
+  .dim-filter-chip:hover { background: #dbeafe; }
+  .dim-filter-chip .chip-x { font-size: 11px; opacity: 0.7; }
+  .dim-filter-chip .chip-x:hover { opacity: 1; }
   .employee-result-area { padding: 16px; }
   .emp-card {
     background: white;
@@ -1689,6 +1698,9 @@ function mergeEmployeeData() {
         <div class="employee-stats" id="employeeStats">
           <span id="employeeTotalCount">共 <strong id="employeeCount">0</strong> 条记录</span>
           <span id="employeeFilteredInfo" style="display:none;margin-left:16px;color:var(--primary);font-weight:600;"></span>
+          <span id="rosterDimFilterChip" class="dim-filter-chip" style="display:none;" onclick="clearDimFilter()">
+            <span class="chip-text"></span><span class="chip-x">✕</span>
+          </span>
         </div>
       </div>
       <!-- 分页控件 -->
@@ -2773,6 +2785,7 @@ var employeeSearchResults = [];
 var employeeDisplayPage = 1;
 var employeePageSize = 20;
 var EMP_SEARCH_INDEX = null;
+var rosterDimFilter = null;  // 仪表盘维度跳转后在花名册生效的真筛选条件: {key, val, label}
 
 // 将整条员工记录（含对象/数组，如工作经历、绩效）递归拼成可搜索文本
 function employeeSearchText(e) {
@@ -2820,15 +2833,21 @@ function runRosterSearch() {
     return;
   }
 
-  // 无搜索词 → 不显示列表，提示用户输入
-  if (!q) {
+  // 无搜索词且无维度筛选 → 不显示列表，提示用户输入
+  if (!q && !rosterDimFilter) {
     employeeSearchResults = [];
     if (filteredInfo) filteredInfo.style.display = 'none';
     var countEl = document.getElementById('employeeCount');
     if (countEl) countEl.style.display = 'none';
-    cards.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--text-secondary);"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div>请输入关键词搜索员工（姓名、工号、部门等）</div></div>';
+    cards.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--text-secondary);"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div>请输入关键词搜索员工（姓名、工号、部门等），或从上方看板点击维度筛选</div></div>';
     hidePagination();
     return;
+  }
+
+  // ---- 第一步：文本匹配（如有搜索词） ----
+  var base;
+  if (!q) {
+    base = EMPLOYEES_DATA;
   } else {
     var ql = q.toLowerCase();
     var qs = toSimplified(ql);
@@ -2846,24 +2865,47 @@ function runRosterSearch() {
     });
 
     if (exactMatches.length > 0) {
-      employeeSearchResults = exactMatches;
+      base = exactMatches;
     } else {
-      employeeSearchResults = EMPLOYEES_DATA.filter(function(e, i) {
+      base = EMPLOYEES_DATA.filter(function(e, i) {
         var text = idx[i] || '';
         return text.indexOf(ql) !== -1 || text.indexOf(qs) !== -1;
       });
     }
-    if (filteredInfo) {
-      filteredInfo.textContent = '找到 ' + employeeSearchResults.length + ' 条匹配';
-      filteredInfo.style.display = '';
-    }
-    // 搜索时恢复显示总数
-    var tc = document.getElementById('employeeTotalCount');
-    if (tc) tc.style.display = '';
   }
+
+  // ---- 第二步：维度筛选（真正的字段判断，非文本搜索） ----
+  employeeSearchResults = base.filter(function(e) { return dimFilterMatch(e, rosterDimFilter); });
+
+  if (filteredInfo) {
+    var parts = [];
+    if (q) parts.push('关键词「' + q + '」');
+    if (rosterDimFilter) parts.push(rosterDimFilter.label);
+    filteredInfo.textContent = '找到 ' + employeeSearchResults.length + ' 条匹配' + (parts.length ? '（' + parts.join(' + ') + '）' : '');
+    filteredInfo.style.display = '';
+  }
+  // 搜索时恢复显示总数
+  var tc = document.getElementById('employeeTotalCount');
+  if (tc) tc.style.display = '';
 
   employeeDisplayPage = 1;
   renderRosterPage();
+}
+
+// 维度筛选匹配：主管/院校走派生判断，其余按维度值文本兜底
+function dimFilterMatch(e, f) {
+  if (!f) return true;
+  if (f.key === 'is_supervisor') {
+    return f.val === '主管' ? isDeptManager(e) : !isDeptManager(e);
+  }
+  if (f.key === 'schoolTag') {
+    if (f.val === '985') return !!e._is985;
+    if (f.val === '211') return !!e._is211;
+    if (f.val === 'dualfei') return !(e._is985 || e._is211);
+    return true;
+  }
+  var v = getDimValue(e, f.key);
+  return v != null && String(v) === f.val;
 }
 
 function escHtml(str) {
@@ -3060,6 +3102,8 @@ function searchEmployee() { employeeDisplayPage = 1; runRosterSearch(); }
 
 function resetEmployee() {
   document.getElementById('employeeSearchInput').value = '';
+  rosterDimFilter = null;
+  updateDimFilterChip();
   var fi = document.getElementById('employeeFilteredInfo');
   if (fi) fi.style.display = 'none';
   // 清除后也隐藏总数计数，保持界面干净
@@ -3480,9 +3524,39 @@ function buildDashboard(){
 // 从看板点击条形 → 跳转到花名册并自动搜索
 function jumpToRosterFilter(dim, val) {
   switchModule('roster');
+  // 设置为真正的维度筛选（非文本搜索），避免佘瑞琦(总监)等不含'主管'文本的人被漏判
+  var labelMap = {
+    'is_supervisor': { '主管':'主管职', '非主管':'非主管职' },
+    'schoolTag': { '985':'985 院校', '211':'211 院校', 'dualfei':'双非院校' }
+  };
+  var lbl = (labelMap[dim] && labelMap[dim][val]) || val;
+  rosterDimFilter = { key: dim, val: val, label: '筛选：' + lbl };
+  // 清掉文本搜索框，避免与维度筛选混淆
   var inp = document.getElementById('employeeSearchInput');
-  if (inp) { inp.value = val; searchEmployee(); }
+  if (inp) inp.value = '';
+  employeeDisplayPage = 1;
+  updateDimFilterChip();
+  runRosterSearch();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 显示/隐藏当前激活的维度筛选标签
+function updateDimFilterChip() {
+  var chip = document.getElementById('rosterDimFilterChip');
+  if (!chip) return;
+  if (rosterDimFilter) {
+    chip.style.display = 'inline-flex';
+    chip.querySelector('.chip-text').textContent = rosterDimFilter.label;
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+// 清除维度筛选（保留文本搜索）
+function clearDimFilter() {
+  rosterDimFilter = null;
+  updateDimFilterChip();
+  runRosterSearch();
 }
 
 // 看板部门搜索过滤
