@@ -2717,6 +2717,11 @@ var _211_TOKENS = SCHOOL_211.map(_normSchool);
 function getSchoolTags(school){
   var s = _normSchool(school);
   if (!s) return { is985:false, is211:false };
+  // 排除继续教育/成人教育/网络教育/函授/夜大/自考等非全日制学历
+  var EXCLUDE_PATTERNS = ['继续教育', '繼續教育', '成人教育', '网络教育', '網絡教育', '函授', '夜大', '自考', '进修班', '進修班', '培训', '培訓', '专修', '專修'];
+  for (var i = 0; i < EXCLUDE_PATTERNS.length; i++) {
+    if (s.indexOf(EXCLUDE_PATTERNS[i]) !== -1) return { is985:false, is211:false };
+  }
   var is985 = _985_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
   var is211 = _211_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
   return { is985:is985, is211:is211 };
@@ -3202,7 +3207,7 @@ function buildDashboard(){
     if (counts.length > SHOW_LIMIT) {
       var restCount = counts.length - SHOW_LIMIT;
       toggleHtml = '<div style="margin-top:8px;text-align:center;">'+
-        '<button onclick="this.previousElementSibling.style.display=this.previousElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent===\'展开全部 '+restCount+' 项 ▼\'?\'收起 ▲\':\'展开全部 '+restCount+' 项 ▼\';" style="padding:4px 16px;cursor:pointer;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:6px;font-size:12px;">展开全部 ' + restCount + ' 项 ▼</button>'+
+        '<button onclick="var d=this.nextElementSibling;if(d){var vis=d.style.display!==\'none\';d.style.display=vis?\'none\':\'\';this.textContent=vis?\'展开全部 '+restCount+' 项 ▼\':\'收起 ▲\';}" style="padding:4px 16px;cursor:pointer;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:6px;font-size:12px;">展开全部 ' + restCount + ' 项 ▼</button>'+
         '<div style="display:none;">' + hiddenBars + '</div></div>';
     }
 
