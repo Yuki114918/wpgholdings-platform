@@ -1379,6 +1379,10 @@ function mergeEmployeeData() {
   }
   .dash-stat .ds-val { font-size:24px; font-weight:700; color:var(--primary); }
   .dash-stat .ds-label { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+  .dash-stat-hl { background:linear-gradient(135deg,#fef2f2,#fee2e2) !important; border-color:#fca5a5 !important; }
+  .dash-stat-hl .ds-val { color:#dc2626 !important; font-size:28px; }
+  .dash-stat-hl .ds-label { color:#991b1b !important; font-weight:600; }
+  .dash-stat-sm .ds-val { font-size:16px; }
   .dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
   .dash-card {
     background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius);
@@ -1708,6 +1712,14 @@ function mergeEmployeeData() {
         <option value="">在职状态（所有）</option>
         <option value="在职">在职</option>
         <option value="离职">离职</option>
+      </select>
+      <select id="dashFilterCity" class="dash-filter-select" onchange="applyDashboardFilter()">
+        <option value="">工作城市（所有）</option>
+      </select>
+      <select id="dashFilterSupervisor" class="dash-filter-select" onchange="applyDashboardFilter()">
+        <option value="">主管/非主管（所有）</option>
+        <option value="主管">主管</option>
+        <option value="非主管">非主管</option>
       </select>
       <button onclick="clearDashboardFilters()" class="dash-filter-btn">清除筛选</button>
       <span class="dash-filter-count" id="dashFilterCount"></span>
@@ -3036,16 +3048,56 @@ function resetEmployee() {
 }
 
 // ==================== 看板（含筛选 + 性能优化） ====================
-var dashboardFilters = {};       // 当前筛选条件 {group:'', sub_region:'', job_series:'', status:''}
+var dashboardFilters = {};       // 当前筛选条件 {group:'', sub_region:'', job_series:'', status:'', city:'', is_supervisor:''}
 var _dashCache = null;           // 缓存: {fullData, dimCounts} 避免重复计算
 
-// 归属集团：英文代码 → 中文名称 映射表（按工号合并，以中文为准）
-var GROUP_NAME_MAP = {
+// ===== 数据归一化映射表（中文/旧格式 → 规范代码，按工号合并后每人只有一个值） =====
+
+// 归属集团：G01~G10 中文码 → 英文码（以英文码为规范）
+var GROUP_NORM_MAP = {
+  'G01-世平集團': 'WPIg', 'G02-品佳集團': 'AITg', 'G03-詮鼎集團': 'SACg',
+  'G04-友尚集團': 'YSNg', 'G05-後勤支援中心': 'TGH', 'G06-運籌': 'LOG',
+  'G07-控股公司': 'BSC', 'G08-海外事業群': 'HOLDINGS', 'G09-鑫聯大控股': 'HOLDINGS',
+  'G10-其他': 'GBG'
+};
+// 归属集团显示名（规范码 → 友好名称）
+var GROUP_DISPLAY = {
   'WPIg': 'WPIg(世平集團)', 'AITg': 'AITg(品佳集團)', 'SACg': 'SACg(詮鼎集團)',
   'YSNg': 'YSNg(友尚集團)', 'BSC': 'BSC(控股公司)', 'TGH': 'TGH(世平偉業)',
   'LOG': 'LOG(運籌)', 'HOLDINGS': 'HOLDINGS(控股公司)', 'GBG': 'GBG(鑫聯大)'
 };
-function normalizeGroup(g) { return (GROUP_NAME_MAP[g] || g || ''); }
+
+// 职系：中文名 → 代码（以代码为规范）
+var JOB_SERIES_NORM_MAP = {
+  '一般倉務': 'LD-運籌DL', '人力資源': 'AB-營運幕僚', '運籌管理': 'AL-運籌',
+  '船務作業': 'AL-運籌', '業務 (Sales)': 'S-銷售', '產品業助 (PCSR)': 'P-產品',
+  '會計': 'AF-財會', '一般行政': 'AC-行政', '銷售業助 (CSR)': 'S-銷售',
+  '產品行銷 (PM)': 'P-產品', '網管 (Networking)': 'I-資訊', '法務': 'AK-企劃幕僚',
+  '客服/品保': 'AS-業務支持', '高階主管': 'CE-高管', '技術應用 (TME)': 'T-技術',
+  '信管': 'I-資訊', '財務': 'AF-財會', '業務效能 (BEPG)': 'AB-營運幕僚'
+};
+
+// 城市：纯英文名 → City前缀代码（以City前缀为规范）
+var CITY_NORM_MAP = {
+  'Taipei': 'City1-Taipei', 'Taoyuan': 'City2-Taoyuan', 'Hsinchu': 'City3-Hsinchu',
+  'Kaohsiung': 'City4-Kaohsiung', 'Hongkong': 'City5-Hongkong', 'Shenzhen': 'City6-Shenzhen',
+  'Beijing': 'City9-Beijing', 'Suzhou': 'City13-Suzhou', 'Chengdu': 'City10-Chengdu',
+  'Hangzhou': 'City14-Hangzhou', 'Nanjing': 'City16-Nanjing', 'Wuhan': 'City19-Wuhan',
+  'Shanghai': 'City8-Shanghai', 'Dongguan': 'City39-Dongguan', "Xi'an": 'City24-Xi\'an',
+  'Zhuhai': 'City17-Zhuhai', 'Chongqing': 'City38-Chongqing', 'Qingdao': 'City15-Qingdao'
+};
+
+// 统一归一化函数
+function normalizeField(val, normMap) {
+  if (!val) return '';
+  v = String(val).trim();
+  return (normMap[v] || v);
+}
+
+function normalizeGroup(g) { return g ? (GROUP_DISPLAY[g] || g || '') : ''; }
+function getNormGroup(e) { return normalizeField(e.group, GROUP_NORM_MAP); }
+function getNormJobSeries(e) { return normalizeField(e.job_series, JOB_SERIES_NORM_MAP); }
+function getNormCity(e) { return normalizeField(e.city, CITY_NORM_MAP); }
 
 function getDashboardFilteredData() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return [];
@@ -3057,9 +3109,16 @@ function getDashboardFilteredData() {
       var k = keys[i], v = dashboardFilters[k];
       if (!v) continue;
       if (k === 'status') { if ((e.status||'') !== v) return false; }
-      else if (k === 'group') { if (normalizeGroup(e.group) !== v) return false; }
+      else if (k === 'group') { if (getNormGroup(e) !== v) return false; }
       else if (k === 'sub_region') { if ((e.sub_region||'') !== v) return false; }
-      else if (k === 'job_series') { if ((e.job_series||'') !== v) return false; }
+      else if (k === 'job_series') { if (getNormJobSeries(e) !== v) return false; }
+      else if (k === 'city') { if (getNormCity(e) !== v) return false; }
+      else if (k === 'is_supervisor') {
+        var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
+        var isSup = (im === 'TRUE' || im === '主管');
+        if (v === '主管' && !isSup) return false;
+        if (v === '非主管' && isSup) return false;
+      }
       else { if ((e[k]||'') !== v) return false; }
     }
     return true;
@@ -3070,9 +3129,8 @@ function populateDashboardFilters() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return;
   var D = EMPLOYEES_DATA;
 
-  // 归属集团（归一化：英文代码→中文显示）
-  var groupRaw = D.map(function(e){return e.group||''}).filter(Boolean);
-  var groups = [...new Set(groupRaw.map(normalizeGroup))].sort();
+  // 归属集团（归一化后去重）
+  var groups = [...new Set(D.map(getNormGroup).filter(Boolean))].sort();
   var selG = document.getElementById('dashFilterGroup');
   if (selG) { selG.innerHTML = '<option value="">归属集团（所有）</option>' +
     groups.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join(''); }
@@ -3083,16 +3141,31 @@ function populateDashboardFilters() {
   if (selR) { selR.innerHTML = '<option value="">工作子区域（所有）</option>' +
     regions.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join(''); }
 
-  // 职系
-  var series = [...new Set(D.map(function(e){return e.job_series||''}).filter(Boolean))].sort();
+  // 职系（归一化后去重）
+  var series = [...new Set(D.map(getNormJobSeries).filter(Boolean))].sort();
   var selJ = document.getElementById('dashFilterJobSeries');
   if (selJ) { selJ.innerHTML = '<option value="">职系（所有）</option>' +
     series.map(function(j){return '<option value="'+j+'">'+j+'</option>';}).join(''); }
+
+  // 工作城市（归一化后去重）
+  var cities = [...new Set(D.map(getNormCity).filter(Boolean))].sort();
+  var selC = document.getElementById('dashFilterCity');
+  if (selC) { selC.innerHTML = '<option value="">工作城市（所有）</option>' +
+    cities.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join(''); }
+
+  // 主管/非主管
+  var selSup = document.getElementById('dashFilterSupervisor');
+  if (selSup && !selSup.options.length) {
+    selSup.innerHTML = '<option value="">主管/非主管（所有）</option>' +
+      '<option value="主管">主管</option><option value="非主管">非主管</option>';
+  }
 
   // 恢复已选值
   if (dashboardFilters.group && selG) selG.value = dashboardFilters.group;
   if (dashboardFilters.sub_region && selR) selR.value = dashboardFilters.sub_region;
   if (dashboardFilters.job_series && selJ) selJ.value = dashboardFilters.job_series;
+  if (dashboardFilters.city && selC) selC.value = dashboardFilters.city;
+  if (dashboardFilters.is_supervisor && selSup) selSup.value = dashboardFilters.is_supervisor;
   if (dashboardFilters.status) { var selS = document.getElementById('dashFilterStatus'); if (selS) selS.value = dashboardFilters.status; }
 }
 
@@ -3101,10 +3174,14 @@ function applyDashboardFilter() {
   var selR = document.getElementById('dashFilterSubRegion');
   var selJ = document.getElementById('dashFilterJobSeries');
   var selS = document.getElementById('dashFilterStatus');
+  var selC = document.getElementById('dashFilterCity');
+  var selSup = document.getElementById('dashFilterSupervisor');
   dashboardFilters.group = selG ? selG.value : '';
   dashboardFilters.sub_region = selR ? selR.value : '';
   dashboardFilters.job_series = selJ ? selJ.value : '';
   dashboardFilters.status = selS ? selS.value : '';
+  dashboardFilters.city = selC ? selC.value : '';
+  dashboardFilters.is_supervisor = selSup ? selSup.value : '';
   // 清除空值
   Object.keys(dashboardFilters).forEach(function(k){ if (!dashboardFilters[k]) delete dashboardFilters[k]; });
   buildDashboard();
@@ -3112,7 +3189,7 @@ function applyDashboardFilter() {
 
 function clearDashboardFilters() {
   dashboardFilters = {};
-  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus'];
+  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus','dashFilterCity','dashFilterSupervisor'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.selectedIndex=0; });
   buildDashboard();
 }
@@ -3161,16 +3238,57 @@ function buildDashboard(){
   var cnt211 = D.filter(function(e){ return e._is211; }).length;
   var male = D.filter(function(e){ return (e.gender||'')==='男'; }).length;
   var female = D.filter(function(e){ return (e.gender||'')==='女'; }).length;
+
+  // 计算平均年资（基于 join_date，截止到 2026/08/10）
+  var nowDate = new Date(2026, 7, 10); // 2026-08-10
+  var totalTenure = 0, tenureCount = 0;
+  D.forEach(function(e) {
+    if (e.join_date) {
+      var jd = new Date(e.join_date);
+      if (!isNaN(jd.getTime())) {
+        var years = (nowDate - jd) / (365.25 * 24 * 60 * 60 * 1000);
+        if (years >= 0 && years < 80) { totalTenure += years; tenureCount++; }
+      }
+    }
+  });
+  var avgTenure = tenureCount > 0 ? (totalTenure / tenureCount).toFixed(1) : '-';
+
+  // 计算平均年龄（基于 birthday）
+  var totalAge = 0, ageCount = 0;
+  D.forEach(function(e) {
+    if (e.birthday) {
+      var bd = new Date(e.birthday);
+      if (!isNaN(bd.getTime())) {
+        var age = (nowDate - bd) / (365.25 * 24 * 60 * 60 * 1000);
+        if (age >= 16 && age < 100) { totalAge += age; ageCount++; }
+      }
+    }
+  });
+  var avgAge = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : '-';
+
+  // 主管/非主管统计
+  var supCount = D.filter(function(e){
+    var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
+    return im === 'TRUE' || im === '主管';
+  }).length;
+  var nonSupCount = D.filter(function(e){
+    var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
+    return im === 'FALSE' || im === '非主管';
+  }).length;
+
   var summary = [
     {val:total.toLocaleString(), label:'当前人数'},
     {val:active.toLocaleString(), label:'在职人数'},
+    {val:avgTenure, label:'平均年资(年)', highlight:true},
+    {val:avgAge, label:'平均年龄(岁)', highlight:true},
+    {val:supCount.toLocaleString()+'('+Math.round(supCount/D.length*100)+'%)', label:'主管', small:true},
+    {val:nonSupCount.toLocaleString()+'('+Math.round(nonSupCount/D.length*100)+'%)', label:'非主管', small:true},
     {val:cnt985.toLocaleString(), label:'985院校'},
-    {val:cnt211.toLocaleString(), label:'211院校'},
-    {val:male.toLocaleString(), label:'男性'},
-    {val:female.toLocaleString(), label:'女性'}
+    {val:cnt211.toLocaleString(), label:'211院校'}
   ];
   sumEl.innerHTML = summary.map(function(s){
-    return '<div class="dash-stat"><div class="ds-val">'+s.val+'</div><div class="ds-label">'+s.label+'</div></div>';
+    var cls = s.highlight ? ' dash-stat-hl' : (s.small ? ' dash-stat-sm' : '');
+    return '<div class="dash-stat'+cls+'"><div class="ds-val">'+s.val+'</div><div class="ds-label">'+s.label+'</div></div>';
   }).join('');
 
   // 维度图表 —— 颜色方案 + 全量显示（无TOP限制）
@@ -3183,6 +3301,7 @@ function buildDashboard(){
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
     {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','985211':'#dc2626','normal':'#64748b','noschool':'#94a3b8'}},
     {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
+    {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
     {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
@@ -3276,7 +3395,9 @@ function filterDashBars(input, dimKey) {
 
 function getDimValue(e, key){
   if (key==='schoolTag') return null;
-  if (key==='group') return normalizeGroup(e.group);
+  if (key==='group') return getNormGroup(e);
+  if (key==='job_series') return getNormJobSeries(e);
+  if (key==='city') return getNormCity(e);
   return e[key] != null ? String(e[key]) : '';
 }
 
@@ -3287,6 +3408,11 @@ function countByDim(D, key, val){
     if (val==='985211') return D.filter(function(e){return e._is985 && e._is211;}).length;
     if (val==='normal') return D.filter(function(e){return e.school && !(e._is985||e._is211);}).length;
     if (val==='noschool') return D.filter(function(e){return !e.school;}).length;
+    return 0;
+  }
+  if (key==='is_supervisor') {
+    if (val==='主管') return D.filter(function(e){ var im=String(e.is_manager||e.is_supervisor||'').toUpperCase(); return im==='TRUE'||im==='主管'; }).length;
+    if (val==='非主管') return D.filter(function(e){ var im=String(e.is_manager||e.is_supervisor||'').toUpperCase(); return im==='FALSE'||im==='非主管'; }).length;
     return 0;
   }
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
