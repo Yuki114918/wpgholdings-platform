@@ -249,6 +249,25 @@ footer span{display:block}
 .pma-card .pma-tags{margin-top:6px}
 .trust-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:3px;margin:2px 1px}
 .trust-badge.a{background:#ecfdf5;color:#065f46}.trust-badge.b{background:#dbeafe;color:#1d40af}.trust-badge.c{background:#fef9c3;color:#a16207}@media(max-width:900px){.pma-grid,.pma-grid.col4{grid-template-columns:1fr}}
+
+/* ===== 报告子标签页（Tab 切换）===== */
+.tab-bar {
+  display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:20px;
+  background:#fff; border-radius:10px 10px 0 0; padding:0 16px; overflow-x:auto;
+}
+.tab-btn {
+  padding:12px 22px; border:none; background:none; font-size:14px; font-weight:600;
+  color:#64748b; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap;
+  transition:all .2s; position:relative; bottom:-2px;
+}
+.tab-btn:hover { color:#2563eb; background:#f1f5f9; }
+.tab-btn.active { color:#2563eb; border-bottom-color:#2563eb; background:#fff; }
+.tab-content { display:none; animation:tabFadeIn .3s ease; }
+.tab-content.active { display:block; }
+@keyframes tabFadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+@media(max-width:768px){
+  .tab-btn { padding:10px 14px; font-size:13px; }
+}
 </style>
 </head>
 <body>
@@ -393,6 +412,22 @@ function initReportCharts() {
       }
     });
   }
+}
+
+// 报告子标签页切换（直接定义在此处，不依赖动态脚本提取）
+function switchTab(tabId) {
+  var container = document.getElementById('reportBodyContent');
+  if (!container) return;
+  container.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  container.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  var panel = container.querySelector('#' + tabId);
+  if (panel) panel.classList.add('active');
+  // 高亮当前按钮（通过 data-tab 属性匹配）
+  container.querySelectorAll('.tab-btn').forEach(function(b) {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(tabId) !== -1) {
+      b.classList.add('active');
+    }
+  });
 }
 
 // 从 HTML 字符串中提取并执行 <script> 标签（innerHTML 不会自动执行脚本）
