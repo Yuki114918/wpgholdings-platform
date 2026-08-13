@@ -15,6 +15,7 @@
 // 分块加载花名册数据
 // GitHub Pages: 本地加载 / Surge等: 从 jsDelivr CDN 加载（避免Surge截断）
 var EMPLOYEES_DATA = null;
+var MGR99_NAME_SET = {};  // 全局主管姓名集合：key=姓名, value=true（数据加载后构建）
 var TOTAL_CHUNKS = 10;
 var DATA_BASE = location.hostname.indexOf('github.io') !== -1
   ? 'data/'
@@ -48,6 +49,12 @@ function mergeEmployeeData() {
     if (p && p.length) parts.push(p);
   }
   EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
+  // 构建全局主管姓名集合：所有出现在他人 mgr99 字段中的人名 → 都是主管
+  MGR99_NAME_SET = {};
+  for (var mi = 0; mi < EMPLOYEES_DATA.length; mi++) {
+    var m99 = (EMPLOYEES_DATA[mi].mgr99 || '').trim();
+    if (m99) MGR99_NAME_SET[m99] = true;
+  }
   var el = document.getElementById('employeeCount');
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
   buildEmployeeSearchIndex();
@@ -3166,15 +3173,17 @@ function getNormJobFunction(e) {
  * 规则（按优先级）：
  *   1. 原始 is_manager/is_supervisor 字段为 TRUE/主管 → 主管
  *   2. mgr99 等于本人姓名（=自己是99层部门负责人）→ 主管
- *   3. perf_mgr 字段中出现本人姓名且该人员被其他人引用为 perf_mgr（兼任主管）→ 主管
+ *   3. 姓名出现在全局主管集合中（有人汇报给TA）→ 主管
  */
 function isDeptManager(e) {
   var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
   if (im === 'TRUE' || im === '主管') return true;
-  // mgr99 = 自己名字 → 部门负责人
+  // 规则2: mgr99 = 自己名字 → 部门负责人
   var name = (e.cn_name || e.name || '').trim();
   var m99 = (e.mgr99 || '').trim();
   if (name && m99 && name === m99) return true;
+  // 规则3: 姓名在全局主管集合中 → 有人汇报给TA（中间层主管/组长）
+  if (name && MGR99_NAME_SET[name]) return true;
   return false;
 }
 
@@ -3391,7 +3400,7 @@ function buildDashboard(){
   ];
   var dims = [
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
-    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','985211':'#dc2626','normal':'#64748b','noschool':'#94a3b8'}},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b'}},
     {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
@@ -3503,9 +3512,7 @@ function countByDim(D, key, val){
   if (key==='schoolTag') {
     if (val==='985') return D.filter(function(e){return e._is985;}).length;
     if (val==='211') return D.filter(function(e){return e._is211;}).length;
-    if (val==='985211') return D.filter(function(e){return e._is985 && e._is211;}).length;
-    if (val==='normal') return D.filter(function(e){return e.school && !(e._is985||e._is211);}).length;
-    if (val==='noschool') return D.filter(function(e){return !e.school;}).length;
+    if (val==='dualfei') return D.filter(function(e){return !(e._is985 || e._is211); }).length;
     return 0;
   }
   if (key==='is_supervisor') {
