@@ -204,7 +204,10 @@ footer span{display:block}
   .cover{padding:28px 20px 22px}.cover h1{font-size:22px}
   .metric-row,.city-row,.num-cards,.org-grid,.market-grid,.exec-grid,.chart-row{grid-template-columns:1fr}
   .main{padding:24px 14px}.report-layout{flex-direction:column}
-  .report-sidebar{width:100%;position:static;height:auto;max-height:200px;border-right:none;border-bottom:1px solid var(--border)}
+  .report-sidebar{width:100%;position:static;height:auto;max-height:none;border-right:none;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:0;padding:8px 12px}
+  .sb-group-label,.sb-back{display:none}
+  .sb-item{flex:1;min-width:80px;text-align:center;padding:10px 8px;font-size:12.5px;border-left:3px solid transparent;border-bottom:3px solid var(--border);justify-content:center}
+  .sb-item.active{border-left-color:transparent;border-bottom-color:var(--primary);background:var(--primary-light)}
 }
 
 .chart-wrap{background:#fff;border:1px solid #e5e7eb;padding:20px;margin-bottom:16px}
@@ -268,6 +271,19 @@ footer span{display:block}
 @media(max-width:768px){
   .tab-btn { padding:10px 14px; font-size:13px; }
 }
+
+/* 手机端悬浮返回按钮 */
+.fab-back {
+  display:none; position:fixed; bottom:20px; right:18px; z-index:999;
+  width:48px; height:48px; border-radius:50%;
+  background:linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff;
+  border:none; box-shadow:0 4px 16px rgba(37,99,235,.4);
+  font-size:22px; cursor:pointer; align-items:center; justify-content:center;
+  text-decoration:none; transition:transform .2s,box-shadow .2s;
+}
+.fab-back:hover { transform:scale(1.1); box-shadow:0 6px 24px rgba(37,99,235,.5); }
+.fab-back::after { content:'🏠'; }
+@media(max-width:900px){ .fab-back { display:flex; } }
 </style>
 </head>
 <body>
@@ -442,5 +458,6 @@ function executeScripts(html, container) {
   }
 }
 </script>
+<a href="index.html" class="fab-back" title="返回工作平台" aria-label="返回工作平台"></a>
 </body>
 </html>
