@@ -3503,6 +3503,8 @@ var currentModule = 'all'; // 'all' = 显示全部
 
 function switchModule(target) {
   currentModule = target;
+  // 外部报告是独立页面，直接跳转
+  if (target === 'report') { location.href = 'report.html'; return; }
   var sidebar = document.getElementById('appSidebar');
   var main = document.getElementById('appMain');
   if (!main) return;
@@ -3563,7 +3565,7 @@ function buildMobileNav() {
   var items = [
     ['all','🏠 总览'],['shortcuts','🚀 快捷入口'],['roster','👥 花名册'],
     ['dashboard','📊 看板'],['todo','📝 待办'],['hr-law','⚖️ HR法令'],
-    ['labor','📋 劳动争议']
+    ['labor','📋 劳动争议'],['report','📰 外部报告']
   ];
   var html = '';
   items.forEach(function(it){
