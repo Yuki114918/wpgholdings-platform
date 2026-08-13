@@ -3175,18 +3175,33 @@ function buildDashboard(){
       searchHtml = '<div style="margin-bottom:8px;"><input type="text" placeholder="🔍 搜索部门..." oninput="filterDashBars(this,\''+dim.key+'\')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" /></div>';
     }
 
-    var bars = counts.map(function(c, idx){
+    // 生成条形 HTML
+    function makeBar(c, idx) {
       var pct = (c.cnt/max*100).toFixed(1);
       var esc = String(c.val).replace(/'/g,"\\'");
-      // 颜色：优先用自定义映射，否则按顺序取色板
       var barColor = (dim.colors && dim.colors[c.val]) ? dim.colors[c.val] : DIM_COLORS[colorIdx % DIM_COLORS.length];
       if (!dim.colors) colorIdx++;
       return '<div class="dash-bar-row" onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击跳转到花名册：'+c.label+'" data-label="'+esc.toLowerCase()+'">'+
         '<div class="dash-bar-label" title="'+c.label+'">'+c.label+'</div>'+
         '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>'+
         '<div class="dash-bar-val" style="color:'+barColor+';">'+c.cnt.toLocaleString()+'</div></div>';
-    }).join('');
-    grid += '<div class="dash-card"><h3>'+dim.title+(counts.length?' ('+counts.length+')':'')+'</h3>'+searchHtml+bars+'</div>';
+    }
+
+    var SHOW_LIMIT = 10;
+    var visibleBars = counts.slice(0, SHOW_LIMIT).map(makeBar).join('');
+    var hiddenBars = counts.length > SHOW_LIMIT
+      ? counts.slice(SHOW_LIMIT).map(makeBar).join('')
+      : '';
+
+    var toggleHtml = '';
+    if (counts.length > SHOW_LIMIT) {
+      var restCount = counts.length - SHOW_LIMIT;
+      toggleHtml = '<div style="margin-top:8px;text-align:center;">'+
+        '<button onclick="this.previousElementSibling.style.display=this.previousElementSibling.style.display===\'none\'?\'\':\'none\';this.textContent=this.textContent===\'展开全部 '+restCount+' 项 ▼\'?\'收起 ▲\':\'展开全部 '+restCount+' 项 ▼\';" style="padding:4px 16px;cursor:pointer;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:6px;font-size:12px;">展开全部 ' + restCount + ' 项 ▼</button>'+
+        '<div style="display:none;">' + hiddenBars + '</div></div>';
+    }
+
+    grid += '<div class="dash-card"><h3>'+dim.title+(counts.length?' ('+counts.length+')':'')+'</h3>'+searchHtml+visibleBars+toggleHtml+'</div>';
   });
   gridEl.innerHTML = grid;
 
