@@ -1378,6 +1378,7 @@ function mergeEmployeeData() {
   }
   .school-tag.t985 { background:#fef3c7; color:#b45309; }
   .school-tag.t211 { background:#dbeafe; color:#1d4ed8; }
+  .school-tag.tnoschool { background:#e2e8f0; color:#475569; }
   .emp-head-tags { margin-left:6px; display:inline-flex; gap:4px; }
   .emp-head-tags .school-tag { margin-left:0; }
 
@@ -2769,7 +2770,7 @@ var _985_TOKENS = SCHOOL_985.map(_normSchool);
 var _211_TOKENS = SCHOOL_211.map(_normSchool);
 function getSchoolTags(school){
   var s = _normSchool(school);
-  if (!s) return { is985:false, is211:false };
+  if (!s) return { is985:false, is211:false, noSchool:true };
   // 排除继续教育/成人教育/网络教育/函授/夜大/自考等非全日制学历
   var EXCLUDE_PATTERNS = ['继续教育', '繼續教育', '成人教育', '网络教育', '網絡教育', '函授', '夜大', '自考', '进修班', '進修班', '培训', '培訓', '专修', '專修',
     '教育学院', '教育學院', '职业技术学院', '職業技術學院', '职业学院', '職業學院',
@@ -2788,7 +2789,7 @@ function getSchoolTags(school){
   }
   var is985 = _985_TOKENS.some(function(t){ return s === t; });
   var is211 = _211_TOKENS.some(function(t){ return s === t; });
-  return { is985:is985, is211:is211 };
+  return { is985:is985, is211:is211, noSchool:false };
 }
 
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
@@ -2819,6 +2820,7 @@ function buildEmployeeSearchIndex() {
     var tags = getSchoolTags(e.school);
     e._is985 = tags.is985;
     e._is211 = tags.is211;
+    e._noSchool = tags.noSchool;
     var tagTxt = (tags.is985 ? ' 985' : '') + (tags.is211 ? ' 211' : '');
     return t + ' ' + toSimplified(t) + tagTxt;
   });
@@ -2912,8 +2914,9 @@ function dimFilterMatch(e, f) {
   if (f.key === 'schoolTag') {
     if (f.val === '985') return !!e._is985;
     if (f.val === '211') return !!e._is211;
-    if (f.val === 'dualfei') return !(e._is985 || e._is211);
-    return true;
+    if (f.val === 'noschool') return !!e._noSchool;
+    if (f.val === 'dualfei') return !(e._is985 || e._is211 || e._noSchool);
+    return false;
   }
   var v = getDimValue(e, f.key);
   return v != null && String(v) === f.val;
@@ -2942,10 +2945,11 @@ function renderEmployeeCard(e) {
   var isActive = (e.status || '') === '在职';
   var badgeClass = isActive ? '' : ' inactive';
   var badgeText = isActive ? (e.status || '') : '离职';  // 离职统一显示"离职"，原因在详情区展示
-  var headTags = (e._is985 || e._is211)
+  var headTags = (e._is985 || e._is211 || e._noSchool)
     ? '<span class="emp-head-tags">' +
         (e._is985 ? '<span class="school-tag t985">985</span>' : '') +
         (e._is211 ? '<span class="school-tag t211">211</span>' : '') +
+        (e._noSchool ? '<span class="school-tag tnoschool">无院校</span>' : '') +
       '</span>'
     : '';
 
@@ -3385,6 +3389,7 @@ function buildDashboard(){
       var st = getSchoolTags(EMPLOYEES_DATA[si].school);
       EMPLOYEES_DATA[si]._is985 = st.is985;
       EMPLOYEES_DATA[si]._is211 = st.is211;
+      EMPLOYEES_DATA[si]._noSchool = st.noSchool;
     }
   }
 
@@ -3398,6 +3403,8 @@ function buildDashboard(){
   var active = D.filter(function(e){ return (e.status||'')==='在职'; }).length;
   var cnt985 = D.filter(function(e){ return e._is985; }).length;
   var cnt211 = D.filter(function(e){ return e._is211; }).length;
+  var cntDualfei = D.filter(function(e){ return !(e._is985 || e._is211 || e._noSchool); }).length;
+  var cntNoSchool = D.filter(function(e){ return !!e._noSchool; }).length;
   var male = D.filter(function(e){ return (e.gender||'')==='男'; }).length;
   var female = D.filter(function(e){ return (e.gender||'')==='女'; }).length;
 
@@ -3440,7 +3447,9 @@ function buildDashboard(){
     {val:supCount.toLocaleString()+'('+Math.round(supCount/D.length*100)+'%)', label:'主管', small:true},
     {val:nonSupCount.toLocaleString()+'('+Math.round(nonSupCount/D.length*100)+'%)', label:'非主管', small:true},
     {val:cnt985.toLocaleString()+'('+Math.round(cnt985/D.length*100)+'%)', label:'985院校', small:true},
-    {val:cnt211.toLocaleString()+'('+Math.round(cnt211/D.length*100)+'%)', label:'211院校', small:true}
+    {val:cnt211.toLocaleString()+'('+Math.round(cnt211/D.length*100)+'%)', label:'211院校', small:true},
+    {val:cntDualfei.toLocaleString()+'('+Math.round(cntDualfei/D.length*100)+'%)', label:'双非院校', small:true},
+    {val:cntNoSchool.toLocaleString()+'('+Math.round(cntNoSchool/D.length*100)+'%)', label:'无院校', small:true}
   ];
   sumEl.innerHTML = summary.map(function(s){
     var cls = s.highlight ? ' dash-stat-hl' : (s.small ? ' dash-stat-sm' : '');
@@ -3455,7 +3464,7 @@ function buildDashboard(){
   ];
   var dims = [
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
-    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b'}},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b','noschool':'#94a3b8'}},
     {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
@@ -3538,7 +3547,7 @@ function jumpToRosterFilter(dim, val) {
   // 设置为真正的维度筛选（非文本搜索），避免佘瑞琦(总监)等不含'主管'文本的人被漏判
   var labelMap = {
     'is_supervisor': { '主管':'主管职', '非主管':'非主管职' },
-    'schoolTag': { '985':'985 院校', '211':'211 院校', 'dualfei':'双非院校' }
+    'schoolTag': { '985':'985 院校', '211':'211 院校', 'dualfei':'双非院校', 'noschool':'无院校' }
   };
   var lbl = (labelMap[dim] && labelMap[dim][val]) || val;
   rosterDimFilter = { key: dim, val: val, label: '筛选：' + lbl };
@@ -3597,7 +3606,8 @@ function countByDim(D, key, val){
   if (key==='schoolTag') {
     if (val==='985') return D.filter(function(e){return e._is985;}).length;
     if (val==='211') return D.filter(function(e){return e._is211;}).length;
-    if (val==='dualfei') return D.filter(function(e){return !(e._is985 || e._is211); }).length;
+    if (val==='noschool') return D.filter(function(e){return e._noSchool;}).length;
+    if (val==='dualfei') return D.filter(function(e){return !(e._is985 || e._is211 || e._noSchool); }).length;
     return 0;
   }
   if (key==='is_supervisor') {
