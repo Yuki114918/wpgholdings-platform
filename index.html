@@ -1721,6 +1721,12 @@ function mergeEmployeeData() {
         <option value="主管">主管</option>
         <option value="非主管">非主管</option>
       </select>
+      <select id="dashFilterWorkRegion" class="dash-filter-select" onchange="applyDashboardFilter()">
+        <option value="">工作区域（所有）</option>
+      </select>
+      <select id="dashFilterJobFunction" class="dash-filter-select" onchange="applyDashboardFilter()">
+        <option value="">Job Function（所有）</option>
+      </select>
       <button onclick="clearDashboardFilters()" class="dash-filter-btn">清除筛选</button>
       <span class="dash-filter-count" id="dashFilterCount"></span>
     </div>
@@ -3099,6 +3105,53 @@ function getNormGroup(e) { return normalizeField(e.group, GROUP_NORM_MAP); }
 function getNormJobSeries(e) { return normalizeField(e.job_series, JOB_SERIES_NORM_MAP); }
 function getNormCity(e) { return normalizeField(e.city, CITY_NORM_MAP); }
 
+// ===== 工作区域：由 city / sub_region 派生（city 有 City代码 与 英文 两种形式，合并为大区） =====
+var TAIWAN_CITIES = ['City1-Taipei','City2-Taoyuan','City3-Hsinchu','City4-Kaohsiung','City73-Taichung','Taipei','Taoyuan','Hsinchu','Kaohsiung','Taichung'];
+var HK_CITIES = ['City5-Hongkong','Hongkong'];
+var SG_CITIES = ['City12-Singapore','Singapore'];
+function getNormWorkRegion(e) {
+  var c = (e.city || '').trim();
+  if (TAIWAN_CITIES.indexOf(c) >= 0) return '台湾区';
+  if (HK_CITIES.indexOf(c) >= 0) return '香港区';
+  if (SG_CITIES.indexOf(c) >= 0) return '新加坡区';
+  if (c || (e.sub_region || '').trim()) return '中国大陆区';
+  return '(未填)';
+}
+
+// ===== Job Function：由 position 的「功能部分」派生 =====
+// 同一职能在数据中常以多种形式出现（中文 / 中文(英文) / 纯英文 / 简体 / 集团代码前缀），
+// 统一合并为单一中文职能名（以中文为准）。
+function getNormJobFunction(e) {
+  var p = (e.position || '').trim();
+  if (!p) return '(未填)';
+  // 去掉开头的集团代码前缀（可能多级，如 GBG-CEO-高階主管 / WPIg-業務 / SACg系統應用）
+  var fn = p;
+  var PREFIX = /^(WPIg|WPIG|WPI|WPHG|YSNg|YSHg|TGH|THG|SACg|Sacg|SAC|GBG|GBSU|HOLDINGS|LOG|BSC|AITg|Vitec|WPG|G07|G01|G02|G03|G04|G05|G06|G08|G09|G10|CEO|CE01|H)\s*-?/;
+  var prev;
+  do { prev = fn; fn = fn.replace(PREFIX, ''); } while (fn !== prev && fn);
+  if (!fn) fn = p;
+  fn = fn.replace(/^[·c]+/, '');                 // 清理 ·業務 / c產品行銷 这类前缀噪声
+  fn = fn.replace(/\s*[（(][^（）()]*[)）]\s*$/, ''); // 去掉末尾 (Sales)/(PM) 等英文括号
+  fn = fn.trim();
+  if (fn === 'CE01') return '高階主管';
+  var EN_MAP = {
+    'SALES':'業務','PM':'產品行銷','FAE':'系統應用','TME':'技術應用','CSR':'銷售業助',
+    'PCSR':'產品業助','BEPG':'業務效能','AE':'應用工程師','MIS':'軟體工程師','Networking':'網管',
+    'MarCom':'行銷企劃','Shipping':'進出口作業','EMS':'其他','銷售':'業務','銷售業務':'業務'
+  };
+  if (EN_MAP[fn]) return EN_MAP[fn];
+  var SIM_MAP = {
+    '业务效能':'業務效能','产品':'產品','产品行銷':'產品行銷','产品营销':'產品行銷',
+    '产品营销（PM）':'產品行銷','技术':'技術','后端幕僚':'後端幕僚','产品助理':'產品業助'
+  };
+  if (SIM_MAP[fn]) return SIM_MAP[fn];
+  if (/^Supply Chain/i.test(fn)) return '供應鏈管理';
+  if (/^Global|^GBO|^MRQ/.test(fn)) return '其他';
+  if (/非編制無法歸類|其他[（(]/.test(fn)) return '其他';
+  if (/推廣應用/.test(fn)) return '推廣應用';
+  return fn || '(未填)';
+}
+
 function getDashboardFilteredData() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return [];
   var D = EMPLOYEES_DATA;
@@ -3119,6 +3172,8 @@ function getDashboardFilteredData() {
         if (v === '主管' && !isSup) return false;
         if (v === '非主管' && isSup) return false;
       }
+      else if (k === 'work_region') { if (getNormWorkRegion(e) !== v) return false; }
+      else if (k === 'job_function') { if (getNormJobFunction(e) !== v) return false; }
       else { if ((e[k]||'') !== v) return false; }
     }
     return true;
@@ -3160,12 +3215,26 @@ function populateDashboardFilters() {
       '<option value="主管">主管</option><option value="非主管">非主管</option>';
   }
 
+  // 工作区域（派生，合并为大区）
+  var regions = [...new Set(D.map(getNormWorkRegion).filter(Boolean))].sort();
+  var selWR = document.getElementById('dashFilterWorkRegion');
+  if (selWR) { selWR.innerHTML = '<option value="">工作区域（所有）</option>' +
+    regions.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join(''); }
+
+  // Job Function（派生，合并中英文/简繁/代码前缀）
+  var funcs = [...new Set(D.map(getNormJobFunction).filter(Boolean))].sort();
+  var selJF = document.getElementById('dashFilterJobFunction');
+  if (selJF) { selJF.innerHTML = '<option value="">Job Function（所有）</option>' +
+    funcs.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join(''); }
+
   // 恢复已选值
   if (dashboardFilters.group && selG) selG.value = dashboardFilters.group;
   if (dashboardFilters.sub_region && selR) selR.value = dashboardFilters.sub_region;
   if (dashboardFilters.job_series && selJ) selJ.value = dashboardFilters.job_series;
   if (dashboardFilters.city && selC) selC.value = dashboardFilters.city;
   if (dashboardFilters.is_supervisor && selSup) selSup.value = dashboardFilters.is_supervisor;
+  if (dashboardFilters.work_region && selWR) selWR.value = dashboardFilters.work_region;
+  if (dashboardFilters.job_function && selJF) selJF.value = dashboardFilters.job_function;
   if (dashboardFilters.status) { var selS = document.getElementById('dashFilterStatus'); if (selS) selS.value = dashboardFilters.status; }
 }
 
@@ -3176,12 +3245,16 @@ function applyDashboardFilter() {
   var selS = document.getElementById('dashFilterStatus');
   var selC = document.getElementById('dashFilterCity');
   var selSup = document.getElementById('dashFilterSupervisor');
+  var selWR = document.getElementById('dashFilterWorkRegion');
+  var selJF = document.getElementById('dashFilterJobFunction');
   dashboardFilters.group = selG ? selG.value : '';
   dashboardFilters.sub_region = selR ? selR.value : '';
   dashboardFilters.job_series = selJ ? selJ.value : '';
   dashboardFilters.status = selS ? selS.value : '';
   dashboardFilters.city = selC ? selC.value : '';
   dashboardFilters.is_supervisor = selSup ? selSup.value : '';
+  dashboardFilters.work_region = selWR ? selWR.value : '';
+  dashboardFilters.job_function = selJF ? selJF.value : '';
   // 清除空值
   Object.keys(dashboardFilters).forEach(function(k){ if (!dashboardFilters[k]) delete dashboardFilters[k]; });
   buildDashboard();
@@ -3189,7 +3262,7 @@ function applyDashboardFilter() {
 
 function clearDashboardFilters() {
   dashboardFilters = {};
-  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus','dashFilterCity','dashFilterSupervisor'];
+  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus','dashFilterCity','dashFilterSupervisor','dashFilterWorkRegion','dashFilterJobFunction'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.selectedIndex=0; });
   buildDashboard();
 }
@@ -3304,8 +3377,10 @@ function buildDashboard(){
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
+    {key:'job_function', title:'Job Function', vals:null, noJump:true},
     {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
     {key:'city', title:'工作城市', vals:null},
+    {key:'work_region', title:'工作区域', vals:null, noJump:true},
     {key:'grade', title:'职级', vals:null}
   ];
 
@@ -3336,7 +3411,9 @@ function buildDashboard(){
       var esc = String(c.val).replace(/'/g,"\\'");
       var barColor = (dim.colors && dim.colors[c.val]) ? dim.colors[c.val] : DIM_COLORS[colorIdx % DIM_COLORS.length];
       if (!dim.colors) colorIdx++;
-      return '<div class="dash-bar-row" onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击跳转到花名册：'+c.label+'" data-label="'+esc.toLowerCase()+'">'+
+      var titleAttr = dim.noJump ? ' title="'+c.label+'"' : ' title="点击跳转到花名册：'+c.label+'"';
+      var onclickAttr = dim.noJump ? '' : ' onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')"';
+      return '<div class="dash-bar-row"'+onclickAttr+titleAttr+' data-label="'+esc.toLowerCase()+'">'+
         '<div class="dash-bar-label" title="'+c.label+'">'+c.label+'</div>'+
         '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>'+
         '<div class="dash-bar-val" style="color:'+barColor+';">'+c.cnt.toLocaleString()+'</div></div>';
@@ -3398,6 +3475,8 @@ function getDimValue(e, key){
   if (key==='group') return getNormGroup(e);
   if (key==='job_series') return getNormJobSeries(e);
   if (key==='city') return getNormCity(e);
+  if (key==='work_region') return getNormWorkRegion(e);
+  if (key==='job_function') return getNormJobFunction(e);
   return e[key] != null ? String(e[key]) : '';
 }
 
