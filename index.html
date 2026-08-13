@@ -1038,6 +1038,40 @@ function mergeEmployeeData() {
     line-height: 1.5;
   }
   .emp-card .emp-details .perf-item:first-of-type { border-top: none; }
+  .emp-card .emp-details .emp-detail {
+    display: flex;
+    gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px dotted #e5e7eb;
+    line-height: 1.5;
+  }
+  .emp-card .emp-details .emp-detail:last-child { border-bottom: none; }
+  .emp-card .emp-details .detail-label {
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 72px;
+  }
+  .emp-card .emp-details .work-details {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f8fafc;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .emp-card .emp-details .work-details summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .emp-card .emp-details .we-item {
+    padding: 4px 0;
+    border-top: 1px dashed #e5e7eb;
+    line-height: 1.55;
+  }
+  .emp-card .emp-details .we-item:first-of-type { border-top: none; }
 
   /* Peoplus Modal */
   .peoplus-overlay {
@@ -2776,6 +2810,18 @@ function runRosterSearch() {
 
   employeeDisplayPage = 1;
   renderRosterPage();
+}
+
+function buildDetail(label, val, linkType) {
+  if (!val) return '';
+  var safe = String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (linkType === 'tel') {
+    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="tel:' + safe + '">' + safe + '</a></div>';
+  }
+  if (linkType === 'mail') {
+    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="mailto:' + safe + '">' + safe + '</a></div>';
+  }
+  return '<div class="emp-detail"><span class="detail-label">' + label + '</span>' + safe + '</div>';
 }
 
 function renderEmployeeCard(e) {
