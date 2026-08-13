@@ -343,7 +343,7 @@ footer span{display:block}
   <p class="subtitle">聚焦大联大控股及 7 家对标企业（文晔 &middot; 安富利 &middot; 艾睿 &middot; 至上 &middot; 益登 &middot; 威健 &middot; 全科）| 北上广深四城 | 15 个岗位全覆盖 | HR 视角深度分析</p>
   <div class="cover-meta">
     <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>报告结构</b> 结论先行 &rarr; 数据支撑 &rarr; 总结收束</div>
-    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>数据来源</b> 大联大官网 &middot; 国际电子商情 &middot; 芯世相 &middot; 51Job &middot; 猎聘 &middot; BOSS直聘 &middot; 智联招聘 &middot; 北京人社局 &middot; Gartner &middot; 集邦咨询 &middot; 财富中国 &middot; 外资投行研报</div>
+    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>数据来源</b> 大联大官网 &middot; 国际电子商情 &middot; 芯世相 &middot; 51Job &middot; 猎聘 &middot; BOSS直聘 &middot; 智联招聘 &middot; 北京人社局 &middot; 美世Mercer &middot; Gartner &middot; 集邦咨询 &middot; 财富中国 &middot; 外资投行研报</div>
     <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>更新日期</b> 2026 年 8 月</div>
   </div>
 </header>
@@ -374,8 +374,8 @@ footer span{display:block}
 </footer>
 
 <script>
-// 加载报告主体内容
-fetch('report-content.html')
+// 加载报告主体内容（带版本号缓存 bust）
+fetch('report-content.html?v=3')
   .then(r => r.text())
   .then(html => {
     document.getElementById('reportBodyContent').innerHTML = html;
