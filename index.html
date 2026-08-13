@@ -2806,6 +2806,9 @@ function runRosterSearch() {
       filteredInfo.textContent = '找到 ' + employeeSearchResults.length + ' 条匹配';
       filteredInfo.style.display = '';
     }
+    // 搜索时恢复显示总数
+    var tc = document.getElementById('employeeTotalCount');
+    if (tc) tc.style.display = '';
   }
 
   employeeDisplayPage = 1;
@@ -2842,11 +2845,15 @@ function renderEmployeeCard(e) {
       '</span>'
     : '';
 
-  // 绩效考核记录
+  // 绩效考核记录 —— 按结束日期降序（最新在前）
   var perfHtml = '';
   if (e.perf && e.perf.length) {
-    perfHtml = '<details class="work-details"><summary>📊 绩效考核记录（' + e.perf.length + ' 条）</summary>'
-      + e.perf.map(function(p){
+    var sortedPerf = e.perf.slice().sort(function(a, b) {
+      var da = a.end_date || '', db = b.end_date || '';
+      return da > db ? -1 : (da < db ? 1 : 0);
+    });
+    perfHtml = '<details class="work-details"><summary>📊 绩效考核记录（' + sortedPerf.length + ' 条）</summary>'
+      + sortedPerf.map(function(p){
           return '<div class="we-item"><strong>' + (p.score_name||'-') + '</strong>'
             + '<br/><small>' + (p.score_label||p.score||'-')
             + ' | ' + (p.start_date||'') + ' ~ ' + (p.end_date||'') + '</small></div>';
@@ -3004,6 +3011,9 @@ function resetEmployee() {
   document.getElementById('employeeSearchInput').value = '';
   var fi = document.getElementById('employeeFilteredInfo');
   if (fi) fi.style.display = 'none';
+  // 清除后也隐藏总数计数，保持界面干净
+  var tc = document.getElementById('employeeTotalCount');
+  if (tc) tc.style.display = 'none';
   employeeDisplayPage = 1;
   runRosterSearch();
 }
@@ -3127,19 +3137,25 @@ function buildDashboard(){
     return '<div class="dash-stat"><div class="ds-val">'+s.val+'</div><div class="ds-label">'+s.label+'</div></div>';
   }).join('');
 
-  // 维度图表
+  // 维度图表 —— 颜色方案 + 全量显示（无TOP限制）
+  var DIM_COLORS = [
+    '#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed',
+    '#0891b2', '#be185d', '#4f46e5', '#059669', '#ca8a04',
+    '#e11d48', '#6366f1', '#0d9488', '#b45309', '#a855f7'
+  ];
   var dims = [
-    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']]},
-    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true},
-    {key:'gender', title:'性别', vals:[['男','男'],['女','女']]},
+    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['985211','985+211'],['normal','普通院校'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','985211':'#dc2626','normal':'#64748b','noschool':'#94a3b8'}},
+    {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
     {key:'hire_type', title:'用工类型', vals:null},
-    {key:'business_unit', title:'事业体 Top8', vals:null, top:8},
-    {key:'dept_99', title:'部门(99层) Top8', vals:null, top:8},
-    {key:'city', title:'工作城市 Top8', vals:null, top:8},
-    {key:'grade', title:'职级 Top8', vals:null, top:8}
+    {key:'business_unit', title:'事业体', vals:null},
+    {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
+    {key:'city', title:'工作城市', vals:null},
+    {key:'grade', title:'职级', vals:null}
   ];
 
   var grid = '';
+  var colorIdx = 0;
   dims.forEach(function(dim){
     var counts;
     if (dim.vals) {
@@ -3149,18 +3165,28 @@ function buildDashboard(){
       D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
       counts = Object.keys(map).map(function(k){return {label:k, val:k, cnt:map[k]};});
       counts.sort(function(a,b){return b.cnt-a.cnt;});
-      if (dim.top) counts = counts.slice(0, dim.top);
+      // 不再截断 TOP N，显示全部
     }
     var max = counts.reduce(function(m,c){return Math.max(m,c.cnt);},1);
-    var bars = counts.map(function(c){
+
+    // 部门搜索栏
+    var searchHtml = '';
+    if (dim.searchable && counts.length > 10) {
+      searchHtml = '<div style="margin-bottom:8px;"><input type="text" placeholder="🔍 搜索部门..." oninput="filterDashBars(this,\''+dim.key+'\')" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;" /></div>';
+    }
+
+    var bars = counts.map(function(c, idx){
       var pct = (c.cnt/max*100).toFixed(1);
       var esc = String(c.val).replace(/'/g,"\\'");
-      return '<div class="dash-bar-row" onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击跳转到花名册：'+c.label+'">'+
+      // 颜色：优先用自定义映射，否则按顺序取色板
+      var barColor = (dim.colors && dim.colors[c.val]) ? dim.colors[c.val] : DIM_COLORS[colorIdx % DIM_COLORS.length];
+      if (!dim.colors) colorIdx++;
+      return '<div class="dash-bar-row" onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')" title="点击跳转到花名册：'+c.label+'" data-label="'+esc.toLowerCase()+'">'+
         '<div class="dash-bar-label" title="'+c.label+'">'+c.label+'</div>'+
-        '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;"></div></div>'+
-        '<div class="dash-bar-val">'+c.cnt.toLocaleString()+'</div></div>';
+        '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>'+
+        '<div class="dash-bar-val" style="color:'+barColor+';">'+c.cnt.toLocaleString()+'</div></div>';
     }).join('');
-    grid += '<div class="dash-card"><h3>'+dim.title+'</h3>'+bars+'</div>';
+    grid += '<div class="dash-card"><h3>'+dim.title+(counts.length?' ('+counts.length+')':'')+'</h3>'+searchHtml+bars+'</div>';
   });
   gridEl.innerHTML = grid;
 
@@ -3179,6 +3205,19 @@ function jumpToRosterFilter(dim, val) {
   var inp = document.getElementById('employeeSearchInput');
   if (inp) { inp.value = val; searchEmployee(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 看板部门搜索过滤
+function filterDashBars(input, dimKey) {
+  var q = (input.value || '').trim().toLowerCase();
+  // 找到当前输入框所在的 dash-card，过滤其中的 bar-row
+  var card = input.closest('.dash-card');
+  if (!card) return;
+  var rows = card.querySelectorAll('.dash-bar-row');
+  for (var i = 0; i < rows.length; i++) {
+    var label = (rows[i].getAttribute('data-label') || '').toLowerCase();
+    rows[i].style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
+  }
 }
 
 function getDimValue(e, key){
