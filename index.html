@@ -2798,6 +2798,7 @@ var employeeDisplayPage = 1;
 var employeePageSize = 20;
 var EMP_SEARCH_INDEX = null;
 var rosterDimFilter = null;  // 仪表盘维度跳转后在花名册生效的真筛选条件: {key, val, label}
+var rosterDashFilters = null; // 仪表盘跳转时携带的看板筛选条件(保证数据子集一致)
 
 // 将整条员工记录（含对象/数组，如工作经历、绩效）递归拼成可搜索文本
 function employeeSearchText(e) {
@@ -2887,12 +2888,38 @@ function runRosterSearch() {
     }
   }
 
+  // ---- 第一步.5：看板筛选条件（从仪表盘跳转时携带，保证数据子集与看板一致） ----
+  if (rosterDashFilters && Object.keys(rosterDashFilters).length > 0) {
+    var dfKeys = Object.keys(rosterDashFilters);
+    base = base.filter(function(e) {
+      for (var di = 0; di < dfKeys.length; di++) {
+        var dk = dfKeys[di], dv = rosterDashFilters[dk];
+        if (!dv) continue;
+        if (dk === 'status') { if ((e.status||'') !== dv) return false; }
+        else if (dk === 'group') { if (getNormGroup(e) !== dv) return false; }
+        else if (dk === 'sub_region') { if ((e.sub_region||'') !== dv) return false; }
+        else if (dk === 'job_series') { if (getNormJobSeries(e) !== dv) return false; }
+        else if (dk === 'city') { if (getNormCity(e) !== dv) return false; }
+        else if (dk === 'is_supervisor') {
+          var isSup = isDeptManager(e);
+          if (dv === '主管' && !isSup) return false;
+          if (dv === '非主管' && isSup) return false;
+        }
+        else if (dk === 'work_region') { if (getNormWorkRegion(e) !== dv) return false; }
+        else if (dk === 'job_function') { if (getNormJobFunction(e) !== dv) return false; }
+        else { if ((e[dk]||'') !== dv) return false; }
+      }
+      return true;
+    });
+  }
+
   // ---- 第二步：维度筛选（真正的字段判断，非文本搜索） ----
   employeeSearchResults = base.filter(function(e) { return dimFilterMatch(e, rosterDimFilter); });
 
   if (filteredInfo) {
     var parts = [];
     if (q) parts.push('关键词「' + q + '」');
+    if (rosterDashFilters && Object.keys(rosterDashFilters).length > 0) parts.push('看板筛选');
     if (rosterDimFilter) parts.push(rosterDimFilter.label);
     filteredInfo.textContent = '找到 ' + employeeSearchResults.length + ' 条匹配' + (parts.length ? '（' + parts.join(' + ') + '）' : '');
     filteredInfo.style.display = '';
@@ -3118,6 +3145,7 @@ function searchEmployee() { employeeDisplayPage = 1; runRosterSearch(); }
 function resetEmployee() {
   document.getElementById('employeeSearchInput').value = '';
   rosterDimFilter = null;
+  rosterDashFilters = null;
   updateDimFilterChip();
   var fi = document.getElementById('employeeFilteredInfo');
   if (fi) fi.style.display = 'none';
@@ -3551,6 +3579,8 @@ function jumpToRosterFilter(dim, val) {
   };
   var lbl = (labelMap[dim] && labelMap[dim][val]) || val;
   rosterDimFilter = { key: dim, val: val, label: '筛选：' + lbl };
+  // 携带当前看板筛选条件，确保花名册数据与看板一致（如看板已按集团/区域过滤，跳转后保持同一子集）
+  rosterDashFilters = Object.keys(dashboardFilters).length > 0 ? JSON.parse(JSON.stringify(dashboardFilters)) : null;
   // 清掉文本搜索框，避免与维度筛选混淆
   var inp = document.getElementById('employeeSearchInput');
   if (inp) inp.value = '';
@@ -3575,6 +3605,7 @@ function updateDimFilterChip() {
 // 清除维度筛选（保留文本搜索）
 function clearDimFilter() {
   rosterDimFilter = null;
+  rosterDashFilters = null;
   updateDimFilterChip();
   runRosterSearch();
 }
