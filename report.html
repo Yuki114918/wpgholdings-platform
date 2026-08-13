@@ -317,9 +317,6 @@ footer span{display:block}
     <div class="sb-item" data-target="sec-strategy" onclick="scrollToReportSec('sec-strategy',this)">
       <span>04</span> HR 策略
     </div>
-    <div class="sb-item" data-target="sec-action" onclick="scrollToReportSec('sec-action',this)">
-      <span>04.5</span> 行动方案
-    </div>
     <div class="sb-item" data-target="sec-talent" onclick="scrollToReportSec('sec-talent',this)">
       <span>05</span> 人才竞争力
     </div>
@@ -356,7 +353,7 @@ footer span{display:block}
   <div class="nav-inner">
     <a href="#sec-flash">00 行业快讯</a><a href="#sec-summary" class="active">01 核心结论</a>
     <a href="#sec-salary">02 薪酬全貌</a><a href="#sec-market">03 市场趋势</a>
-    <a href="#sec-strategy">04 HR 策略</a><a href="#sec-action" class="active">04.5 行动方案</a>
+    <a href="#sec-strategy">04 HR 策略</a>
     <a href="#sec-talent">05 人才竞争力</a>
     <a href="#sec-db">06 专题数据库</a><a href="#sec-verify">07 数据验证</a>
   </div>
@@ -379,7 +376,7 @@ footer span{display:block}
 
 <script>
 // 加载报告主体内容（带版本号缓存 bust）
-fetch('report-content.html?v=4')
+fetch('report-content.html?v=5')
   .then(r => r.text())
   .then(html => {
     document.getElementById('reportBodyContent').innerHTML = html;
