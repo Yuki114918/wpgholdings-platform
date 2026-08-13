@@ -2935,7 +2935,7 @@ function renderEmployeeCard(e) {
       buildDetail('归属集团', e.group) +
       buildDetail('公司', e.company) +
       buildDetail('岗位', e.position) +
-      buildDetail('是否主管', e.is_manager) +
+      buildDetail('是否主管', isDeptManager(e) ? 'TRUE' : e.is_manager) +
       /* ---- 基本信息 ---- */
       buildDetail('性别', e.gender) +
       buildDetail('出生日期', e.birthday) +
@@ -2962,9 +2962,9 @@ function renderEmployeeCard(e) {
       buildDetail('专业', e.major) +
       buildDetail('毕业日期', e.grad_date) +
       buildDetail('学籍状态', e.study_status) +
-      /* ---- 绩效主管 ---- */
-      buildDetail('绩效考核主管(100)', e.mgr100) +
-      buildDetail('绩效考核主管(99)', e.mgr99) +
+      /* ---- 部门主管 ---- */
+      buildDetail('部门主管', e.mgr99) +
+      buildDetail('上级主管(100)', e.mgr100) +
       buildDetail('绩效主管', e.perf_mgr) +
       /* ---- 人事信息 ---- */
       buildDetail('婚姻状况', e.marriage) +
@@ -3161,6 +3161,23 @@ function getNormJobFunction(e) {
   return fn || '(未填)';
 }
 
+/**
+ * 派生判断：是否为部门主管
+ * 规则（按优先级）：
+ *   1. 原始 is_manager/is_supervisor 字段为 TRUE/主管 → 主管
+ *   2. mgr99 等于本人姓名（=自己是99层部门负责人）→ 主管
+ *   3. perf_mgr 字段中出现本人姓名且该人员被其他人引用为 perf_mgr（兼任主管）→ 主管
+ */
+function isDeptManager(e) {
+  var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
+  if (im === 'TRUE' || im === '主管') return true;
+  // mgr99 = 自己名字 → 部门负责人
+  var name = (e.cn_name || e.name || '').trim();
+  var m99 = (e.mgr99 || '').trim();
+  if (name && m99 && name === m99) return true;
+  return false;
+}
+
 function getDashboardFilteredData() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return [];
   var D = EMPLOYEES_DATA;
@@ -3176,8 +3193,7 @@ function getDashboardFilteredData() {
       else if (k === 'job_series') { if (getNormJobSeries(e) !== v) return false; }
       else if (k === 'city') { if (getNormCity(e) !== v) return false; }
       else if (k === 'is_supervisor') {
-        var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
-        var isSup = (im === 'TRUE' || im === '主管');
+        var isSup = isDeptManager(e);
         if (v === '主管' && !isSup) return false;
         if (v === '非主管' && isSup) return false;
       }
@@ -3348,15 +3364,9 @@ function buildDashboard(){
   });
   var avgAge = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : '-';
 
-  // 主管/非主管统计
-  var supCount = D.filter(function(e){
-    var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
-    return im === 'TRUE' || im === '主管';
-  }).length;
-  var nonSupCount = D.filter(function(e){
-    var im = String(e.is_manager || e.is_supervisor || '').toUpperCase();
-    return im === 'FALSE' || im === '非主管';
-  }).length;
+  // 主管/非主管统计（使用派生判断 isDeptManager）
+  var supCount = D.filter(function(e){ return isDeptManager(e); }).length;
+  var nonSupCount = D.filter(function(e){ return !isDeptManager(e); }).length;
 
   var summary = [
     {val:total.toLocaleString(), label:'当前人数'},
@@ -3499,8 +3509,8 @@ function countByDim(D, key, val){
     return 0;
   }
   if (key==='is_supervisor') {
-    if (val==='主管') return D.filter(function(e){ var im=String(e.is_manager||e.is_supervisor||'').toUpperCase(); return im==='TRUE'||im==='主管'; }).length;
-    if (val==='非主管') return D.filter(function(e){ var im=String(e.is_manager||e.is_supervisor||'').toUpperCase(); return im==='FALSE'||im==='非主管'; }).length;
+    if (val==='主管') return D.filter(function(e){ return isDeptManager(e); }).length;
+    if (val==='非主管') return D.filter(function(e){ return !isDeptManager(e); }).length;
     return 0;
   }
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
