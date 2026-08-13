@@ -25,12 +25,12 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=11';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
     var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=11&r=' + Date.now();
+    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12&r=' + Date.now();
     r.onload = function() { loadEmployeeData(idx + 1); };
     r.onerror = function() {
       console.error('花名册分块' + idx + '重试失败，跳过');
@@ -50,6 +50,7 @@ function mergeEmployeeData() {
   EMPLOYEES_DATA = parts.length > 0 ? [].concat.apply([], parts) : [];
   var el = document.getElementById('employeeCount');
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
+  buildEmployeeSearchIndex();
   window._employeesMerged = true;
 }
 </script>
@@ -1466,7 +1467,7 @@ function mergeEmployeeData() {
             <button class="todo-sync-btn" onclick="connectCloud()">🔗 连接</button>
             <a class="todo-sync-adv" href="javascript:void(0)" onclick="toggleOfflineCode()">或用离线同步码</a>
           </div>
-          <span class="todo-sync-hint">用你自己的 GitHub 私有仓库存待办：免费、数据自控。Token 在 github.com → Settings → Developer settings → Personal access tokens 生成（勾 repo 权限）</span>
+          <span class="todo-sync-hint">云端已预置，打开即同步。输入你的用户名后点「刷新」即可与手机/电脑端保持一致。</span>
         </div>
         <div id="syncConnected" style="display:none;">
           <div class="todo-sync-row">
@@ -2414,6 +2415,33 @@ function toSimplified(str) {
 // ==================== 员工查询 ====================
 var employeeSearchResults = [];
 var employeeDisplayCount = 0;
+var EMP_SEARCH_INDEX = null;
+
+// 将整条员工记录（含对象/数组，如工作经历、绩效）递归拼成可搜索文本
+function employeeSearchText(e) {
+  var parts = [];
+  (function collect(v) {
+    if (v === null || v === undefined) return;
+    if (typeof v === 'string') { if (v) parts.push(v); }
+    else if (typeof v === 'number') { parts.push(String(v)); }
+    else if (Array.isArray(v)) { v.forEach(collect); }
+    else if (typeof v === 'object') { for (var k in v) collect(v[k]); }
+  })(e);
+  return parts.join(' ').toLowerCase();
+}
+
+// 预计算一次：每条员工的「原文 + 简体版」合并文本，搜索时只做 indexOf
+function buildEmployeeSearchIndex() {
+  if (!EMPLOYEES_DATA) return;
+  EMP_SEARCH_INDEX = EMPLOYEES_DATA.map(function(e) {
+    var t = employeeSearchText(e);
+    return t + ' ' + toSimplified(t);
+  });
+}
+function getEmployeeSearchIndex() {
+  if (!EMP_SEARCH_INDEX && EMPLOYEES_DATA) buildEmployeeSearchIndex();
+  return EMP_SEARCH_INDEX || [];
+}
 
 function searchEmployee() {
   var q = document.getElementById('employeeSearchInput').value.trim();
@@ -2438,21 +2466,12 @@ function searchEmployee() {
 
   var ql = q.toLowerCase();
   var qs = toSimplified(ql); // 简体版搜索词
-  employeeSearchResults = EMPLOYEES_DATA.filter(function(e) {
-    // 工号精确匹配
-    if (e.id && String(e.id).toLowerCase().indexOf(ql) !== -1) return true;
-    // 姓名：同时匹配原始值 & 简体版
-    if (e.name) {
-      var n = e.name.toLowerCase();
-      if (n.indexOf(ql) !== -1) return true;
-      if (toSimplified(n).indexOf(qs) !== -1) return true;
-    }
-    if (e.ec_name) {
-      var ec = e.ec_name.toLowerCase();
-      if (ec.indexOf(ql) !== -1) return true;
-      if (toSimplified(ec).indexOf(qs) !== -1) return true;
-    }
-    if (e.en_name && e.en_name.toLowerCase().indexOf(ql) !== -1) return true;
+  // 全字段模糊搜索：将整条员工记录（含工作经历/绩效等）拼成一个可搜索文本
+  var idx = getEmployeeSearchIndex();
+  employeeSearchResults = EMPLOYEES_DATA.filter(function(e, i) {
+    var text = idx[i] || '';
+    if (text.indexOf(ql) !== -1) return true;       // 原始文本匹配
+    if (text.indexOf(qs) !== -1) return true;        // 简体版匹配
     return false;
   });
 
@@ -2556,6 +2575,17 @@ function showMoreEmployees() {
             return '<div class="perf-item">' + line + '</div>';
           }).join('');
           return '<details class="perf-details"><summary>绩效考核记录（' + e.perf.length + ' 笔，按年份排序）</summary>' + items + '</details>';
+        })() +
+        (function() {
+          if (!e.work_experience || !e.work_experience.length) return '';
+          var items = e.work_experience.map(function(w) {
+            var period = (w.start || '') + (w.end ? ' ~ ' + w.end : '');
+            var head = [w.company, w.title, w.dept, w.city].filter(function(x){ return x; }).join(' · ');
+            var line = head + (period ? '  (' + period + ')' : '');
+            if (w.content) line += '<br><span class="we-content">工作内容：' + w.content + '</span>';
+            return '<div class="we-item">' + line + '</div>';
+          }).join('');
+          return '<details class="perf-details" open><summary>工作经历（' + e.work_experience.length + ' 段，按入职倒序）</summary>' + items + '</details>';
         })() +
         buildDetail('任用别', e.hire_type) +
         buildDetail('国籍', e.nationality) +
@@ -2980,8 +3010,12 @@ function decodeTodos(code) {
 }
 
 // ---- 云端状态（GitHub 私有仓库，数据存 todos/{user}.json） ----
-function getGithubToken() { return localStorage.getItem('wpgholdings_ghtoken') || ''; }
-function getGithubRepo() { return localStorage.getItem('wpgholdings_ghrepo') || ''; }
+// 配置从 Secret Gist 加载：公开代码不含 Token，团队成员打开即同步
+var SYNC_CONFIG_GIST = 'https://gist.githubusercontent.com/Yuki114918/__GIST_ID__/raw/sync-config.json';
+var DEFAULT_GITHUB_TOKEN = '';
+var DEFAULT_GITHUB_REPO  = 'Yuki114918/wpgholdings-todos';
+function getGithubToken() { return localStorage.getItem('wpgholdings_ghtoken') || DEFAULT_GITHUB_TOKEN; }
+function getGithubRepo() { return localStorage.getItem('wpgholdings_ghrepo') || DEFAULT_GITHUB_REPO; }
 function getAutoSync() { return localStorage.getItem('wpgholdings_autosync_' + (currentUser || 'default')) === '1'; }
 function setGithubToken(k) { localStorage.setItem('wpgholdings_ghtoken', k); }
 function setGithubRepo(r) { localStorage.setItem('wpgholdings_ghrepo', r); }
@@ -3230,7 +3264,37 @@ loadTodos();
 renderTodoList();
 updateTodoStats();
 updateSyncUI();
-if (isCloudConnected() && getAutoSync()) startAutoSync();
+
+// 从 Secret Gist 加载共享配置（Token），团队成员打开即同步
+function loadSyncConfig() {
+  return fetch(SYNC_CONFIG_GIST).then(function(r){
+    if (!r.ok) throw new Error('CONFIG ' + r.status);
+    return r.json();
+  }).then(function(cfg){
+    if (cfg && cfg.github_token) DEFAULT_GITHUB_TOKEN = cfg.github_token;
+    if (cfg && cfg.github_repo) DEFAULT_GITHUB_REPO = cfg.github_repo;
+  });
+}
+
+// 有默认云端配置时自动连接（团队成员打开即同步）
+function autoConnectIfConfigured() {
+  if (isCloudConnected()) {
+    updateSyncUI();
+    if (getAutoSync()) startAutoSync();
+    return;
+  }
+  if (!DEFAULT_GITHUB_TOKEN) return; // 等 Gist 加载
+  setGithubToken(DEFAULT_GITHUB_TOKEN);
+  setGithubRepo(DEFAULT_GITHUB_REPO);
+  updateSyncUI();
+  var sp = document.getElementById('syncPanel');
+  if (sp) sp.style.display = '';
+  setTimeout(function(){ pullCloud(true).then(function(){ if (getAutoSync()) startAutoSync(); }).catch(function(){}); }, 500);
+}
+
+loadSyncConfig()
+  .then(autoConnectIfConfigured)
+  .catch(function(e){ console.warn('同步配置加载失败（可手动连接）:', e); });
 
 // ==================== 板块折叠 ====================
 function toggleSection(section) {
