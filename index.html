@@ -3252,7 +3252,8 @@ function getNormJobFunction(e) {
   if (/^Global|^GBO|^MRQ/.test(fn)) return '其他';
   if (/非編制無法歸類|其他[（(]/.test(fn)) return '其他';
   if (/推廣應用/.test(fn)) return '推廣應用';
-  return fn || '(未填)';
+  // 统一转简体，避免下拉框/筛选/维度图出现简繁不一致导致漏匹配
+  return toSimplified(fn) || '(未填)';
 }
 
 /**
