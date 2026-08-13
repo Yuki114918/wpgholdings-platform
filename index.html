@@ -2771,12 +2771,23 @@ function getSchoolTags(school){
   var s = _normSchool(school);
   if (!s) return { is985:false, is211:false };
   // 排除继续教育/成人教育/网络教育/函授/夜大/自考等非全日制学历
-  var EXCLUDE_PATTERNS = ['继续教育', '繼續教育', '成人教育', '网络教育', '網絡教育', '函授', '夜大', '自考', '进修班', '進修班', '培训', '培訓', '专修', '專修'];
+  var EXCLUDE_PATTERNS = ['继续教育', '繼續教育', '成人教育', '网络教育', '網絡教育', '函授', '夜大', '自考', '进修班', '進修班', '培训', '培訓', '专修', '專修',
+    '教育学院', '教育學院', '职业技术学院', '職業技術學院', '职业学院', '職業學院',
+    '城市学院', '城市學院', '理工学院', '理工學院', '商学院', '商學院',
+    '管理学院', '管理學院', '艺术学院', '藝術學院', '传媒学院', '傳媒學院',
+    '文正学院', '文正學院', '至诚学院', '至誠學院', '阳光学院', '陽光學院',
+    '金城学院', '金城學院', '紫金学院', '紫金學院', '太湖学院', '太湖學院',
+    '应用技术学院', '應用技術學院', '信息科技学院', '信息科技學院',
+    '人民武装学院', '人民武裝學院', '共青学院', '共青學院', '科学技术学院', '科學技術學院',
+    '科技学院', '科技學院', '华夏学院', '華夏學院', '锦城学院', '錦城學院',
+    '新华学院', '新華學院', '南方学院', '南方學院', '珠海学院', '珠海學院',
+    '金陵学院', '金陵學院', '东湖分校', '東湖分校', '珞珈学院', '珞珈學院',
+    '武昌分校', '廊坊分校', '广分院', '廣分院', '汉口分校', '漢口分校'];
   for (var i = 0; i < EXCLUDE_PATTERNS.length; i++) {
     if (s.indexOf(EXCLUDE_PATTERNS[i]) !== -1) return { is985:false, is211:false };
   }
-  var is985 = _985_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
-  var is211 = _211_TOKENS.some(function(t){ return s.indexOf(t) !== -1 || (s.length >= 2 && t.indexOf(s) !== -1); });
+  var is985 = _985_TOKENS.some(function(t){ return s === t; });
+  var is211 = _211_TOKENS.some(function(t){ return s === t; });
   return { is985:is985, is211:is211 };
 }
 
@@ -3428,8 +3439,8 @@ function buildDashboard(){
     {val:avgAge, label:'平均年龄(岁)', highlight:true},
     {val:supCount.toLocaleString()+'('+Math.round(supCount/D.length*100)+'%)', label:'主管', small:true},
     {val:nonSupCount.toLocaleString()+'('+Math.round(nonSupCount/D.length*100)+'%)', label:'非主管', small:true},
-    {val:cnt985.toLocaleString(), label:'985院校'},
-    {val:cnt211.toLocaleString(), label:'211院校'}
+    {val:cnt985.toLocaleString()+'('+Math.round(cnt985/D.length*100)+'%)', label:'985院校', small:true},
+    {val:cnt211.toLocaleString()+'('+Math.round(cnt211/D.length*100)+'%)', label:'211院校', small:true}
   ];
   sumEl.innerHTML = summary.map(function(s){
     var cls = s.highlight ? ' dash-stat-hl' : (s.small ? ' dash-stat-sm' : '');
