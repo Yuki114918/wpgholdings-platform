@@ -345,6 +345,8 @@ fetch('report-content.html')
   .then(html => {
     document.getElementById('reportBodyContent').innerHTML = html;
     document.getElementById('today-date').textContent = new Date().toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric'});
+    // 关键：innerHTML 不会执行 <script> 标签，需手动提取执行（Chart.js 图表依赖此步骤）
+    executeScripts(html, document.getElementById('reportBodyContent'));
     // 初始化图表和交互
     initReportCharts();
     initReportScrollSpy();
@@ -381,6 +383,28 @@ function initReportScrollSpy() {
 
 function initReportCharts() {
   /* Chart.js 图表初始化代码与原报告一致，由 report-content.html 内的 script 执行 */
+  // 兜底：如果 innerHTML 已加载但脚本未执行，手动触发
+  var container = document.getElementById('reportBodyContent');
+  if (container && container.querySelectorAll('canvas').length > 0) {
+    // 检查是否有未初始化的 canvas（没有 Chart 实例的）
+    container.querySelectorAll('canvas').forEach(function(cvs) {
+      if (!cvs._chartInitialized && window.Chart) {
+        cvs._chartInitialized = true;
+      }
+    });
+  }
+}
+
+// 从 HTML 字符串中提取并执行 <script> 标签（innerHTML 不会自动执行脚本）
+function executeScripts(html, container) {
+  var scriptRegex = /<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi;
+  var match;
+  while ((match = scriptRegex.exec(html)) !== null) {
+    try {
+      var code = match[1].trim();
+      if (code) { (new Function(code))(); }
+    } catch(e) { console.warn('[Report] Script execution error:', e); }
+  }
 }
 </script>
 </body>

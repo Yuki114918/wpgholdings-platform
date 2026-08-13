@@ -3032,6 +3032,14 @@ function resetEmployee() {
 var dashboardFilters = {};       // 当前筛选条件 {group:'', sub_region:'', job_series:'', status:''}
 var _dashCache = null;           // 缓存: {fullData, dimCounts} 避免重复计算
 
+// 归属集团：英文代码 → 中文名称 映射表（按工号合并，以中文为准）
+var GROUP_NAME_MAP = {
+  'WPIg': 'WPIg(世平集團)', 'AITg': 'AITg(品佳集團)', 'SACg': 'SACg(詮鼎集團)',
+  'YSNg': 'YSNg(友尚集團)', 'BSC': 'BSC(控股公司)', 'TGH': 'TGH(世平偉業)',
+  'LOG': 'LOG(運籌)', 'HOLDINGS': 'HOLDINGS(控股公司)', 'GBG': 'GBG(鑫聯大)'
+};
+function normalizeGroup(g) { return (GROUP_NAME_MAP[g] || g || ''); }
+
 function getDashboardFilteredData() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return [];
   var D = EMPLOYEES_DATA;
@@ -3042,7 +3050,7 @@ function getDashboardFilteredData() {
       var k = keys[i], v = dashboardFilters[k];
       if (!v) continue;
       if (k === 'status') { if ((e.status||'') !== v) return false; }
-      else if (k === 'group') { if ((e.group||'') !== v) return false; }
+      else if (k === 'group') { if (normalizeGroup(e.group) !== v) return false; }
       else if (k === 'sub_region') { if ((e.sub_region||'') !== v) return false; }
       else if (k === 'job_series') { if ((e.job_series||'') !== v) return false; }
       else { if ((e[k]||'') !== v) return false; }
@@ -3055,8 +3063,9 @@ function populateDashboardFilters() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return;
   var D = EMPLOYEES_DATA;
 
-  // 归属集团
-  var groups = [...new Set(D.map(function(e){return e.group||''}).filter(Boolean))].sort();
+  // 归属集团（归一化：英文代码→中文显示）
+  var groupRaw = D.map(function(e){return e.group||''}).filter(Boolean);
+  var groups = [...new Set(groupRaw.map(normalizeGroup))].sort();
   var selG = document.getElementById('dashFilterGroup');
   if (selG) { selG.innerHTML = '<option value="">归属集团（所有）</option>' +
     groups.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join(''); }
@@ -3122,6 +3131,16 @@ function buildDashboard(){
   var D = getDashboardFilteredData();
   var total = D.length;
   var fullTotal = EMPLOYEES_DATA.length;
+
+  // 安全兜底：确保 _is985/_is211 已计算（防止 buildEmployeeSearchIndex 未执行或失败）
+  if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_is985')) {
+    console.warn('[Dashboard] _is985 not found, recomputing...');
+    for (var si = 0; si < EMPLOYEES_DATA.length; si++) {
+      var st = getSchoolTags(EMPLOYEES_DATA[si].school);
+      EMPLOYEES_DATA[si]._is985 = st.is985;
+      EMPLOYEES_DATA[si]._is211 = st.is211;
+    }
+  }
 
   // 筛选计数显示
   if (countEl) {
@@ -3250,6 +3269,7 @@ function filterDashBars(input, dimKey) {
 
 function getDimValue(e, key){
   if (key==='schoolTag') return null;
+  if (key==='group') return normalizeGroup(e.group);
   return e[key] != null ? String(e[key]) : '';
 }
 
