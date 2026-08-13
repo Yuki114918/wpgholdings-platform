@@ -53,6 +53,8 @@ function mergeEmployeeData() {
   buildEmployeeSearchIndex();
   buildRosterSidebar();
   buildDashboard();
+  // 安全兜底：确保看板在 DOM 完全就绪后渲染
+  setTimeout(function(){ if(EMPLOYEES_DATA) buildDashboard(); }, 500);
   window._employeesMerged = true;
 }
 </script>
@@ -1233,6 +1235,71 @@ function mergeEmployeeData() {
     margin-top: 48px;
   }
 
+  /* ===== 全局侧边栏导航 ===== */
+  .app-layout { display:flex; flex:1; max-width:1400px; margin:0 auto; width:100%; }
+  .app-sidebar {
+    width:200px; flex-shrink:0; background:var(--card-bg);
+    border-right:1px solid var(--border); position:sticky; top:104px;
+    height:calc(100vh - 120px); overflow-y:auto; z-index:50;
+    transition:width .25s, opacity .2s; padding:12px 0;
+  }
+  .app-sidebar.collapsed { width:48px; }
+  .app-sidebar.collapsed .nav-label, .app-sidebar.collapsed .nav-group-label,
+  .app-sidebar.collapsed .sidebar-toggle-text { display:none; }
+  .app-sidebar.collapsed .nav-item { justify-content:center; padding:10px 0; font-size:18px; }
+  .app-sidebar::-webkit-scrollbar { width:4px; }
+  .app-sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+  .sidebar-toggle {
+    display:flex; align-items:center; gap:8px; padding:8px 16px 8px 16px;
+    cursor:pointer; color:var(--text-secondary); font-size:12px;
+    border-bottom:1px solid var(--border); margin-bottom:8px;
+    transition:color .15s; user-select:none;
+  }
+  .sidebar-toggle:hover { color:var(--primary); }
+  .sidebar-toggle-icon { font-size:14px; transition:transform .25s; }
+  .app-sidebar.collapsed .sidebar-toggle-icon { transform:rotate(180deg); }
+  .nav-group-label {
+    font-size:10px; font-weight:700; color:var(--text-secondary);
+    letter-spacing:1px; text-transform:uppercase; padding:12px 16px 6px;
+  }
+  .nav-item {
+    display:flex; align-items:center; gap:10px; padding:10px 16px;
+    cursor:pointer; font-size:13.5px; color:var(--text);
+    border-left:3px solid transparent; transition:all .15s;
+    user-select:none; white-space:nowrap;
+  }
+  .nav-item:hover { background:var(--primary-light); color:var(--primary); }
+  .nav-item.active { background:var(--primary-light); color:var(--primary); border-left-color:var(--primary); font-weight:600; }
+  .nav-item .nav-icon { font-size:16px; width:22px; text-align:center; flex-shrink:0; }
+  .nav-item .nav-label { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .nav-item .nav-badge {
+    font-size:10px; background:var(--danger); color:#fff;
+    padding:1px 6px; border-radius:8px; font-weight:600;
+  }
+  .app-main { flex:1; min-width:0; padding:0 16px; }
+  /* 模块显隐控制 */
+  [data-module] { display:none; }
+  [data-module].module-visible { display:block; }
+  /* 当显示全部模块时 */
+  .show-all-modules [data-module] { display:block !important; }
+
+  /* 可点击链接样式 */
+  .clickable-link { color:var(--primary); cursor:pointer; text-decoration:none; border-bottom:1px dashed var(--primary); transition:all .15s; }
+  .clickable-link:hover { color:var(--primary-dark); border-bottom-style:solid; }
+
+  @media (max-width: 900px) {
+    .app-sidebar { display:none; }
+    .app-main { padding:0 8px; }
+    /* 移动端：显示顶部标签导航 */
+    .mobile-nav-bar { display:flex !important; overflow-x:auto; gap:0; padding:8px 12px; background:var(--card-bg); border-bottom:1px solid var(--border); position:sticky; top:104px; z-index:50; -webkit-overflow-scrolling:touch; }
+    .mobile-nav-bar::-webkit-scrollbar { display:none; }
+    .mobile-nav-item { flex-shrink:0; padding:7px 14px; font-size:12.5px; color:var(--text-secondary); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:all .15s; }
+    .mobile-nav-item:hover, .mobile-nav-item.active { color:var(--primary); border-bottom-color:var(--primary); }
+  }
+  @media (min-width: 901px) {
+    .mobile-nav-bar { display:none !important; }
+  }
+
   /* ===== 花名册：侧边栏 + 主区 布局 ===== */
   .roster-layout { display:flex; gap:16px; align-items:flex-start; }
   .roster-sidebar {
@@ -1378,7 +1445,7 @@ function mergeEmployeeData() {
   <div class="ws-divider"></div>
   <a class="ws-calendar-link" href="https://outlook.cloud.microsoft/calendar/view/month" target="_blank" rel="noopener">📅 行事曆</a>
   <div class="ws-divider"></div>
-  <div class="ws-item" style="cursor:pointer;gap:4px;" onclick="scrollToSection('todoSection')" title="点击跳转到待办事项">
+  <div class="ws-item" style="cursor:pointer;gap:4px;" onclick="switchModule('todo')" title="点击跳转到待办事项">
     <span>📝</span>
     <span class="ws-value" id="todoStats">0 待办</span>
     <span class="ws-label" id="todoUrgentStats" style="color:#dc2626;"></span>
@@ -1387,8 +1454,55 @@ function mergeEmployeeData() {
 
 <div class="container">
 
+  <!-- 移动端顶部导航（小屏显示） -->
+  <div class="mobile-nav-bar" id="mobileNavBar"></div>
+
+  <div class="app-layout">
+    <!-- ===== 全局侧边栏 ===== -->
+    <nav class="app-sidebar" id="appSidebar">
+      <div class="sidebar-toggle" onclick="toggleAppSidebar()">
+        <span class="sidebar-toggle-icon">◀</span>
+        <span class="sidebar-toggle-text">收起菜单</span>
+      </div>
+
+      <div class="nav-group-label">主导航</div>
+      <div class="nav-item active" data-target="all" onclick="switchModule('all')">
+        <span class="nav-icon">🏠</span><span class="nav-label">首页总览</span>
+      </div>
+      <div class="nav-item" data-target="shortcuts" onclick="switchModule('shortcuts')">
+        <span class="nav-icon">🚀</span><span class="nav-label">快捷入口</span>
+      </div>
+      <div class="nav-item" data-target="roster" onclick="switchModule('roster')">
+        <span class="nav-icon">👥</span><span class="nav-label">员工花名册</span>
+      </div>
+      <div class="nav-item" data-target="dashboard" onclick="switchModule('dashboard')">
+        <span class="nav-icon">📊</span><span class="nav-label">人力数据看板</span>
+      </div>
+      <div class="nav-item" data-target="todo" onclick="switchModule('todo')">
+        <span class="nav-icon">📝</span><span class="nav-label">待办事项</span>
+        <span class="nav-badge" id="navTodoBadge" style="display:none;">0</span>
+      </div>
+
+      <div class="nav-group-label">HR 工具</div>
+      <div class="nav-item" data-target="hr-law" onclick="switchModule('hr-law')">
+        <span class="nav-icon">⚖️</span><span class="nav-label">HR法令查询</span>
+      </div>
+      <div class="nav-item" data-target="labor" onclick="switchModule('labor')">
+        <span class="nav-icon">📋</span><span class="nav-label">劳动争议查询</span>
+      </div>
+
+      <div class="nav-group-label">专题报告</div>
+      <div class="nav-item" data-target="report" onclick="location.href='report.html'">
+        <span class="nav-icon">📈</span><span class="nav-label">外部数据快讯</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
+      </div>
+    </nav>
+
+    <!-- ===== 主内容区 ===== -->
+    <main class="app-main" id="appMain">
+
   <!-- 快捷入口 -->
-  <section class="section">
+  <section class="section module-visible" data-module="shortcuts" id="mod-shortcuts">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">快捷入口<span class="collapse-arrow">▼</span></h2>
     <div class="quick-cards">
       <a class="quick-card" href="https://app.powerbi.com/groups/me/apps/5d160a1a-e16f-4b6a-bdb2-19fe69dad938/dashboards/4d7813b1-b732-4fb5-bd47-fcbac5b8715a?ctid=de047c79-d4d9-4af3-91de-bc44b0581490&experience=power-bi" target="_blank" rel="noopener">
@@ -1507,7 +1621,7 @@ function mergeEmployeeData() {
   </section>
 
   <!-- 员工花名册查询 -->
-  <section class="section">
+  <section class="section module-visible" data-module="roster" id="mod-roster">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">员工花名册查询<span class="collapse-arrow">▼</span></h2>
     <div class="employee-section">
       <div class="employee-search-bar">
@@ -1554,14 +1668,15 @@ function mergeEmployeeData() {
   </section>
 
   <!-- 人力数据交互看板 -->
-  <section class="section dashboard-section">
+  <section class="section dashboard-section module-visible" data-module="dashboard" id="mod-dashboard">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">📊 人力数据看板<span class="collapse-arrow">▼</span></h2>
-    <div id="dashboardSummary" class="dash-summary"></div>
-    <div id="dashboardGrid" class="dash-grid"></div>
+    <div id="dashboardLoading" style="padding:24px;text-align:center;color:var(--text-secondary);">⏳ 数据加载中，看板即将渲染...</div>
+    <div id="dashboardSummary" class="dash-summary" style="display:none;"></div>
+    <div id="dashboardGrid" class="dash-grid" style="display:none;"></div>
   </section>
 
   <!-- ===== 待办事项 ===== -->
-  <section class="section" id="todoSection">
+  <section class="section module-visible" data-module="todo" id="mod-todo">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">📝 待办事项<span class="collapse-arrow">▼</span></h2>
 
     <!-- 用户选择 -->
@@ -1687,7 +1802,7 @@ function mergeEmployeeData() {
   </section>
 
   <!-- HR法令查询 -->
-  <section class="section">
+  <section class="section module-visible" data-module="hr-law" id="mod-hr-law">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">HR法令查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
@@ -1716,7 +1831,7 @@ function mergeEmployeeData() {
   </section>
 
   <!-- 劳动争议案件查询 -->
-  <section class="section">
+  <section class="section module-visible" data-module="labor" id="mod-labor">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">劳动争议案件查询<span class="collapse-arrow">▼</span></h2>
     <div class="legal-section">
       <div class="legal-header">
@@ -1805,8 +1920,10 @@ function mergeEmployeeData() {
     <div class="lv-body">
       <iframe id="lvIframe" class="lv-iframe" src="about:blank" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
     </div>
-  </div>
-</div>
+  </section>
+    </main><!-- /app-main -->
+  </div><!-- /app-layout -->
+</div><!-- /container -->
 
 <footer class="footer">
 
@@ -2754,9 +2871,9 @@ function showMoreEmployees() {
         buildDetail('工作城市', e.city) +
         buildDetail('工作子区域', e.sub_region) +
         buildDetail('主管标记', e.is_manager) +
-        buildDetail('手机', e.phone) +
+        buildDetail('手机', e.phone, 'tel') +
         buildDetail('分机', e.ext) +
-        buildDetail('邮箱', e.email) +
+        buildDetail('邮箱', e.email, 'mail') +
         buildDetail(e.is_overseas === 'TRUE' ? '派驻地联络地址' : '通讯地址', (e.is_overseas === 'TRUE' ? (e.dispatch_addr || e.address) : e.address)) +
         buildDetail('到职日期', e.join_date) +
         buildDetail('司龄(年)', e.tenure) +
@@ -2839,9 +2956,15 @@ function showMoreEmployees() {
   loadMore.style.display = end < employeeSearchResults.length ? 'block' : 'none';
 }
 
-function buildDetail(label, val) {
+function buildDetail(label, val, linkType) {
   if (val === null || val === undefined || val === '') return '';
-  return '<div><span class="dl">' + label + '：</span><span class="dv">' + val + '</span></div>';
+  var displayVal = val;
+  if (linkType === 'tel') {
+    displayVal = '<a class="clickable-link" href="tel:' + val.replace(/[^0-9+]/g,'') + '" title="点击拨打：' + val + '">' + val + '</a>';
+  } else if (linkType === 'mail') {
+    displayVal = '<a class="clickable-link" href="mailto:' + val + '" title="点击发送邮件至：' + val + '">' + val + '</a>';
+  }
+  return '<div><span class="dl">' + label + '：</span><span class="dv">' + displayVal + '</span></div>';
 }
 
 function resetEmployee() {
@@ -2927,7 +3050,16 @@ function updateRosterFilterUI(){
 function buildDashboard(){
   var sumEl = document.getElementById('dashboardSummary');
   var gridEl = document.getElementById('dashboardGrid');
-  if (!sumEl || !gridEl || !EMPLOYEES_DATA) return;
+  var loadEl = document.getElementById('dashboardLoading');
+  if (!sumEl || !gridEl) return;
+  if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) {
+    if (loadEl) { loadEl.style.display='block'; sumEl.style.display='none'; gridEl.style.display='none'; }
+    return;
+  }
+  // 隐藏加载提示，显示内容
+  if (loadEl) loadEl.style.display='none';
+  sumEl.style.display='';
+  gridEl.style.display='';
   var D = EMPLOYEES_DATA;
   var total = D.length;
   var active = D.filter(function(e){ return (e.status||'')==='在职'; }).length;
@@ -2997,6 +3129,95 @@ function countByDim(D, key, val){
     return 0;
   }
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
+}
+
+// ==================== 全局侧边栏导航 ====================
+var currentModule = 'all'; // 'all' = 显示全部
+
+function switchModule(target) {
+  currentModule = target;
+  var sidebar = document.getElementById('appSidebar');
+  var main = document.getElementById('appMain');
+  if (!main) return;
+
+  // 更新侧边栏激活状态
+  var items = sidebar ? sidebar.querySelectorAll('.nav-item') : [];
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.toggle('active', items[i].getAttribute('data-target') === target);
+  }
+
+  // 控制模块显隐
+  var sections = main.querySelectorAll('[data-module]');
+  if (target === 'all') {
+    main.classList.add('show-all-modules');
+    for (var j = 0; j < sections.length; j++) {
+      sections[j].classList.add('module-visible');
+    }
+  } else {
+    main.classList.remove('show-all-modules');
+    for (var k = 0; k < sections.length; k++) {
+      var isVisible = sections[k].getAttribute('data-module') === target;
+      sections[k].classList.toggle('module-visible', isVisible);
+    }
+  }
+
+  // 移动端导航同步
+  updateMobileNav();
+  
+  // 切换到看板时确保渲染
+  if (target === 'dashboard' || target === 'all') {
+    buildDashboard();
+  }
+  
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleAppSidebar() {
+  var sb = document.getElementById('appSidebar');
+  if (sb) sb.classList.toggle('collapsed');
+  try { localStorage.setItem('wpgholdings_sidebar_collapsed', sb.classList.contains('collapsed')); } catch(e){}
+}
+
+function initAppSidebar() {
+  var sb = document.getElementById('appSidebar');
+  if (!sb) return;
+  try {
+    if (localStorage.getItem('wpgholdings_sidebar_collapsed') === 'true') {
+      sb.classList.add('collapsed');
+    }
+  } catch(e){}
+  buildMobileNav();
+}
+
+function buildMobileNav() {
+  var bar = document.getElementById('mobileNavBar');
+  if (!bar) return;
+  var items = [
+    ['all','🏠 总览'],['shortcuts','🚀 快捷入口'],['roster','👥 花名册'],
+    ['dashboard','📊 看板'],['todo','📝 待办'],['hr-law','⚖️ HR法令'],
+    ['labor','📋 劳动争议']
+  ];
+  var html = '';
+  items.forEach(function(it){
+    html += '<span class="mobile-nav-item" data-target="'+it[0]+'" onclick="switchModule(\''+it[0]+'\')">'+it[1]+'</span>';
+  });
+  bar.innerHTML = html;
+}
+
+function updateMobileNav() {
+  var bar = document.getElementById('mobileNavBar');
+  if (!bar) return;
+  var items = bar.querySelectorAll('.mobile-nav-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.toggle('active', items[i].getAttribute('data-target') === currentModule);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAppSidebar);
+} else {
+  initAppSidebar();
 }
 
 // ==================== 待办事项 ====================
