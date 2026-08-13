@@ -25,7 +25,7 @@ var DATA_BASE = location.hostname.indexOf('github.io') !== -1
     return;
   }
   var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12';
+  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=13';
   s.onload = function() { loadEmployeeData(idx + 1); };
   s.onerror = function() {
     console.error('花名册分块' + idx + '加载失败，重试...');
