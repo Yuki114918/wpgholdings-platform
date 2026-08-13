@@ -2774,10 +2774,15 @@ function runRosterSearch() {
     return;
   }
 
-  // 无搜索词 → 显示全部
+  // 无搜索词 → 不显示列表，提示用户输入
   if (!q) {
-    employeeSearchResults = EMPLOYEES_DATA.slice();
+    employeeSearchResults = [];
     if (filteredInfo) filteredInfo.style.display = 'none';
+    var countEl = document.getElementById('employeeCount');
+    if (countEl) countEl.style.display = 'none';
+    cards.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--text-secondary);"><div style="font-size:48px;margin-bottom:12px;">🔍</div><div>请输入关键词搜索员工（姓名、工号、部门等）</div></div>';
+    hidePagination();
+    return;
   } else {
     var ql = q.toLowerCase();
     var qs = toSimplified(ql);
@@ -2837,7 +2842,7 @@ function renderEmployeeCard(e) {
   var empId = e.id || '-';
   var isActive = (e.status || '') === '在职';
   var badgeClass = isActive ? '' : ' inactive';
-  var badgeText = isActive ? (e.status || '') : (e.leave_reason || '离职');
+  var badgeText = isActive ? (e.status || '') : '离职';  // 离职统一显示"离职"，原因在详情区展示
   var headTags = (e._is985 || e._is211)
     ? '<span class="emp-head-tags">' +
         (e._is985 ? '<span class="school-tag t985">985</span>' : '') +
@@ -3205,8 +3210,11 @@ function buildDashboard(){
   });
   gridEl.innerHTML = grid;
 
-  // 填充筛选下拉（仅首次）
-  populateDashboardFilters();
+  // 填充筛选下拉（仅首次，避免每次筛选都重置下拉框）
+  if (!window._dashFiltersPopulated) {
+    window._dashFiltersPopulated = true;
+    populateDashboardFilters();
+  }
   } catch(err) {
     console.error('[Dashboard] 渲染出错:', err.message || err);
     var loadEl2 = document.getElementById('dashboardLoading');
