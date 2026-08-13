@@ -2812,6 +2812,11 @@ function runRosterSearch() {
   renderRosterPage();
 }
 
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function buildDetail(label, val, linkType) {
   if (!val) return '';
   var safe = String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2829,7 +2834,7 @@ function renderEmployeeCard(e) {
   var empId = e.id || '-';
   var isActive = (e.status || '') === '在职';
   var badgeClass = isActive ? '' : ' inactive';
-  var badgeText = isActive ? (e.status || '') : '离职访谈';
+  var badgeText = isActive ? (e.status || '') : (e.leave_reason || '离职');
   var headTags = (e._is985 || e._is211)
     ? '<span class="emp-head-tags">' +
         (e._is985 ? '<span class="school-tag t985">985</span>' : '') +
@@ -2837,32 +2842,93 @@ function renderEmployeeCard(e) {
       '</span>'
     : '';
 
+  // 绩效考核记录
+  var perfHtml = '';
+  if (e.perf && e.perf.length) {
+    perfHtml = '<details class="work-details"><summary>📊 绩效考核记录（' + e.perf.length + ' 条）</summary>'
+      + e.perf.map(function(p){
+          return '<div class="we-item"><strong>' + (p.score_name||'-') + '</strong>'
+            + '<br/><small>' + (p.score_label||p.score||'-')
+            + ' | ' + (p.start_date||'') + ' ~ ' + (p.end_date||'') + '</small></div>';
+        }).join('')
+      + '</details>';
+  }
+
+  // 工作经历
+  var workHtml = '';
+  if (e.work_experience && e.work_experience.length) {
+    workHtml = '<details class="work-details"><summary>💼 工作经历（' + e.work_experience.length + ' 段）</summary>'
+      + e.work_experience.map(function(w){ return '<div class="we-item">'
+        + '<strong>' + (w.company||'-') + '</strong> · ' + (w.title||'-')
+        + '<br/><small>' + (w.city||'') + ' | ' + (w.start||'') + ' ~ ' + (w.end||'进行中') + '</small></div>'; }).join('')
+      + '</details>';
+  }
+
   return '<div class="emp-card">' +
     '<div class="emp-header">' +
       '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
       '<div>' +
         '<div class="emp-name">' + name + headTags + '</div>' +
-        '<div class="emp-id">工号：' + empId + '</div>' +
+        '<div class="emp-id">工号：' + empId + (e.en_name ? ' / ' + e.en_name : '') + '</div>' +
       '</div>' +
       (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
     '</div>' +
     '<div class="emp-details">' +
+      /* ---- 组织信息 ---- */
       buildDetail('部门(99层)', e.dept_99) +
+      buildDetail('部门(100层)', e.dept_100) +
       buildDetail('职位', e.title) +
       buildDetail('职等', e.grade) +
+      buildDetail('职系', e.job_series) +
       buildDetail('事业体', e.business_unit) +
-      buildDetail('工作城市', e.city) +
+      buildDetail('归属集团', e.group) +
+      buildDetail('公司', e.company) +
+      buildDetail('岗位', e.position) +
+      buildDetail('是否主管', e.is_manager) +
+      /* ---- 基本信息 ---- */
+      buildDetail('性别', e.gender) +
+      buildDetail('出生日期', e.birthday) +
+      buildDetail('用工类型', e.hire_type) +
       buildDetail('到职日期', e.join_date) +
+      (e.tenure ? buildDetail('司龄', e.tenure) : '') +
+      /* ---- 联系方式 ---- */
       buildDetail('手机', e.phone, 'tel') +
       buildDetail('邮箱', e.email, 'mail') +
+      /* ---- 工作地点 ---- */
+      buildDetail('工作城市', e.city) +
+      buildDetail('工作子区域', e.sub_region) +
+      /* ---- 紧急联络人 ---- */
+      (e.emerg_name ? ('<div class="emp-detail"><span class="detail-label">紧急联络人</span>'
+        + escHtml(e.emerg_name) + (e.emerg_rel ? '（' + escHtml(e.emerg_rel) + '）' : '')
+        + (e.emerg_phone ? ' <a class="clickable-link" href="tel:' + escHtml(e.emerg_phone) + '">' + escHtml(e.emerg_phone) + '</a>' : '')
+        + '</div>') : '') +
+      /* ---- 地址 ---- */
+      buildDetail('家庭地址', e.address) +
+      buildDetail('派驻地址', e.dispatch_addr) +
+      /* ---- 教育背景 ---- */
+      buildDetail('学历', e.education) +
       buildDetail('毕业院校', e.school) +
-      (e.work_experience && e.work_experience.length
-        ? '<details class="work-details"><summary>工作经历（' + e.work_experience.length + ' 段）</summary>'
-          + e.work_experience.map(function(w){ return '<div class="we-item">'
-            + '<strong>' + (w.company||'-') + '</strong> · ' + (w.title||'-')
-            + '<br/><small>' + (w.city||'') + ' | ' + (w.start||'') + ' ~ ' + (w.end||'进行中') + '</small></div>'; }).join('')
-          + '</details>'
-        : '') +
+      buildDetail('专业', e.major) +
+      buildDetail('毕业日期', e.grad_date) +
+      buildDetail('学籍状态', e.study_status) +
+      /* ---- 绩效主管 ---- */
+      buildDetail('绩效考核主管(100)', e.mgr100) +
+      buildDetail('绩效考核主管(99)', e.mgr99) +
+      buildDetail('绩效主管', e.perf_mgr) +
+      /* ---- 人事信息 ---- */
+      buildDetail('婚姻状况', e.marriage) +
+      buildDetail('国籍/地区', e.nationality) +
+      buildDetail('民族', e.ethnicity) +
+      buildDetail('户籍', e.hukou) +
+      buildDetail('是否外派', e.is_overseas) +
+      /* ---- 离职信息（仅离职显示）---- */
+      (!isActive ? buildDetail('离职日期', e.leave_date) : '') +
+      (!isActive ? buildDetail('离职原因', e.leave_reason) : '') +
+      (!isActive ? buildDetail('事件原因', e.event_reason) : '') +
+      (!isActive ? buildDetail('访谈人', e.interview_by) : '') +
+      /* ---- 展开区域 ---- */
+      perfHtml +
+      workHtml +
     '</div></div>';
 }
 
@@ -3016,18 +3082,22 @@ function clearDashboardFilters() {
 }
 
 function buildDashboard(){
-  var sumEl = document.getElementById('dashboardSummary');
-  var gridEl = document.getElementById('dashboardGrid');
-  var loadEl = document.getElementById('dashboardLoading');
-  var countEl = document.getElementById('dashFilterCount');
-  if (!sumEl || !gridEl) return;
-  if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) {
-    if (loadEl) { loadEl.style.display='block'; sumEl.style.display='none'; gridEl.style.display='none'; }
-    return;
-  }
-  if (loadEl) loadEl.style.display='none';
-  sumEl.style.display='';
-  gridEl.style.display='';
+  try {
+    var sumEl = document.getElementById('dashboardSummary');
+    var gridEl = document.getElementById('dashboardGrid');
+    var loadEl = document.getElementById('dashboardLoading');
+    var countEl = document.getElementById('dashFilterCount');
+    if (!sumEl || !gridEl) { console.warn('[Dashboard] DOM elements not found, retrying later...'); return; }
+    if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) {
+      console.warn('[Dashboard] EMPLOYEES_DATA not ready:', !!EMPLOYEES_DATA, EMPLOYEES_DATA ? EMPLOYEES_DATA.length : 'N/A');
+      if (loadEl) { loadEl.style.display='block'; sumEl.style.display='none'; gridEl.style.display='none'; }
+      // 数据未就绪时自动重试
+      setTimeout(function(){ buildDashboard(); }, 800);
+      return;
+    }
+    if (loadEl) loadEl.style.display='none';
+    sumEl.style.display='';
+    gridEl.style.display='';
 
   var D = getDashboardFilteredData();
   var total = D.length;
@@ -3096,6 +3166,11 @@ function buildDashboard(){
 
   // 填充筛选下拉（仅首次）
   populateDashboardFilters();
+  } catch(err) {
+    console.error('[Dashboard] 渲染出错:', err.message || err);
+    var loadEl2 = document.getElementById('dashboardLoading');
+    if (loadEl2) loadEl2.innerHTML = '⚠️ 看板渲染异常: ' + (err.message||'未知错误') + '<br/><button onclick="buildDashboard()" style="margin-top:8px;padding:4px 12px;cursor:pointer;">重试</button>';
+  }
 }
 
 // 从看板点击条形 → 跳转到花名册并自动搜索
@@ -3212,6 +3287,14 @@ if (document.readyState === 'loading') {
 } else {
   initAppSidebar();
 }
+
+// 最终安全网：页面完全加载后确保看板渲染（处理异步数据加载+模块切换等各种时序问题）
+window.addEventListener('load', function() {
+  setTimeout(function(){
+    console.log('[Dashboard] Final safety net: forcing render');
+    if (typeof buildDashboard === 'function') buildDashboard();
+  }, 1000);
+});
 
 // ==================== 待办事项 ====================
 var todoList = [];
