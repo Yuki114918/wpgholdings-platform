@@ -1647,6 +1647,15 @@ function mergeEmployeeData() {
         <span class="card-arrow">→</span>
       </a>
 
+      <a class="quick-card" href="sharepoint-search.html" target="_blank" rel="noopener">
+        <div class="card-icon orange">📂</div>
+        <div class="card-info">
+          <h3>HR资料库搜索器</h3>
+          <p>SharePoint 模糊搜索 · 跳转定位文件</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
       <!-- 招聘平台合集 -->
       <div class="quick-sub-header collapsed" onclick="toggleRecruit(this)">🎯 招聘平台 <span class="toggle-arrow">▼</span></div>
 
@@ -3513,6 +3522,24 @@ function getNormWorkRegion(e) {
   return '(未填)';
 }
 
+// ===== 职称归一化：title 字段（简繁体统一 + 去代码后缀）=====
+function getNormTitle(e) {
+  var t = (e.title || '').trim();
+  if (!t) return '';
+  // 简繁体统一
+  t = toSimplified(t);
+  // 去掉括号内的代码，如 "副理(LT6)" → "副理"，"工程师(LTW)" → "工程师"
+  t = t.replace(/\s*[\(（][^\)）]*[\)）]\s*/g, '').trim();
+  // 统一常见变体
+  var TITLE_NORM = {
+    '副理':'副理','專員':'专员','經理':'经理','工程師':'工程师','管理師':'管理师',
+    '秘書':'秘书','資深專員':'资深专员','資深經理':'资深经理','協理':'协理',
+    '助理':'助理','總經理':'总经理','董事長':'董事长','處長':'处长',
+    '組長':'组长','課長':'课长','主任':'主任','顧問':'顾问','副總經理':'副总经理'
+  };
+  return TITLE_NORM[t] || t;
+}
+
 // ===== Job Function：由 position 的「功能部分」派生 =====
 // 同一职能在数据中常以多种形式出现（中文 / 中文(英文) / 纯英文 / 简体 / 集团代码前缀），
 // 统一合并为单一中文职能名（以中文为准）。
@@ -3635,18 +3662,18 @@ function populateDashboardFilters() {
   // Job Function（派生，合并中英文/简繁/代码前缀）
   var funcs = [...new Set(D.map(getNormJobFunction).filter(Boolean))].sort();
   var selJF = document.getElementById('dashFilterJobFunction');
-  // 如果已选职系，应用业务逻辑过滤
+  // 如果已选职系，应用业务逻辑过滤（简繁体都要覆盖）
   var preSelectedSeries = dashboardFilters.job_series || '';
   if (preSelectedSeries) {
     var initExcludeMap = {
-      'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
-      'S-销售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
-      'T-技術': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
-      'T-技术': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
-      'P-產品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
-      'P-产品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
-      'I-資訊': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品'],
-      'I-资讯': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品']
+      'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+      'S-销售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+      'T-技術': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+      'T-技术': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+      'P-產品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+      'P-产品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+      'I-資訊': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品'],
+      'I-资讯': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品']
     };
     var initExcluded = initExcludeMap[preSelectedSeries] || [];
     if (initExcluded.length) {
@@ -3695,14 +3722,14 @@ function applyDashboardFilter() {
     var selectedSeries = selJ ? selJ.value : '';
     if (selectedSeries) {
       var excludeMap = {
-        'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
-        'S-销售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
-        'T-技術': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
-        'T-技术': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
-        'P-產品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
-        'P-产品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
-        'I-資訊': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品'],
-        'I-资讯': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品']
+        'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+        'S-销售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+        'T-技術': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+        'T-技术': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+        'P-產品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+        'P-产品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+        'I-資訊': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品'],
+        'I-资讯': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品']
       };
       var excluded = excludeMap[selectedSeries] || [];
       if (excluded.length) {
@@ -3849,7 +3876,8 @@ function buildDashboard(){
     {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
     {key:'city', title:'工作城市', vals:null},
     {key:'work_region', title:'工作区域', vals:null, noJump:true},
-    {key:'grade', title:'职级', vals:null}
+    {key:'grade', title:'职级', vals:null},
+    {key:'title', title:'职称', vals:null}                  // ★ 新增：职称维度（副理/专员/经理/工程师等，归一化简体）
   ];
 
   var grid = '';
@@ -4057,6 +4085,7 @@ function getDimValue(e, key){
   if (key==='city') return getNormCity(e);
   if (key==='work_region') return getNormWorkRegion(e);
   if (key==='job_function') return getNormJobFunction(e);
+  if (key==='title') return getNormTitle(e);
   return e[key] != null ? String(e[key]) : '';
 }
 
@@ -4084,6 +4113,7 @@ function countByDim(D, key, val){
   }
   if (key==='job_series') return D.filter(function(e){ return getNormJobSeries(e) === val; }).length;
   if (key==='job_function') return D.filter(function(e){ return getNormJobFunction(e) === val; }).length;
+  if (key==='title') return D.filter(function(e){ return getNormTitle(e) === val; }).length;
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
 }
 
