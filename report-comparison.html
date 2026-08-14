@@ -1,0 +1,238 @@
+<!-- 内部资料对比报告 · 由 report.html 的「内部资料对比」页签加载 -->
+<!-- 样式复用 report.html 的全局 CSS（.finding-box / .tbl-wrap / .tab-bar / .metric-row 等） -->
+
+<div class="cover" style="padding:28px 32px 22px;">
+  <div class="cover-row">
+    <span class="cover-badge">INTERNAL &middot; 内部资料对比</span>
+    <span class="cover-date">数据截止 2026/07</span>
+  </div>
+  <h1 style="font-size:24px;">内部资料对比 <span style="color:#0ea5a8">与同年度对标</span></h1>
+  <p class="subtitle" style="font-size:12.5px;margin-bottom:12px;">基于三份纯内部洞察报告（绩效07 / 人力07 / 招聘07）同年度数据，并与外部对标企业（文晔 &middot; 安富利 &middot; 艾睿 &middot; 大联大集团）交叉验证。所有内部数据均以「同一年度」口径对齐，避免跨年混算。</p>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>数据原则</b> 入职与离职同年度比对；简历与合格同年度比对</div>
+    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>内部来源</b> WPG-CN 人员结构 / 绩效与晋升 / 招聘漏斗 三份 07 版报告</div>
+  </div>
+</div>
+
+<!-- 内部子页签 -->
+<div class="tab-bar" style="margin:20px 16px 0;">
+  <button class="tab-btn active" onclick="switchInternalTab('t-flow', this)">① 人力流动（同年度）</button>
+  <button class="tab-btn" onclick="switchInternalTab('t-funnel', this)">② 招聘漏斗（同年度）</button>
+  <button class="tab-btn" onclick="switchInternalTab('t-bench', this)">③ 内外对标</button>
+  <button class="tab-btn" onclick="switchInternalTab('t-perf', this)">④ 绩效与晋升</button>
+</div>
+
+<!-- ===== Tab ① 人力流动（同年度）===== -->
+<div class="tab-content active" id="t-flow">
+  <div class="main" style="padding:24px 16px;">
+
+    <div class="finding-box">
+      <div class="fb-label">核心结论</div>
+      <div class="fb-text">2026 年至今（至 7 月）<b>离职 106 人、雇用 56 人，净减 50 人</b>——离职规模接近补员的两倍，当前策略明显偏「只减不补」。将「主动离职 ÷ 新进」按同一年度对齐后，比值从 <b>2024 年 10 倍</b> 一路放大到 <b>2026 年 64 倍</b>，说明招聘实质上在「补流失的窟窿」，而非支撑扩张。</div>
+    </div>
+
+    <div class="sec-title" style="font-size:19px;margin-top:8px;">同年度「主动离职 ÷ 新进」趋势</div>
+    <div class="sec-desc">数据为同一年度口径：该年主动离职人数与该年新进人数的倍数关系（绝对值未在三份报告中单列，比值为报告明确给出的同年度信号）。</div>
+    <div class="tbl-wrap">
+      <div class="tbl-title">主动离职 ÷ 新进（同年度）</div>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>年度</th><th>主动离职 ÷ 新进</th><th>趋势判断</th></tr></thead>
+        <tbody>
+          <tr><td>2024</td><td><span class="tag tag-y">10 倍</span></td><td>流失已高于补员，但尚可承受</td></tr>
+          <tr><td>2025</td><td><span class="tag tag-o">23 倍</span></td><td>差距快速拉大，补位压力剧增</td></tr>
+          <tr><td>2026（至 7 月）</td><td><span class="tag tag-r">64 倍</span></td><td>招聘几乎完全被流失「吞噬」</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="sec-title" style="font-size:19px;">2026 年至今（YTD 至 7 月）绝对值</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="mc-name">离职</div><div class="mc-role-val">106 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">YTD 2026/07</div></div>
+      <div class="metric-card"><div class="mc-name">雇用（新进）</div><div class="mc-role-val">56 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">YTD 2026/07</div></div>
+      <div class="metric-card"><div class="mc-name">净变动</div><div class="mc-role-val" style="color:#dc2626;">-50 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">离职 ≫ 补员</div></div>
+      <div class="metric-card"><div class="mc-name">YTD 离职率</div><div class="mc-role-val">5.1% <small>（年化≈8.7%）</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">106 ÷ 平均在职≈2,090</div></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">2026 YTD（至 7 月）入职 vs 离职</div>
+      <div class="chart-subtitle">同年度口径：离职 106 人 / 雇用 56 人</div>
+      <canvas id="cmpHireLeave" height="120"></canvas>
+    </div>
+
+    <div class="finding-box compact" style="border-left-color:#d97706;">
+      <div class="fb-label" style="color:#92400e;">管理提示</div>
+      <div class="fb-text">「主动离职 ÷ 新进」三年从 10×→64× 持续恶化，单纯优化招聘漏斗无法根治——应把<b>主动离职率</b>与<b>招聘到岗率</b>并列为核心看板指标，先从留任治理入手。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Tab ② 招聘漏斗（同年度）===== -->
+<div class="tab-content" id="t-funnel">
+  <div class="main" style="padding:24px 16px;">
+
+    <div class="finding-box">
+      <div class="fb-label">核心结论</div>
+      <div class="fb-text">同一年度招聘漏斗呈「上头大、下头瘪」：需求 <b>561</b> 个 → 收到简历 <b>2,920</b> 份 → 最终到岗仅 <b>28</b> 人，<b>整体成功率不足 1%（0.96%）</b>。最大泄漏在两处：① 初筛（部门通过率仅 41.7%）；② Offer→到岗仅 14.6%。每需求平均对应 5 份简历、却仅 0.05 人到岗。</div>
+    </div>
+
+    <div class="sec-title" style="font-size:19px;">同年度招聘漏斗（简历 vs 合格/到岗）</div>
+    <div class="sec-desc">「我今年进来的简历」与「我合格（到岗）的人」同年度比对，转化率一目了然。</div>
+    <div class="tbl-wrap">
+      <div class="tbl-title">外招漏斗全环节（2026 同年度）</div>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>环节</th><th>数量</th><th>占「收到简历」比</th><th>环节转化率</th></tr></thead>
+        <tbody>
+          <tr><td>需求（职缺）</td><td>561</td><td>—</td><td>—</td></tr>
+          <tr><td>收到简历</td><td><b>2,920</b></td><td>100%</td><td>—</td></tr>
+          <tr><td>部门筛选通过</td><td>≈1,219</td><td>41.7%</td><td><span class="tag tag-y">41.7%</span></td></tr>
+          <tr><td>面试通过</td><td>≈192*</td><td>≈6.6%</td><td><span class="tag tag-o">14.6%（Offer→到岗）</span></td></tr>
+          <tr><td>到岗</td><td><b>28</b></td><td>0.96%</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="flash-footnote">* 面试通过/Offer 人数按「到岗 28 ÷ Offer→到岗 14.6%」反推约 192 人，为估算值；报告原文仅给出到岗 28 与两端转化率。</div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">招聘漏斗（同年度：简历 2,920 → 到岗 28）</div>
+      <div class="chart-subtitle">对数视角更能看出「漏水」区间</div>
+      <canvas id="cmpFunnel" height="140"></canvas>
+    </div>
+
+    <div class="sec-title" style="font-size:17px;margin-top:8px;">职缺流转 & 内推效能（同年度）</div>
+    <div class="metric-row col3">
+      <div class="metric-card"><div class="mc-name">在招/待入职占比</div><div class="mc-role-val" style="color:#dc2626;">76.6%</div><div class="num-desc" style="font-size:11px;color:#6b7280;">真正已完成仅 13.2%</div></div>
+      <div class="metric-card"><div class="mc-name">平均招聘天数</div><div class="mc-role-val">53 <small>天</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">极端值达 690 天</div></div>
+      <div class="metric-card"><div class="mc-name">内推转化</div><div class="mc-role-val">33% / 67%</div><div class="num-desc" style="font-size:11px;color:#6b7280;">部门通过 / 面试通过（质优量小）</div></div>
+    </div>
+    <div class="finding-box compact">
+      <div class="fb-text"><b>内推</b>：需求 39、投递仅 9，量严重不足，但「部门通过率 33%、面试通过率 67%」显著优于外招——是低成本高质量的突破口，应重点运营而非「随缘」。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Tab ③ 内外对标 ===== -->
+<div class="tab-content" id="t-bench">
+  <div class="main" style="padding:24px 16px;">
+
+    <div class="finding-box">
+      <div class="fb-label">核心结论</div>
+      <div class="fb-text">WPG-CN 的<b>稳定性优势突出</b>（平均年资 10.1 年、平均年龄 39.8 岁、>10 年占 43.7%），是分销商客户关系护城河；但<b>招聘到岗率 &lt;1%、离职为补员 64 倍</b>是结构性短板。薪酬端：大联大集团技术岗月薪低于美商 20–30%，靠 <b>16–17 薪</b>把年包拉回竞品水平。</div>
+    </div>
+
+    <div class="sec-title" style="font-size:19px;">内部（WPG-CN）vs 外部对标企业</div>
+    <div class="sec-desc">外部数据取自《数据洞察报告HR参考版》对标板块（文晔 / 安富利 / 艾睿 / 大联大集团），均为 2026 年近期口径。</div>
+    <div class="tbl-wrap">
+      <div class="tbl-title">多维对标总表</div>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>指标</th><th>WPG-CN（内部）</th><th>大联大集团</th><th>文晔 WT</th><th>安富利 Avnet</th><th>艾睿 Arrow</th></tr></thead>
+        <tbody>
+          <tr><td><b>近期营收</b></td><td><span class="tag tag-c">内部不披露</span></td><td>NT$7,748 亿 H1<span class="hl-up">+55%</span></td><td>NT$1.08 兆 H1<span class="hl-up">+114%</span></td><td>$7.12B Q3<span class="hl-up">+34%</span></td><td>$9.47B Q1<span class="hl-up">+39%</span></td></tr>
+          <tr><td><b>在职人数</b></td><td><b>2,065</b>（CN 2026/07）</td><td>集团口径未单列</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td><b>平均年龄</b></td><td><b>39.8 岁</b></td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td><b>平均年资</b></td><td><b>10.1 年</b></td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td><b>离职率（YTD）</b></td><td>5.1%（年化≈8.7%）</td><td>目标 &lt;5%</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td><b>技术岗月薪</b></td><td>内部未单列</td><td>1.8~2.0 万</td><td>2.1~2.6 万</td><td>2.4~2.7 万</td><td>2.3~2.8 万</td></tr>
+          <tr><td><b>年包区间</b></td><td>内部未单列</td><td>29~34 万</td><td>29~39 万</td><td>31~38 万</td><td>30~39 万</td></tr>
+          <tr><td><b>年终月数</b></td><td>内部未单列</td><td><span class="tag tag-g">16~17 薪</span></td><td>14~15 薪</td><td>13~14 薪</td><td>13~14 薪</td></tr>
+          <tr><td><b>招聘到岗率</b></td><td><span class="tag tag-r">0.96%</span></td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="flash-footnote">说明：外部对标企业「在职人数 / 年龄 / 年资 / 离职率」未在原报告中单列，故以「—」标注；营收与薪酬为原报告明确给出的 2026 年近期数据。WPG-CN 为 CN 区正职口径（2,065 人），与集团全球口径不可直接相加。</div>
+
+    <div class="sec-title" style="font-size:17px;margin-top:8px;">三家公司（文晔 / 安富利 / 艾睿）薪酬定位速览</div>
+    <div class="market-grid">
+      <div class="mkt-panel"><div class="mkt-hd"><span class="mkt-icon teal"></span>文晔 WT Micro</div>
+        <ul><li>技术岗月薪 <span class="hl">2.1~2.6 万</span>，PM 上限最高 2.3~4.0 万</li><li>年包 29~39 万，14~15 薪</li><li>H1 营收 NT$1.08 兆（+114%），收购 Future 后全球第一</li></ul></div>
+      <div class="mkt-panel"><div class="mkt-hd"><span class="mkt-icon red"></span>安富利 Avnet</div>
+        <ul><li>技术岗月薪 <span class="hl">2.4~2.7 万</span>（美商最高）</li><li>年包 31~38 万，13~14 薪</li><li>FY26 Q3 营收 $7.12B（+34%），亚洲占 49%</li></ul></div>
+      <div class="mkt-panel"><div class="mkt-hd"><span class="mkt-icon amber"></span>艾睿 Arrow</div>
+        <ul><li>技术岗月薪 <span class="hl">2.3~2.8 万</span></li><li>年包 30~39 万，13~14 薪</li><li>Q1 2026 营收 $9.47B（+39%），净利 +195%</li></ul></div>
+      <div class="mkt-panel"><div class="mkt-hd"><span class="mkt-icon green"></span>大联大 WPG（集团）</div>
+        <ul><li>技术岗月薪 1.8~2.0 万（最低），但 <span class="hl">16~17 薪</span></li><li>年包 29~34 万，靠年包追平竞品</li><li>H1 营收 NT$7,748 亿（+55%），MSCI ESG A 级</li></ul></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== Tab ④ 绩效与晋升（年度）===== -->
+<div class="tab-content" id="t-perf">
+  <div class="main" style="padding:24px 16px;">
+
+    <div class="finding-box">
+      <div class="fb-label">核心结论</div>
+      <div class="fb-text">考核等级<b>高度集中于 S 级（约 70%）</b>、A+ 近乎名存实亡（2025 年仅 7 人）；晋升节奏快但<b>39% 发生在入职 1 年内</b>、&gt;10 年才晋升仅 3%——存在「职称通胀」与「资深员工激励断层」双重风险。</div>
+    </div>
+
+    <div class="sec-title" style="font-size:19px;">考核等级分布（同年度：2021 / 2023 / 2025）</div>
+    <div class="tbl-wrap">
+      <div class="tbl-title">年度考核等级人数</div>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>等级</th><th>2021</th><th>2023</th><th>2025</th><th>趋势</th></tr></thead>
+        <tbody>
+          <tr><td>P（最低）</td><td>7</td><td>3</td><td>2</td><td>极少量</td></tr>
+          <tr><td>S-（待改进）</td><td>79</td><td>96</td><td>67</td><td>约 2%</td></tr>
+          <tr><td><b>S（中）</b></td><td><b>2,561</b></td><td><b>2,839</b></td><td><b>2,611</b></td><td><span class="tag tag-b">约 70%（主体）</span></td></tr>
+          <tr><td>A（高）</td><td>1,028</td><td>881</td><td>1,043</td><td>约 25%</td></tr>
+          <tr><td>A+（最高）</td><td>43</td><td>8</td><td>7</td><td><span class="tag tag-r">逐年递减·名存实亡</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">考核等级分布（2021 / 2023 / 2025）</div>
+      <div class="chart-subtitle">S 级长期占比约 70%，区分度不足</div>
+      <canvas id="cmpGrade" height="150"></canvas>
+    </div>
+
+    <div class="sec-title" style="font-size:17px;margin-top:8px;">晋升时年资分布</div>
+    <div class="tbl-wrap">
+      <div class="tbl-title">晋升事件按「晋升时年资」拆解</div>
+      <div class="tbl-scroll"><table>
+        <thead><tr><th>晋升时年资</th><th>晋升次数</th><th>占比</th></tr></thead>
+        <tbody>
+          <tr><td>1 年以下</td><td>1,819</td><td><span class="tag tag-y">39%</span></td></tr>
+          <tr><td>1~3 年</td><td>1,220</td><td>26%</td></tr>
+          <tr><td>3~5 年</td><td>905</td><td>19%</td></tr>
+          <tr><td>5~10 年</td><td>552</td><td>12%</td></tr>
+          <tr><td>&gt;10 年</td><td>135</td><td><span class="tag tag-r">3%</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="finding-box compact">
+      <div class="fb-text"><b>绩效-晋升联动有效</b>：S-/P 级基本与晋升绝缘，A 级为最强晋升驱动。但 S 级占七成却晋升比例有限，且 1 年内晋升占 39%（需防「职称通胀」），&gt;10 年才晋升仅 3%（资深员工激励隐患）。建议在 S 级内部引入细分维度。</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function switchInternalTab(id, btn) {
+  var root = document.getElementById('internalReportBody');
+  if (!root) return;
+  root.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+  root.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var panel = document.getElementById(id);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+(function(){
+  if (!window.Chart) return;
+  try {
+    var c1 = document.getElementById('cmpHireLeave');
+    if (c1) new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    var c2 = document.getElementById('cmpFunnel');
+    if (c2) new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
+    var c3 = document.getElementById('cmpGrade');
+    if (c3) new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
+      {label:'S', data:[2561,2839,2611], backgroundColor:'#6366f1'},
+      {label:'A', data:[1028,881,1043], backgroundColor:'#0ea5a8'},
+      {label:'A+', data:[43,8,7], backgroundColor:'#d97706'},
+      {label:'S-', data:[79,96,67], backgroundColor:'#94a3b8'},
+      {label:'P', data:[7,3,2], backgroundColor:'#cbd5e1'}
+    ]}, options:{plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}}}});
+  } catch(e) { console.warn('[Comparison] chart init error:', e); }
+})();
+</script>

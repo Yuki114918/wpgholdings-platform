@@ -3729,36 +3729,33 @@ function applyDashboardFilter() {
   dashboardFilters.city = selC ? selC.value : '';
   dashboardFilters.is_supervisor = selSup ? selSup.value : '';
   dashboardFilters.work_region = selWR ? selWR.value : '';
-  // ★ 联动：当职系变更时，自动重置 Job Function 并缩窄选项
-  var prevJf = dashboardFilters.job_function;
-  dashboardFilters.job_function = ''; // 先清空，避免残留不匹配的值
+  // ★ 联动：先捕获当前 Job Function 下拉的「新选择」（重填前必须取值，否则选择会丢失）
+  var newJf = selJF ? selJF.value : '';
+  var selectedSeries = selJ ? selJ.value : '';
   if (selJF) {
+    dashboardFilters.job_function = ''; // 先清空，避免旧值污染子集计算
     var D_filtered = getDashboardFilteredData(); // 基于当前筛选（含新选的职系）的子集
     var funcs = [...new Set(D_filtered.map(getNormJobFunction).filter(Boolean))].sort();
-    // ★ 业务逻辑过滤：根据职系排除不匹配的岗位关键词
-    var selectedSeries = selJ ? selJ.value : '';
-    if (selectedSeries) {
-      var excludeMap = {
-        'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
-        'S-销售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
-        'T-技術': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
-        'T-技术': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
-        'P-產品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
-        'P-产品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
-        'I-資訊': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品'],
-        'I-资讯': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品']
-      };
-      var excluded = excludeMap[selectedSeries] || [];
-      if (excluded.length) {
-        funcs = funcs.filter(function(f){
-          return !excluded.some(function(kw){ return f.indexOf(kw) !== -1; });
-        });
-      }
+    // ★ 业务逻辑过滤：根据职系排除不匹配的岗位关键词（简繁体双版）
+    var excludeMap = {
+      'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+      'S-销售': ['产品','產品','行销','行銷','PM','技术應用','技术应用','系統應用','系统应用','軟體工程師','软件工程師','软件工程师','資料科學','数据科学','MIS'],
+      'T-技術': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+      'T-技术': ['业务','業務','銷售','销售','業助','业助','CSR','行销','行銷','PM'],
+      'P-產品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+      'P-产品': ['業務','业务','銷售','销售','CSR','電銷','电销','业助','業助','SALES'],
+      'I-資訊': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品'],
+      'I-资讯': ['業務','业务','銷售','销售','業助','业助','CSR','行销','行銷','PM','產品','产品']
+    };
+    var excluded = excludeMap[selectedSeries] || [];
+    if (excluded.length) {
+      funcs = funcs.filter(function(f){ return !excluded.some(function(kw){ return f.indexOf(kw) !== -1; }); });
     }
     selJF.innerHTML = '<option value="">Job Function（所有）</option>' +
       funcs.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join('');
-    // 如果之前的 Job Function 值仍在缩窄后的列表中，恢复选中
-    if (prevJf && funcs.indexOf(prevJf) !== -1) { selJF.value = prevJf; dashboardFilters.job_function = prevJf; }
+    // 保留用户当下所选的 Job Function（仅当仍存在于缩窄后的列表中）
+    if (newJf && funcs.indexOf(newJf) !== -1) { selJF.value = newJf; dashboardFilters.job_function = newJf; }
+    else { dashboardFilters.job_function = ''; }
   }
   // 清除空值
   Object.keys(dashboardFilters).forEach(function(k){ if (!dashboardFilters[k]) delete dashboardFilters[k]; });

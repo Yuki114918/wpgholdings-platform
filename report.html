@@ -272,6 +272,13 @@ footer span{display:block}
   .tab-btn { padding:10px 14px; font-size:13px; }
 }
 
+/* 顶部页签：外部数据快讯 / 内部资料对比 */
+.top-tab-bar{display:flex;background:#1e3a5f;border-bottom:1px solid rgba(255,255,255,.12);padding:0 16px}
+.top-tab-btn{padding:14px 22px;border:none;background:none;color:rgba(255,255,255,.72);font-size:14px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;position:relative;bottom:-1px;letter-spacing:.3px}
+.top-tab-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+.top-tab-btn.active{color:#fff;border-bottom-color:#0ea5a8}
+@media(max-width:768px){.top-tab-btn{padding:11px 14px;font-size:12.5px}}
+
 /* 手机端悬浮返回按钮 */
 .fab-back {
   display:none; position:fixed; bottom:20px; right:18px; z-index:999;
@@ -296,7 +303,13 @@ footer span{display:block}
   </div>
 </header>
 
-<div class="report-layout">
+<!-- 顶部页签：外部数据快讯 / 内部资料对比 -->
+<div class="top-tab-bar" id="topTabBar">
+  <button class="top-tab-btn active" id="tabExtBtn" onclick="switchTopTab('external', this)">📊 外部数据快讯</button>
+  <button class="top-tab-btn" id="tabIntBtn" onclick="switchTopTab('internal', this)">🔍 内部资料对比</button>
+</div>
+
+<div id="tab-external"><div class="report-layout">
   <!-- 报告侧边栏导航 -->
   <nav class="report-sidebar" id="reportSidebar">
     <div class="sb-back" onclick="location.href='index.html'">🏠 返回工作平台</div>
@@ -367,7 +380,9 @@ footer span{display:block}
 
 </div><!-- /main -->
   </main><!-- /report-main -->
-</div><!-- /report-layout -->
+</div></div><!-- /report-layout /tab-external -->
+
+<div id="tab-internal" style="display:none"><div id="internalReportBody"></div></div>
 
 <footer>
   <span>&copy; 2026 大聯大控股人力資源部 &middot; 數據洞察報告</span>
@@ -457,6 +472,41 @@ function executeScripts(html, container) {
       if (code) { (new Function(code))(); }
     } catch(e) { console.warn('[Report] Script execution error:', e); }
   }
+}
+
+// 顶部页签切换：外部数据快讯 / 内部资料对比
+function switchTopTab(which, btn) {
+  var bar = document.getElementById('topTabBar');
+  if (bar) bar.querySelectorAll('.top-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var ext = document.getElementById('tab-external');
+  var int = document.getElementById('tab-internal');
+  if (which === 'internal') {
+    if (ext) ext.style.display = 'none';
+    if (int) {
+      int.style.display = 'block';
+      if (!int.dataset.loaded) { loadComparison(); int.dataset.loaded = '1'; }
+    }
+    window.scrollTo(0, 0);
+  } else {
+    if (int) int.style.display = 'none';
+    if (ext) ext.style.display = 'flex';
+  }
+}
+
+function loadComparison() {
+  var c = document.getElementById('internalReportBody');
+  if (!c) return;
+  c.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">正在加载内部对比报告…</div>';
+  fetch('report-comparison.html?v=1')
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+      c.innerHTML = html;
+      executeScripts(html, c);
+    })
+    .catch(function(){
+      c.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">内部对比报告加载失败，请确保 report-comparison.html 文件存在</div>';
+    });
 }
 </script>
 <a href="index.html" class="fab-back" title="返回工作平台" aria-label="返回工作平台"></a>
