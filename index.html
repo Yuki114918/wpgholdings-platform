@@ -3846,11 +3846,7 @@ function buildDashboard(){
     {val:avgTenure, label:'平均年资(年)', highlight:true},
     {val:avgAge, label:'平均年龄(岁)', highlight:true},
     {val:supCount.toLocaleString()+'('+Math.round(supCount/D.length*100)+'%)', label:'主管', small:true},
-    {val:nonSupCount.toLocaleString()+'('+Math.round(nonSupCount/D.length*100)+'%)', label:'非主管', small:true},
-    {val:cnt985.toLocaleString()+'('+Math.round(cnt985/D.length*100)+'%)', label:'985院校', small:true},
-    {val:cnt211.toLocaleString()+'('+Math.round(cnt211/D.length*100)+'%)', label:'211院校', small:true},
-    {val:cntDualfei.toLocaleString()+'('+Math.round(cntDualfei/D.length*100)+'%)', label:'双非院校', small:true},
-    {val:cntNoSchool.toLocaleString()+'('+Math.round(cntNoSchool/D.length*100)+'%)', label:'无院校', small:true}
+    {val:nonSupCount.toLocaleString()+'('+Math.round(nonSupCount/D.length*100)+'%)', label:'非主管', small:true}
   ];
   sumEl.innerHTML = summary.map(function(s){
     var cls = s.highlight ? ' dash-stat-hl' : (s.small ? ' dash-stat-sm' : '');
