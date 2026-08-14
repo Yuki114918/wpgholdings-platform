@@ -205,8 +205,10 @@ function renderLinks() {
 function spSearch(q) {
   q = (q || document.getElementById('spInput').value).trim();
   if (!q) { document.getElementById('spInput').focus(); return; }
+  // 使用 r 参数（Result Source）+ path KQL 精确限定搜索范围为 HR团队资料库文档库
+  var libUrl = SP_BASE + SP_SITE + '/Shared Documents/HR团队资料库';
   var url = SP_BASE + SP_SITE + '/_layouts/15/search.aspx?k=' + encodeURIComponent(q) +
-            '&u=' + encodeURIComponent(SP_LIB);
+            '&r=' + encodeURIComponent('{?path:"' + libUrl + '"}');
   window.open(url, '_blank');
 }
 
