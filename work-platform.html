@@ -2839,28 +2839,34 @@ function getEduType(e) {
   if (expAge == null) return null;              // 学历层级无法映射（如(空)）
   var expGradYear = by + expAge;                // 全日制应毕业年
 
-  // 信号1：详细工作经历（每段 start 年）
+  // ★ 信号A（最高优先级）：毕业年龄异常 —— 毕业时年龄远超全日制正常年龄
+  //   典型场景：自考/成人大专或本科、边工作边读、专升本等
+  //   判定标准：实际毕业年龄 > 全制预期年龄 + 2年容差
+  var gy = _parseYear4(e.grad_date);
+  if (gy) {
+    var actualAge = gy - by;
+    if (actualAge > expAge + 2) return '非全日制'; // 明显晚于全日制（如31岁才本科）
+    // 在合理范围内，继续用工作经历交叉验证
+  }
+
+  // 信号B：详细工作经历（每段 start 年）—— 在读期间已就业
   var we = e.work_experience;
   if (Array.isArray(we) && we.length) {
     var starts = we.map(function(w){ return _parseYear4(w.start); }).filter(Boolean);
     if (starts.length) {
       var earliest = Math.min.apply(null, starts);
-      if (earliest < expGradYear) return '非全日制'; // 在读期间已工作
-      return '全日制';                              // 最早工作不早于应毕业年
+      if (earliest < expGradYear) return '非全日制'; // 首份工作早于全日制应毕业年
+      // 工作不早于应毕业年，且毕业年龄也正常 → 全日制
+      return '全日制';
     }
   }
 
-  // 信号2：入司日期（WPG 入职年）作为就业信号
+  // 信号C：入司日期（WPG 入职年）作为就业信号
   var jy = _parseYear4(e.join_date);
   if (jy && jy < expGradYear) return '非全日制'; // 入司早于全日制毕业年 → 必然边工作边读
 
-  // 信号3：毕业年份推算（无就业信号时）
-  var gy = _parseYear4(e.grad_date);
-  if (gy) {
-    var actualAge = gy - by;
-    if (actualAge > expAge + 1) return '非全日制'; // 毕业明显晚于全日制年龄
-    return '全日制';
-  }
+  // 信号D：毕业年份在合理范围内 → 全日制
+  if (gy) return '全日制';
 
   // 兜底：有入司且不低于应毕业年 → 全日制；否则数据不足
   if (jy) return '全日制';
@@ -3134,8 +3140,14 @@ function renderEmployeeCard(e) {
         var et = getEduType(e);
         if (!et) return '';
         var color = et === '全日制' ? '#16a34a' : '#dc2626';
+        var eduLabel = (e.education || '').trim();
+        if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
+        else if (eduLabel === '大專' || /專/.test(eduLabel) || eduLabel === '技術學院') eduLabel = '大专';
+        else if (eduLabel === '碩士') eduLabel = '硕士';
+        else if (eduLabel === '博士') eduLabel = '博士';
+        var combined = eduLabel + '（' + et + '）';
         return '<div class="emp-detail"><span class="detail-label">学习形式</span>'
-          + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';">' + et + '</span></div>';
+          + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';" title="基于出生年份+工作经历+毕业日期推算">' + combined + '</span></div>';
       })() +
       /* ---- 部门主管 ---- */
       buildDetail('部门主管', e.mgr99) +
@@ -3492,7 +3504,7 @@ function buildDashboard(){
   var total = D.length;
   var fullTotal = EMPLOYEES_DATA.length;
 
-  // 安全兜底：确保 _is985/_is211 已计算（防止 buildEmployeeSearchIndex 未执行或失败）
+  // 安全兜底：确保 _is985/_is211/_eduType 已计算（防止 buildEmployeeSearchIndex 未执行或失败）
   if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_is985')) {
     console.warn('[Dashboard] _is985 not found, recomputing...');
     for (var si = 0; si < EMPLOYEES_DATA.length; si++) {
@@ -3500,6 +3512,12 @@ function buildDashboard(){
       EMPLOYEES_DATA[si]._is985 = st.is985;
       EMPLOYEES_DATA[si]._is211 = st.is211;
       EMPLOYEES_DATA[si]._noSchool = st.noSchool;
+      EMPLOYEES_DATA[si]._eduType = getEduType(EMPLOYEES_DATA[si]);
+    }
+  } else if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_eduType')) {
+    console.warn('[Dashboard] _eduType not found, recomputing...');
+    for (var si2 = 0; si2 < EMPLOYEES_DATA.length; si2++) {
+      EMPLOYEES_DATA[si2]._eduType = getEduType(EMPLOYEES_DATA[si2]);
     }
   }
 
@@ -3575,7 +3593,7 @@ function buildDashboard(){
   var dims = [
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
     {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b','noschool':'#94a3b8'}},
-    {key:'eduType', title:'学习形式(CN)', vals:null, colors:{'全日制':'#16a34a','非全日制':'#dc2626'}},
+    {key:'eduType', title:'学习形式(CN)', vals:null, colors:{}}, // 动态色，按学历+形式组合
     {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
@@ -3708,7 +3726,21 @@ function filterDashBars(input, dimKey) {
 
 function getDimValue(e, key){
   if (key==='schoolTag') return null;
-  if (key==='eduType') return e._eduType || '';
+  if (key==='eduType') {
+    var et = e._eduType;
+    if (!et) return '';
+    // 组合显示：学历（学习形式），如"本科（全日制）"、"大专（非全日制）"
+    var eduLabel = (e.education || '').trim();
+    // 统一学历名称
+    if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
+    else if (eduLabel === '大專' || eduLabel === '二專' || eduLabel === '三專' || eduLabel === '五專' || eduLabel === '技術學院') eduLabel = '大专';
+    else if (eduLabel === '碩士') eduLabel = '硕士';
+    else if (eduLabel === '博士') eduLabel = '博士';
+    else if (eduLabel === '小學') eduLabel = '小学';
+    else if (eduLabel === '初中' || eduLabel === '國中') eduLabel = '初中';
+    else if (eduLabel === '高中' || eduLabel === '高職' || eduLabel === '中專' || eduLabel === '中五' || eduLabel === '中六' || eduLabel === '中七') eduLabel = '高中';
+    return eduLabel + '（' + et + '）';
+  }
   if (key==='group') return getNormGroup(e);
   if (key==='job_series') return getNormJobSeries(e);
   if (key==='city') return getNormCity(e);
@@ -3731,7 +3763,12 @@ function countByDim(D, key, val){
     return 0;
   }
   if (key==='eduType') {
-    return D.filter(function(e){ return (e._eduType||'') === val; }).length;
+    return D.filter(function(e){
+      var et = e._eduType;
+      if (!et) return false;
+      // val 格式如 "本科（全日制）"，需匹配学习形式部分
+      return val.indexOf('（' + et + '）') !== -1 && getDimValue(e, key) === val;
+    }).length;
   }
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
 }
