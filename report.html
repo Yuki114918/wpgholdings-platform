@@ -5,7 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>数据洞察报告HR参考版 · 工作平台</title>
 <meta name="description" content="数据洞察报告 - 电子元器件分销行业 HR 决策支持">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+/* Chart.js 加载（主 CDN + fallback） */
+(function(){
+  function tryLoad(src, isFallback){
+    var s = document.createElement('script');
+    s.src = src;
+    s.onerror = function(){
+      if(!isFallback){ tryLoad('https://cdn.bootcdn.net/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', true); }
+      else { window._chartLoadError = true; console.warn('[Chart] All CDNs failed'); }
+    };
+    s.onload = function(){ window._chartLoaded = true; };
+    document.head.appendChild(s);
+  }
+  tryLoad('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', false);
+})();
+</script>
 <style>
 /* ===== 平台基础样式（与 index.html 一致）===== */
 :root {

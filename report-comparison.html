@@ -449,27 +449,60 @@ window.switchInternalTab = function(id, btn) {
   if (panel) panel.classList.add('active');
   if (btn) btn.classList.add('active');
   // 切换后让刚显示出来的图表自适应尺寸（隐藏时初始化的图表尺寸为 0）
-  try {
-    if (panel) panel.querySelectorAll('canvas').forEach(function(cv){ if (cv._chart) cv._chart.resize(); });
-  } catch(e){}
+  requestAnimationFrame(function(){
+    try {
+      if (panel) panel.querySelectorAll('canvas').forEach(function(cv){ if (cv._chart) { cv._chart.resize(); } });
+    } catch(e){}
+  });
 };
+
 window.initComparisonCharts = function() {
-  if (!window.Chart) return;
+  // 检查 Chart.js 是否已加载（CDN 可能延迟或失败）
+  if (!window.Chart) {
+    // 延迟重试：等待 CDN 加载完成
+    if (!window._chartInitRetries) window._chartInitRetries = 0;
+    if (window._chartInitRetries < 10) {
+      window._chartInitRetries++;
+      setTimeout(function(){ window.initComparisonCharts(); }, 300);
+      return;
+    }
+    // 彻底失败时显示提示
+    var containers = document.querySelectorAll('#internalReportBody .chart-wrap');
+    for (var i = 0; i < containers.length; i++) {
+      if (!containers[i].querySelector('.chart-err')) {
+        var errEl = document.createElement('div');
+        errEl.className = 'chart-err';
+        errEl.style.cssText = 'padding:20px;text-align:center;color:#dc2626;font-size:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-top:8px;';
+        errEl.innerHTML = '⚠ 图表库加载失败（网络问题），请刷新页面重试';
+        containers[i].appendChild(errEl);
+      }
+    }
+    return;
+  }
+
   try {
     var c1 = document.getElementById('cmpHireLeave');
-    if (c1 && !c1._chart) c1._chart = new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    if (c1 && !c1._chart) {
+      c1._chart = new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    }
     var c2 = document.getElementById('cmpFunnel');
-    if (c2 && !c2._chart) c2._chart = new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
+    if (c2 && !c2._chart) {
+      c2._chart = new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
+    }
     var c3 = document.getElementById('cmpGrade');
-    if (c3 && !c3._chart) c3._chart = new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
-      {label:'S', data:[2561,2839,2611], backgroundColor:'#6366f1'},
-      {label:'A', data:[1028,881,1043], backgroundColor:'#0ea5a8'},
-      {label:'A+', data:[43,8,7], backgroundColor:'#d97706'},
-      {label:'S-', data:[79,96,67], backgroundColor:'#94a3b8'},
-      {label:'P', data:[7,3,2], backgroundColor:'#cbd5e1'}
-    ]}, options:{plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}}}});
+    if (c3 && !c3._chart) {
+      c3._chart = new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
+        {label:'S', data:[2561,2839,2611], backgroundColor:'#6366f1'},
+        {label:'A', data:[1028,881,1043], backgroundColor:'#0ea5a8'},
+        {label:'A+', data:[43,8,7], backgroundColor:'#d97706'},
+        {label:'S-', data:[79,96,67], backgroundColor:'#94a3b8'},
+        {label:'P', data:[7,3,2], backgroundColor:'#cbd5e1'}
+      ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}}}});
+    }
     var c4 = document.getElementById('cmpGroup');
-    if (c4 && !c4._chart) c4._chart = new Chart(c4, {type:'bar', data:{labels:['WPI','YSN','SAC','AIT','LOG','BSC','TGBC','WPGH','GBG','VSELL'], datasets:[{label:'在职人数', data:[683,336,256,236,180,173,112,39,27,23], backgroundColor:['#0ea5a8','#0891b2','#0d9488','#059669','#65a30d','#6366f1','#7c3aed','#9333ea','#db2777','#be123c']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    if (c4 && !c4._chart) {
+      c4._chart = new Chart(c4, {type:'bar', data:{labels:['WPI','YSN','SAC','AIT','LOG','BSC','TGBC','WPGH','GBG','VSELL'], datasets:[{label:'在职人数', data:[683,336,256,236,180,173,112,39,27,23], backgroundColor:['#0ea5a8','#0891b2','#0d9488','#059669','#65a30d','#6366f1','#7c3aed','#9333ea','#db2777','#be123c']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    }
   } catch(e) { console.warn('[Comparison] chart init error:', e); }
 };
 </script>
