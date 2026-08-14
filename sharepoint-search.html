@@ -21,17 +21,7 @@
   .card-header h1 { font-size:21px; font-weight:700; margin-bottom:6px; }
   .card-header p { font-size:13px; opacity:.85; }
 
-  .tabs { display:flex; padding:0 20px; border-bottom:1px solid #eef2f7; background:#fff; }
-  .tab {
-    padding:14px 18px; font-size:14px; color:#6b7280; cursor:pointer;
-    border-bottom:2px solid transparent; transition:all .2s; font-weight:600;
-  }
-  .tab:hover { color:#2563eb; }
-  .tab.active { color:#2563eb; border-bottom-color:#2563eb; }
-  .tab-body { padding:24px 28px; display:none; }
-  .tab-body.active { display:block; }
-
-  .search-box { display:flex; gap:10px; margin-bottom:18px; }
+  .search-box { display:flex; gap:10px; margin-bottom:18px; padding:0 28px; padding-top:24px; }
   .search-input {
     flex:1; padding:13px 16px; border:2px solid #e5e7eb;
     border-radius:10px; font-size:15px; outline:none; transition:border-color .2s, box-shadow .2s;
@@ -43,7 +33,7 @@
   }
   .search-btn:hover { background:#1d4ed8; }
 
-  .option-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .option-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; padding:0 28px; }
   .option-chip {
     padding:6px 13px; border-radius:20px; font-size:12px; border:1.5px solid #e5e7eb;
     background:#fff; cursor:pointer; transition:all .2s; color:#4b5563;
@@ -53,38 +43,12 @@
 
   .help {
     background:#f8fafc; border-radius:10px; padding:14px 16px; border:1px solid #e5e7eb;
-    margin-bottom:16px; font-size:12.5px; color:#6b7280; line-height:1.9;
+    margin:0 28px 16px; font-size:12.5px; color:#6b7280; line-height:1.9;
   }
   .help b { color:#374151; }
   .help code { background:#eef2f7; padding:1px 6px; border-radius:4px; font-size:12px; color:#2563eb; }
 
-  /* 清单编辑器 */
-  .list-editor { width:100%; min-height:120px; border:2px solid #e5e7eb; border-radius:10px;
-    padding:12px 14px; font-size:13px; font-family:Consolas,Menlo,monospace; resize:vertical; outline:none; }
-  .list-editor:focus { border-color:#3b82f6; }
-  .editor-actions { display:flex; gap:10px; margin:12px 0 16px; flex-wrap:wrap; align-items:center; }
-  .btn-sm { padding:8px 16px; border-radius:8px; border:1.5px solid #2563eb; background:#fff; color:#2563eb;
-    font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
-  .btn-sm:hover { background:#eff6ff; }
-  .btn-sm.ghost { border-color:#d1d5db; color:#6b7280; }
-  .btn-sm.ghost:hover { background:#f3f4f6; }
-  .status-line { font-size:12.5px; color:#16a34a; margin-left:auto; }
-  .status-line.err { color:#dc2626; }
-
-  .result-count { font-size:13px; color:#6b7280; margin-bottom:10px; }
-  .result-list { display:flex; flex-direction:column; gap:8px; }
-  .result-item {
-    display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid #e5e7eb;
-    border-radius:8px; text-decoration:none; color:#374151; font-size:13.5px; transition:all .2s;
-  }
-  .result-item:hover { border-color:#3b82f6; background:#eff6ff; color:#2563eb; }
-  .result-item .rn { font-size:11px; color:#9ca3af; width:22px; flex-shrink:0; }
-  .result-item .name { flex:1; }
-  .result-item .arrow { color:#9ca3af; font-size:14px; }
-  .result-item .badge { font-size:10px; padding:1px 7px; border-radius:10px; background:#eef2f7; color:#6b7280; }
-  .empty-hint { font-size:13px; color:#9ca3af; text-align:center; padding:24px; }
-
-  .quick-links { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .quick-links { display:flex; flex-direction:column; gap:8px; margin-top:8px; padding:0 28px 24px; }
   .quick-link {
     display:flex; align-items:center; gap:10px; padding:11px 15px; border:1px solid #e5e7eb;
     border-radius:8px; text-decoration:none; color:#374151; font-size:13.5px; transition:all .2s;
@@ -97,6 +61,12 @@
   .footer-note { text-align:center; font-size:11.5px; color:#9ca3af; padding:16px; }
   .back-link { display:inline-block; margin-bottom:14px; font-size:13px; color:#2563eb; text-decoration:none; }
   .back-link:hover { text-decoration:underline; }
+
+  /* 搜索提示 */
+  .search-hint {
+    margin:0 28px 12px; font-size:12px; color:#6b7280; line-height:1.6;
+  }
+  .search-hint .tag { display:inline-block; background:#eef2f7; padding:1px 7px; border-radius:4px; font-size:11px; color:#4b5563; margin:0 2px; }
 </style>
 </head>
 <body>
@@ -107,53 +77,26 @@
   <div class="card">
     <div class="card-header">
       <h1>📂 HR 团队资料库搜索</h1>
-      <p>模糊搜索 · 快速定位 · 一键跳转</p>
+      <p>模糊搜索 · 快速定位 · 一键跳转（支持繁简体）</p>
     </div>
 
-    <div class="tabs">
-      <div class="tab active" data-tab="sp" onclick="switchTab('sp')">🔍 SharePoint 站内搜索</div>
-      <div class="tab" data-tab="local" onclick="switchTab('local')">📝 本地清单搜索</div>
-    </div>
-
-    <!-- Tab 1: SharePoint 站内搜索 -->
-    <div class="tab-body active" id="tab-sp">
+    <!-- 搜索区（无Tab，直接展示） -->
+    <div style="padding-top:4px;">
       <div class="search-box">
         <input type="text" class="search-input" id="spInput"
-          placeholder="输入关键词搜索（如：薪酬、考勤、招聘...）"
+          placeholder="输入关键词搜索（如：三大办法、薪酬福利、考勤管理...）支持繁简体"
           onkeydown="if(event.key==='Enter')spSearch()">
         <button class="search-btn" onclick="spSearch()">🔍 搜索</button>
       </div>
+      <div class="search-hint" id="searchHint"></div>
       <div class="option-row" id="quickTags"></div>
       <div class="help">
-        <b>使用说明：</b>输入关键词后按回车或点击「搜索」，自动跳转到 SharePoint 资料库范围内的搜索结果页（支持模糊匹配）。
+        <b>使用说明：</b>输入关键词后按回车或点击「搜索」，自动跳转到 SharePoint 资料库的搜索结果页。
+        支持<b>繁简体自动匹配</b>（输入"三大办法"会同时搜索"三大辦法"等变体）。
         搜索结果在 SharePoint 新标签页打开，<b>需登录 WPG 账号</b>。
       </div>
-      <h3 style="font-size:14px;color:#374151;margin-bottom:10px;font-weight:600;">🔗 常用快速入口</h3>
+      <h3 style="font-size:14px;color:#374151;margin-bottom:10px;font-weight:600;padding:0 28px;">🔗 常用快速入口</h3>
       <div class="quick-links" id="quickLinks"></div>
-    </div>
-
-    <!-- Tab 2: 本地清单搜索（离线模糊匹配） -->
-    <div class="tab-body" id="tab-local">
-      <div class="help">
-        <b>适用场景：</b>当你已有一份文件清单（从 SharePoint「复制链接」或导出得到），粘到这里即可<b>离线模糊搜索</b>，点击结果直接打开对应文件，无需依赖站内搜索认证。
-        <br>每行一条，支持两种格式：<br>
-        ① <code>文件名 | 完整URL</code>　② 仅 <code>完整URL</code>（文件名自动取 URL 末段）
-      </div>
-      <textarea class="list-editor" id="listInput" placeholder="在此粘贴文件清单，每行一条：&#10;薪酬制度2026.docx | https://wp.sharepoint.com/.../薪酬制度2026.docx&#10;考勤管理办法.pdf | https://wp.sharepoint.com/.../考勤管理办法.pdf"></textarea>
-      <div class="editor-actions">
-        <button class="btn-sm" onclick="loadList()">📥 加载清单</button>
-        <button class="btn-sm ghost" onclick="clearList()">🗑 清空</button>
-        <button class="btn-sm ghost" onclick="loadSample()">✨ 填充示例</button>
-        <span class="status-line" id="listStatus"></span>
-      </div>
-      <div class="search-box">
-        <input type="text" class="search-input" id="localInput"
-          placeholder="在清单中模糊搜索文件名或链接..."
-          onkeydown="if(event.key==='Enter')localSearch()" oninput="localSearch()">
-        <button class="search-btn" onclick="localSearch()">🔍 搜索</button>
-      </div>
-      <div class="result-count" id="localCount"></div>
-      <div class="result-list" id="localResults"></div>
     </div>
   </div>
 
@@ -167,13 +110,53 @@
 // ===== SharePoint 配置 =====
 var SP_BASE = 'https://wpgh.sharepoint.com';
 var SP_SITE = '/sites/HRMeeting-HR';
-var SP_LIB = '/sites/HRMeeting-HR/Shared%20Documents/HR%E5%9B%A2%E9%98%9F%E8%B5%84%E6%96%99%E5%BA%93';
+var SP_LIB_PATH = '/Shared Documents/HR团队资料库';
+
+// ===== 繁简体映射表（HR文档常见字） =====
+var S2T_MAP = {
+  '办':'辦','业':'業','为':'為','与':'與','专':'專','级':'級','织':'織',
+  '综':'綜','职':'職','项':'項','顺':'順','须':'須','险':'險','员':'員',
+  '劳':'勞','动':'動','协':'協','报':'報','拟':'擬','认':'認','证':'證',
+  '识':'識','财':'財','账':'賬','资':'資','质':'質','达':'達','过':'過',
+  '进':'進','选':'選','释':'釋','钟':'鐘','长':'長','门':'門','问':'問',
+  '阅':'閱','关':'關','风':'風','飞':'飛','举':'舉','誉':'譽','获':'獲',
+  '宝':'寶','实':'實','导':'導','标':'標','机':'機','权':'權','档':'檔',
+  '汇':'匯','属':'屬','屡':'屢','屡':'屢','岁':'歲','卫':'衛','现':'現',
+  '规':'規','见':'見','义':'義','仪':'儀','两':'兩','严':'嚴','业':'業',
+  '优':'優','应':'應','营':'營','拥':'擁','余':'餘','与':'與','愿':'願',
+  '云':'雲','杂':'雜','灾':'災','凿:'鑿','轧':'軋','占':'佔','战':'戰',
+  '栈':'棧','张':'張','折':'折','征':'徵','症':'癥','证':'證','郑':'鄭',
+  '只':'隻','织':'織','职':'職','制':'製','种':'種','众':'眾','周':'週',
+  '注':'註','驻':'駐','专':'專','转':'轉','状':'狀','总':'總','组':'組',
+  '钻':'鑽'
+};
+
+// 常见HR词汇完整繁简对照
+var PHRASE_MAP = {
+  '三大办法':'三大辦法',
+  '工资支付':'工資支付',
+  '劳动合同':'勞動合同',
+  '绩效考核':'績效考核',
+  '薪酬福利':'薪酬福利',
+  '考勤管理':'考勤管理',
+  '入职指引':'入職指引',
+  '离职流程':'離職流程',
+  '培训发展':'培訓發展',
+  '晋升机制':'晉升機制',
+  '社保公积金':'社保公積金',
+  '假期制度':'假期制度',
+  '差旅报销':'差旅報銷',
+  '组织架構':'組織架構',
+  '员工手册':'員工手冊',
+  '招聘流程':'招聘流程'
+};
 
 // ===== Tab 1 数据 =====
 var QUICK_TAGS = [
   '薪酬福利', '绩效考核', '招聘流程', '培训发展', '员工手册',
   '考勤管理', '离职流程', '入职指引', '假期制度', '社保公积金',
-  '劳动合同', '晋升机制', '差旅报销', '组织架构', '会议纪要'
+  '劳动合同', '晋升机制', '差旅报销', '组织架构', '会议纪要',
+  '三大办法'  // 用户特别提到的
 ];
 var QUICK_LINKS = [
   { icon:'📁', text:'HR团队资料库（根目录）', url: SP_BASE + ':f:/r' + SP_SITE + '/Shared%20Documents/HR%E5%9B%A2%E9%98%9F%E8%B5%84%E6%96%99%E5%BA%93' },
@@ -182,12 +165,6 @@ var QUICK_LINKS = [
   { icon:'⭐', text:'收藏夹 / 已关注', url: SP_BASE + SP_SITE + '/_layouts/15/myfavorites.aspx' },
   { icon:'♻️', text:'回收站', url: SP_BASE + SP_SITE + '/_layouts/15/recyclebin.aspx' }
 ];
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab===tab); });
-  document.getElementById('tab-sp').classList.toggle('active', tab==='sp');
-  document.getElementById('tab-local').classList.toggle('active', tab==='local');
-}
 
 function renderTags() {
   document.getElementById('quickTags').innerHTML = QUICK_TAGS.map(function(t){
@@ -201,79 +178,58 @@ function renderLinks() {
   }).join('');
 }
 
-// 执行 SharePoint 站内搜索（限定文档库范围）
+// 将简体字符串转换为繁体变体
+function toTraditional(text) {
+  var result = '';
+  for (var i = 0; i < text.length; i++) {
+    result += S2T_MAP[text[i]] || text[i];
+  }
+  return result;
+}
+
+// 生成搜索提示（显示繁简体变体）
+function showSearchHint(q) {
+  var hintEl = document.getElementById('searchHint');
+  if (!q) { hintEl.innerHTML = ''; return; }
+  var trad = toTraditional(q);
+  var phraseTrad = PHRASE_MAP[q] || '';
+  var hints = [];
+  if (trad !== q) hints.push(trad);
+  if (phraseTrad && phraseTrad !== trad) hints.push(phraseTrad);
+  // 去重
+  hints = hints.filter(function(h, i, arr){ return arr.indexOf(h) === i; });
+  if (hints.length === 0) { hintEl.innerHTML = ''; return; }
+  hintEl.innerHTML = '🔤 同时搜索：<span class="tag">' + hints.join('</span> <span class="tag">') + '</span>';
+}
+
+// 监听输入实时更新提示
+document.getElementById('spInput').addEventListener('input', function(){
+  showSearchHint(this.value.trim());
+});
+
+// 执行 SharePoint 站内搜索（使用 u 参数限定站点范围）
 function spSearch(q) {
   q = (q || document.getElementById('spInput').value).trim();
   if (!q) { document.getElementById('spInput').focus(); return; }
-  // 使用 r 参数（Result Source）+ path KQL 精确限定搜索范围为 HR团队资料库文档库
-  var libUrl = SP_BASE + SP_SITE + '/Shared Documents/HR团队资料库';
-  var url = SP_BASE + SP_SITE + '/_layouts/15/search.aspx?k=' + encodeURIComponent(q) +
-            '&r=' + encodeURIComponent('{?path:"' + libUrl + '"}');
+
+  // 构建搜索词：原词 + 繁体变体，用 OR 连接
+  var tradQ = toTraditional(q);
+  var phraseTrad = PHRASE_MAP[q] || '';
+  var searchTerms = [q];
+  if (tradQ !== q) searchTerms.push(tradQ);
+  if (phraseTrad && phraseTrad !== tradQ && phraseTrad !== q) searchTerms.push(phraseTrad);
+  // 去重
+  searchTerms = searchTerms.filter(function(t, i, arr){ return arr.indexOf(t) === i; });
+
+  var kql = searchTerms.join(' OR ');
+
+  // 使用标准 SharePoint 搜索：k=关键词 + u=站点路径（限定范围）
+  // 不再用 r 参数（KQL Result Source），改用更可靠的 u 参数
+  var url = SP_BASE + SP_SITE + '/_layouts/15/search.aspx?' +
+            'k=' + encodeURIComponent(kql) +
+            '&u=' + encodeURIComponent(SP_SITE);
+
   window.open(url, '_blank');
-}
-
-// ===== Tab 2 本地清单搜索 =====
-var LOCAL_ITEMS = [];
-
-function loadSample() {
-  document.getElementById('listInput').value =
-    '薪酬制度2026.docx | ' + SP_BASE + SP_SITE + '/Shared%20Documents/HR团队资料库/薪酬制度2026.docx\n' +
-    '考勤管理办法.pdf | ' + SP_BASE + SP_SITE + '/Shared%20Documents/HR团队资料库/考勤管理办法.pdf\n' +
-    '新员工入职指引V3.pptx | ' + SP_BASE + SP_SITE + '/Shared%20Documents/HR团队资料库/新员工入职指引V3.pptx\n' +
-    '绩效考核表模板.xlsx | ' + SP_BASE + SP_SITE + '/Shared%20Documents/HR团队资料库/绩效考核表模板.xlsx\n' +
-    '社保公积金政策说明.docx | ' + SP_BASE + SP_SITE + '/Shared%20Documents/HR团队资料库/社保公积金政策说明.docx';
-  loadList();
-}
-
-function loadList() {
-  var raw = document.getElementById('listInput').value.trim();
-  var status = document.getElementById('listStatus');
-  if (!raw) { status.className='status-line err'; status.textContent='请先粘贴清单'; return; }
-  var lines = raw.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);
-  LOCAL_ITEMS = [];
-  lines.forEach(function(line){
-    var parts = line.split(/\s*\|\s*/);
-    var name, url;
-    if (parts.length >= 2) { name = parts[0]; url = parts[1]; }
-    else { url = parts[0]; name = decodeURIComponent(url.split('?')[0].split('/').pop()) || url; }
-    if (url) LOCAL_ITEMS.push({ name: name, url: url });
-  });
-  status.className = 'status-line';
-  status.textContent = '已加载 ' + LOCAL_ITEMS.length + ' 条';
-  localSearch();
-}
-
-function clearList() {
-  document.getElementById('listInput').value = '';
-  LOCAL_ITEMS = [];
-  document.getElementById('listStatus').textContent = '';
-  document.getElementById('localResults').innerHTML = '<div class="empty-hint">已清空清单</div>';
-  document.getElementById('localCount').textContent = '';
-}
-
-function localSearch() {
-  var q = document.getElementById('localInput').value.trim().toLowerCase();
-  var box = document.getElementById('localResults');
-  var countEl = document.getElementById('localCount');
-  if (!LOCAL_ITEMS.length) {
-    box.innerHTML = '<div class="empty-hint">请先点击「加载清单」或「填充示例」</div>';
-    countEl.textContent = '';
-    return;
-  }
-  var hits = LOCAL_ITEMS.filter(function(it){
-    if (!q) return true;
-    return it.name.toLowerCase().indexOf(q) !== -1 || it.url.toLowerCase().indexOf(q) !== -1;
-  });
-  countEl.textContent = q ? ('匹配 ' + hits.length + ' / ' + LOCAL_ITEMS.length + ' 条') : ('共 ' + LOCAL_ITEMS.length + ' 条');
-  if (!hits.length) { box.innerHTML = '<div class="empty-hint">未找到匹配「' + q + '」的文件</div>'; return; }
-  box.innerHTML = hits.map(function(it, i){
-    var ext = (it.name.split('.').pop() || '').toUpperCase();
-    return '<a class="result-item" href="'+it.url+'" target="_blank">'+
-      '<span class="rn">'+(i+1)+'</span>'+
-      '<span class="name">'+it.name+'</span>'+
-      (ext && ext.length<=5 ? '<span class="badge">'+ext+'</span>' : '')+
-      '<span class="arrow">→</span></a>';
-  }).join('');
 }
 
 // ===== 初始化 =====
