@@ -3056,6 +3056,19 @@ function getEduType(e) {
   return null;
 }
 
+// 返回完整的「学历（学习形式）」详情字符串，用于展开子项
+function getEduTypeDetail(e) {
+  var et = e._eduType;
+  if (!et) return '';
+  var eduLabel = (e.education || '').trim();
+  if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
+  else if (eduLabel === '大專' || eduLabel === '二專' || eduLabel === '三專' || eduLabel === '五專' || eduLabel === '技術學院') eduLabel = '大专';
+  else if (eduLabel === '碩士') eduLabel = '硕士';
+  else if (eduLabel === '博士') eduLabel = '博士';
+  else eduLabel = '其他'; // 小学/初中/高中 → 其他
+  return eduLabel + '（' + et + '）';
+}
+
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
 var employeeSearchResults = [];
 var employeeDisplayPage = 1;
@@ -3622,6 +3635,26 @@ function populateDashboardFilters() {
   // Job Function（派生，合并中英文/简繁/代码前缀）
   var funcs = [...new Set(D.map(getNormJobFunction).filter(Boolean))].sort();
   var selJF = document.getElementById('dashFilterJobFunction');
+  // 如果已选职系，应用业务逻辑过滤
+  var preSelectedSeries = dashboardFilters.job_series || '';
+  if (preSelectedSeries) {
+    var initExcludeMap = {
+      'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
+      'S-销售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
+      'T-技術': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
+      'T-技术': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
+      'P-產品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
+      'P-产品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
+      'I-資訊': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品'],
+      'I-资讯': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品']
+    };
+    var initExcluded = initExcludeMap[preSelectedSeries] || [];
+    if (initExcluded.length) {
+      funcs = funcs.filter(function(f){
+        return !initExcluded.some(function(kw){ return f.indexOf(kw) !== -1; });
+      });
+    }
+  }
   if (selJF) { selJF.innerHTML = '<option value="">Job Function（所有）</option>' +
     funcs.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join(''); }
 
@@ -3658,6 +3691,26 @@ function applyDashboardFilter() {
   if (selJF) {
     var D_filtered = getDashboardFilteredData(); // 基于当前筛选（含新选的职系）的子集
     var funcs = [...new Set(D_filtered.map(getNormJobFunction).filter(Boolean))].sort();
+    // ★ 业务逻辑过滤：根据职系排除不匹配的岗位关键词
+    var selectedSeries = selJ ? selJ.value : '';
+    if (selectedSeries) {
+      var excludeMap = {
+        'S-銷售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
+        'S-销售': ['产品','產品','行销','行銷','PM','技术應用','系統應用','軟體工程師','資料科學','MIS'],
+        'T-技術': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
+        'T-技术': ['业务','業務','銷售','業助','CSR','行销','行銷','PM'],
+        'P-產品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
+        'P-产品': ['業務','业务','銷售','CSR','電銷','业助','SALES'],
+        'I-資訊': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品'],
+        'I-资讯': ['業務','业务','銷售','業助','CSR','行销','行銷','PM','產品','产品']
+      };
+      var excluded = excludeMap[selectedSeries] || [];
+      if (excluded.length) {
+        funcs = funcs.filter(function(f){
+          return !excluded.some(function(kw){ return f.indexOf(kw) !== -1; });
+        });
+      }
+    }
     selJF.innerHTML = '<option value="">Job Function（所有）</option>' +
       funcs.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join('');
     // 如果之前的 Job Function 值仍在缩窄后的列表中，恢复选中
@@ -3803,8 +3856,33 @@ function buildDashboard(){
   var colorIdx = 0;
   dims.forEach(function(dim){
     var counts;
+    var eduTypeSubMap = null; // eduType 子项映射：{ "本科": [{label:"本科（全日制）", val:"...", cnt:N}, ...] }
     if (dim.vals) {
       counts = dim.vals.map(function(v){ return {label:v[1], val:v[0], cnt:countByDim(D, dim.key, v[0])}; });
+    } else if (dim.key === 'eduType') {
+      // ★ eduType 特殊渲染：按学历分组，本科可展开显示全日制/非全日制
+      var grpMap = {};
+      var subMap = {}; // 分组 → 子项详情列表
+      D.forEach(function(e){
+        var et = e._eduType;
+        if (!et) return;
+        var grp = getDimValue(e, 'eduType'); // 本科/大专/硕士/博士/其他
+        if (!grp) return;
+        grpMap[grp] = (grpMap[grp]||0) + 1;
+        var detail = getEduTypeDetail(e);
+        if (!subMap[grp]) subMap[grp] = {};
+        subMap[grp][detail] = (subMap[grp][detail]||0) + 1;
+      });
+      counts = Object.keys(grpMap).map(function(k){return {label:k, val:k, cnt:grpMap[k]};});
+      // 排序：本科/大专/硕士/博士/其他
+      var order = ['本科','大专','硕士','博士','其他'];
+      counts.sort(function(a,b){ return order.indexOf(a.label) - order.indexOf(b.label); });
+      // 构建子项映射供渲染使用
+      eduTypeSubMap = {};
+      Object.keys(subMap).forEach(function(grp){
+        eduTypeSubMap[grp] = Object.keys(subMap[grp]).map(function(d){ return {label:d, val:d, cnt:subMap[grp][d]}; });
+        eduTypeSubMap[grp].sort(function(a,b){ return b.cnt - a.cnt; });
+      });
     } else {
       var map = {};
       D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
@@ -3826,6 +3904,10 @@ function buildDashboard(){
       var esc = String(c.val).replace(/'/g,"\\'");
       var barColor = (dim.colors && dim.colors[c.val]) ? dim.colors[c.val] : DIM_COLORS[colorIdx % DIM_COLORS.length];
       if (!dim.colors) colorIdx++;
+      // ★ eduType 子项颜色：全日制绿 / 非全红
+      if (dim.key === 'eduType' && esc.indexOf('（') !== -1) {
+        barColor = esc.indexOf('非全日制') !== -1 ? '#dc2626' : '#16a34a';
+      }
       var titleAttr = dim.noJump ? ' title="'+c.label+'"' : ' title="点击跳转到花名册：'+c.label+'"';
       var onclickAttr = dim.noJump ? '' : ' onclick="jumpToRosterFilter(\''+dim.key+'\',\''+esc+'\')"';
       return '<div class="dash-bar-row"'+onclickAttr+titleAttr+' data-label="'+esc.toLowerCase()+'">'+
@@ -3834,15 +3916,53 @@ function buildDashboard(){
         '<div class="dash-bar-val" style="color:'+barColor+';">'+c.cnt.toLocaleString()+'</div></div>';
     }
 
-    var SHOW_LIMIT = 10;
-    var visibleBars = counts.slice(0, SHOW_LIMIT).map(makeBar).join('');
+    // ★ eduType 特殊渲染：有子项的分组（如"本科"）显示为可展开的父节点
+    var visibleBars = '';
+    if (dim.key === 'eduType' && eduTypeSubMap) {
+      counts.forEach(function(c, idx){
+        var pct = (c.cnt/max*100).toFixed(1);
+        var esc = String(c.val).replace(/'/g,"\\'");
+        var subItems = eduTypeSubMap[c.val];
+        var hasChildren = subItems && subItems.length > 1;
+        var barColor = DIM_COLORS[colorIdx % DIM_COLORS.length]; colorIdx++;
+        var barHtml = '<div class="dash-bar-row" data-label="'+esc.toLowerCase()+'"'+
+          (hasChildren ? ' style="cursor:pointer;" onclick="var sub=this.nextElementSibling;if(sub){var v=sub.style.display!==\'none\';sub.style.display=v?\'none\':\'\';this.querySelector(\'.edu-toggle\').textContent=v?\'▶\':\'▼\';}"' :
+          ' onclick="jumpToRosterFilter(\'eduType\',\''+esc+'\')"') +
+          ' title="' + (hasChildren ? '点击展开/收起' : '点击跳转到花名册：'+c.label) + '">' +
+          '<div class="dash-bar-label">' + (hasChildren ? '<span class="edu-toggle" style="font-size:10px;margin-right:4px;">▶</span>' : '') + c.label + '</div>' +
+          '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div>' +
+          '<div class="dash-bar-val" style="color:'+barColor+';">'+c.cnt.toLocaleString()+'</div></div>';
+        visibleBars += barHtml;
+        // 子项（默认隐藏）
+        if (hasChildren) {
+          var subMax = Math.max.apply(null, subItems.map(function(s){return s.cnt;})) || 1;
+          var subHtml = '<div style="display:none;padding-left:20px;margin:4px 0;border-left:2px solid var(--border);">';
+          subItems.forEach(function(s){
+            var sPct = (s.cnt/subMax*100).toFixed(1);
+            var sEsc = String(s.val).replace(/'/g,"\\'");
+            var sColor = sEsc.indexOf('非全日制') !== -1 ? '#dc2626' : '#16a34a';
+            subHtml += '<div class="dash-bar-row" onclick="jumpToRosterFilter(\'eduType\',\''+sEsc+'\')" title="点击跳转到花名册：'+s.label+'" data-label="'+sEsc.toLowerCase()+'" style="padding:3px 0;">'+
+              '<div class="dash-bar-label" style="font-size:12px;opacity:0.85;">'+s.label+'</div>'+
+              '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+sPct+'%;background:'+sColor+';"></div></div>'+
+              '<div class="dash-bar-val" style="color:'+sColor+';font-size:12px;">'+s.cnt.toLocaleString()+'</div></div>';
+          });
+          subHtml += '</div>';
+          visibleBars += subHtml;
+        }
+      });
+    } else {
+      var SHOW_LIMIT = 10;
+      visibleBars = counts.slice(0, SHOW_LIMIT).map(makeBar).join('');
+    }
     var hiddenBars = counts.length > SHOW_LIMIT
       ? counts.slice(SHOW_LIMIT).map(makeBar).join('')
       : '';
 
     var toggleHtml = '';
-    if (counts.length > SHOW_LIMIT) {
-      var restCount = counts.length - SHOW_LIMIT;
+    // 展开/收起（仅非 eduType 维度需要，eduType 已内置展开逻辑）
+    if (dim.key !== 'eduType' && counts.length > 10) {
+      var hiddenBars = counts.slice(10).map(makeBar).join('');
+      var restCount = counts.length - 10;
       toggleHtml = '<div style="margin-top:8px;text-align:center;">'+
         '<button onclick="var d=this.nextElementSibling;if(d){var vis=d.style.display!==\'none\';d.style.display=vis?\'none\':\'\';this.textContent=vis?\'展开全部 '+restCount+' 项 ▼\':\'收起 ▲\';}" style="padding:4px 16px;cursor:pointer;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary);border-radius:6px;font-size:12px;">展开全部 ' + restCount + ' 项 ▼</button>'+
         '<div style="display:none;">' + hiddenBars + '</div></div>';
@@ -3923,17 +4043,14 @@ function getDimValue(e, key){
   if (key==='eduType') {
     var et = e._eduType;
     if (!et) return '';
-    // 组合显示：学历（学习形式），如"本科（全日制）"、"大专（非全日制）"
+    // 返回学历分组（用于维度聚合）：本科/大专/硕士/博士/其他
     var eduLabel = (e.education || '').trim();
-    // 统一学历名称
-    if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
-    else if (eduLabel === '大專' || eduLabel === '二專' || eduLabel === '三專' || eduLabel === '五專' || eduLabel === '技術學院') eduLabel = '大专';
-    else if (eduLabel === '碩士') eduLabel = '硕士';
-    else if (eduLabel === '博士') eduLabel = '博士';
-    else if (eduLabel === '小學') eduLabel = '小学';
-    else if (eduLabel === '初中' || eduLabel === '國中') eduLabel = '初中';
-    else if (eduLabel === '高中' || eduLabel === '高職' || eduLabel === '中專' || eduLabel === '中五' || eduLabel === '中六' || eduLabel === '中七') eduLabel = '高中';
-    return eduLabel + '（' + et + '）';
+    if (eduLabel === '大學' || eduLabel === '本科') return '本科';
+    if (eduLabel === '大專' || eduLabel === '二專' || eduLabel === '三專' || eduLabel === '五專' || eduLabel === '技術學院') return '大专';
+    if (eduLabel === '碩士') return '硕士';
+    if (eduLabel === '博士') return '博士';
+    // 小学/初中/高中 → 合并为"其他"
+    return '其他';
   }
   if (key==='group') return getNormGroup(e);
   if (key==='job_series') return getNormJobSeries(e);
@@ -3957,12 +4074,13 @@ function countByDim(D, key, val){
     return 0;
   }
   if (key==='eduType') {
-    return D.filter(function(e){
-      var et = e._eduType;
-      if (!et) return false;
-      // val 格式如 "本科（全日制）"，需匹配学习形式部分
-      return val.indexOf('（' + et + '）') !== -1 && getDimValue(e, key) === val;
-    }).length;
+    // val 可能是分组名("本科"/"大专"等) 或详细值("本科（全日制）"等)
+    if (val.indexOf('（') !== -1) {
+      // 详细值匹配：精确匹配 getEduTypeDetail(e)
+      return D.filter(function(e){ return getEduTypeDetail(e) === val; }).length;
+    }
+    // 分组名匹配：匹配 getDimValue 返回的学历分组
+    return D.filter(function(e){ return getDimValue(e, key) === val; }).length;
   }
   if (key==='job_series') return D.filter(function(e){ return getNormJobSeries(e) === val; }).length;
   if (key==='job_function') return D.filter(function(e){ return getNormJobFunction(e) === val; }).length;
