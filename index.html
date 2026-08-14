@@ -2807,6 +2807,66 @@ function getSchoolTags(school){
   return { is985:false, is211:is211, noSchool:false };
 }
 
+// ==================== 派生判断：最高学历是否全日制（仅 CN） ====================
+// 思路：从出生年份按全日制进度推算「应毕业年」，再与工作经历/入司/毕业年份比对。
+//   全日制进度（6岁入学）：小学6→12岁；初中3→15；高中3→18；大专3→21；本科4→22；硕士3→25；博士3→28
+//   若最早工作（或入司）早于应毕业年 → 在读期间已就业 → 非全日制
+//   若无就业信号，则用毕业年份与应毕业年比对：明显晚毕业 → 边工作边读 → 非全日制
+function _parseYear4(s) {
+  if (!s) return null;
+  var m = String(s).match(/(\d{4})/);
+  return m ? parseInt(m[1], 10) : null;
+}
+function _eduFullTimeGradAge(edu) {
+  // 返回「从6岁入学算起的全日制毕业年龄」，未知返回 null
+  switch (edu) {
+    case '小學': return 12;
+    case '初中': case '國中': return 15;
+    case '高中': case '高職': case '中專': case '中五': case '中六': case '中七': return 18;
+    case '大專': case '二專': case '三專': case '五專': case '技術學院': return 21;
+    case '大學': case '本科': return 22;
+    case '碩士': return 25;
+    case '博士': return 28;
+    default: return null;
+  }
+}
+function getEduType(e) {
+  if (!e || e.nationality !== '中国') return null; // 只判断 CN
+  var by = _parseYear4(e.birthday);
+  var edu = (e.education || '').trim();
+  if (!by || !edu) return null;
+  var expAge = _eduFullTimeGradAge(edu);
+  if (expAge == null) return null;              // 学历层级无法映射（如(空)）
+  var expGradYear = by + expAge;                // 全日制应毕业年
+
+  // 信号1：详细工作经历（每段 start 年）
+  var we = e.work_experience;
+  if (Array.isArray(we) && we.length) {
+    var starts = we.map(function(w){ return _parseYear4(w.start); }).filter(Boolean);
+    if (starts.length) {
+      var earliest = Math.min.apply(null, starts);
+      if (earliest < expGradYear) return '非全日制'; // 在读期间已工作
+      return '全日制';                              // 最早工作不早于应毕业年
+    }
+  }
+
+  // 信号2：入司日期（WPG 入职年）作为就业信号
+  var jy = _parseYear4(e.join_date);
+  if (jy && jy < expGradYear) return '非全日制'; // 入司早于全日制毕业年 → 必然边工作边读
+
+  // 信号3：毕业年份推算（无就业信号时）
+  var gy = _parseYear4(e.grad_date);
+  if (gy) {
+    var actualAge = gy - by;
+    if (actualAge > expAge + 1) return '非全日制'; // 毕业明显晚于全日制年龄
+    return '全日制';
+  }
+
+  // 兜底：有入司且不低于应毕业年 → 全日制；否则数据不足
+  if (jy) return '全日制';
+  return null;
+}
+
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
 var employeeSearchResults = [];
 var employeeDisplayPage = 1;
@@ -2838,7 +2898,9 @@ function buildEmployeeSearchIndex() {
     e._is211 = tags.is211;
     e._noSchool = tags.noSchool;
     var tagTxt = (tags.is985 ? ' 985' : '') + (tags.is211 ? ' 211' : '');
-    return t + ' ' + toSimplified(t) + tagTxt;
+    e._eduType = getEduType(e); // 最高学历全日制/非全日制（仅CN）
+    var eduTxt = e._eduType ? ' ' + e._eduType : '';
+    return t + ' ' + toSimplified(t) + tagTxt + eduTxt;
   });
 }
 function getEmployeeSearchIndex() {
@@ -3068,6 +3130,13 @@ function renderEmployeeCard(e) {
       buildDetail('专业', e.major) +
       buildDetail('毕业日期', e.grad_date) +
       buildDetail('学籍状态', e.study_status) +
+      (function(){
+        var et = getEduType(e);
+        if (!et) return '';
+        var color = et === '全日制' ? '#16a34a' : '#dc2626';
+        return '<div class="emp-detail"><span class="detail-label">学习形式</span>'
+          + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';">' + et + '</span></div>';
+      })() +
       /* ---- 部门主管 ---- */
       buildDetail('部门主管', e.mgr99) +
       buildDetail('上级主管(100)', e.mgr100) +
@@ -3506,6 +3575,7 @@ function buildDashboard(){
   var dims = [
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
     {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b','noschool':'#94a3b8'}},
+    {key:'eduType', title:'学习形式(CN)', vals:null, colors:{'全日制':'#16a34a','非全日制':'#dc2626'}},
     {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
@@ -3638,6 +3708,7 @@ function filterDashBars(input, dimKey) {
 
 function getDimValue(e, key){
   if (key==='schoolTag') return null;
+  if (key==='eduType') return e._eduType || '';
   if (key==='group') return getNormGroup(e);
   if (key==='job_series') return getNormJobSeries(e);
   if (key==='city') return getNormCity(e);
@@ -3658,6 +3729,9 @@ function countByDim(D, key, val){
     if (val==='主管') return D.filter(function(e){ return isDeptManager(e); }).length;
     if (val==='非主管') return D.filter(function(e){ return !isDeptManager(e); }).length;
     return 0;
+  }
+  if (key==='eduType') {
+    return D.filter(function(e){ return (e._eduType||'') === val; }).length;
   }
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
 }
