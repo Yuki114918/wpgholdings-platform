@@ -3469,7 +3469,17 @@ function applyDashboardFilter() {
   dashboardFilters.city = selC ? selC.value : '';
   dashboardFilters.is_supervisor = selSup ? selSup.value : '';
   dashboardFilters.work_region = selWR ? selWR.value : '';
-  dashboardFilters.job_function = selJF ? selJF.value : '';
+  // ★ 联动：当职系变更时，自动重置 Job Function 并缩窄选项
+  var prevJf = dashboardFilters.job_function;
+  dashboardFilters.job_function = ''; // 先清空，避免残留不匹配的值
+  if (selJF) {
+    var D_filtered = getDashboardFilteredData(); // 基于当前筛选（含新选的职系）的子集
+    var funcs = [...new Set(D_filtered.map(getNormJobFunction).filter(Boolean))].sort();
+    selJF.innerHTML = '<option value="">Job Function（所有）</option>' +
+      funcs.map(function(f){return '<option value="'+f+'">'+f+'</option>';}).join('');
+    // 如果之前的 Job Function 值仍在缩窄后的列表中，恢复选中
+    if (prevJf && funcs.indexOf(prevJf) !== -1) { selJF.value = prevJf; dashboardFilters.job_function = prevJf; }
+  }
   // 清除空值
   Object.keys(dashboardFilters).forEach(function(k){ if (!dashboardFilters[k]) delete dashboardFilters[k]; });
   buildDashboard();
@@ -3598,7 +3608,8 @@ function buildDashboard(){
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
-    {key:'job_function', title:'Job Function', vals:null, noJump:true},
+    {key:'job_series', title:'职系', vals:null},           // ★ 新增：高级职系分类（S-銷售/T-技術/AC-行政等35类）
+    {key:'job_function', title:'Job Function', vals:null},   // 具体岗位（从position归一化，与职系联动）
     {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
     {key:'city', title:'工作城市', vals:null},
     {key:'work_region', title:'工作区域', vals:null, noJump:true},
@@ -3770,6 +3781,8 @@ function countByDim(D, key, val){
       return val.indexOf('（' + et + '）') !== -1 && getDimValue(e, key) === val;
     }).length;
   }
+  if (key==='job_series') return D.filter(function(e){ return getNormJobSeries(e) === val; }).length;
+  if (key==='job_function') return D.filter(function(e){ return getNormJobFunction(e) === val; }).length;
   return D.filter(function(e){ return (e[key]||'')===val; }).length;
 }
 
