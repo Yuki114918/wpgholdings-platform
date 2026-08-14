@@ -209,7 +209,7 @@
 </div>
 
 <script>
-function switchInternalTab(id, btn) {
+window.switchInternalTab = function(id, btn) {
   var root = document.getElementById('internalReportBody');
   if (!root) return;
   root.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
@@ -217,16 +217,20 @@ function switchInternalTab(id, btn) {
   var panel = document.getElementById(id);
   if (panel) panel.classList.add('active');
   if (btn) btn.classList.add('active');
-}
-(function(){
+  // 切换后让刚显示出来的图表自适应尺寸（隐藏时初始化的图表尺寸为 0）
+  try {
+    if (panel) panel.querySelectorAll('canvas').forEach(function(cv){ if (cv._chart) cv._chart.resize(); });
+  } catch(e){}
+};
+window.initComparisonCharts = function() {
   if (!window.Chart) return;
   try {
     var c1 = document.getElementById('cmpHireLeave');
-    if (c1) new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    if (c1 && !c1._chart) c1._chart = new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
     var c2 = document.getElementById('cmpFunnel');
-    if (c2) new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
+    if (c2 && !c2._chart) c2._chart = new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
     var c3 = document.getElementById('cmpGrade');
-    if (c3) new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
+    if (c3 && !c3._chart) c3._chart = new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
       {label:'S', data:[2561,2839,2611], backgroundColor:'#6366f1'},
       {label:'A', data:[1028,881,1043], backgroundColor:'#0ea5a8'},
       {label:'A+', data:[43,8,7], backgroundColor:'#d97706'},
@@ -234,5 +238,5 @@ function switchInternalTab(id, btn) {
       {label:'P', data:[7,3,2], backgroundColor:'#cbd5e1'}
     ]}, options:{plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}}}});
   } catch(e) { console.warn('[Comparison] chart init error:', e); }
-})();
+};
 </script>

@@ -503,6 +503,7 @@ function loadComparison() {
     .then(function(html){
       c.innerHTML = html;
       executeScripts(html, c);
+      if (window.initComparisonCharts) window.initComparisonCharts();
     })
     .catch(function(){
       c.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">内部对比报告加载失败，请确保 report-comparison.html 文件存在</div>';
