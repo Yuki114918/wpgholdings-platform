@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>开放式工作平台 v15</title>
+<title>开放式工作平台 v16</title>
 <meta name="description" content="工作平台 · 员工花名册 · HR法令查询 · 快捷入口">
 <meta name="theme-color" content="#2563eb">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +23,7 @@ var MGR99_NAME_SET = {};  // 全局主管姓名集合：key=姓名, value=true�
 var TOTAL_CHUNKS = 10;
 var DATA_BASE = location.hostname.indexOf('github.io') !== -1
   ? 'data/'
-  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@5017167/data/';
+  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@ae2a719/data/';
 (function loadEmployeeData(idx) {
   if (idx > TOTAL_CHUNKS) {
     mergeEmployeeData();
@@ -2798,11 +2798,13 @@ function getSchoolTags(school){
     '金陵学院', '金陵學院', '东湖分校', '東湖分校', '珞珈学院', '珞珈學院',
     '武昌分校', '廊坊分校', '广分院', '廣分院', '汉口分校', '漢口分校'];
   for (var i = 0; i < EXCLUDE_PATTERNS.length; i++) {
-    if (s.indexOf(EXCLUDE_PATTERNS[i]) !== -1) return { is985:false, is211:false };
+    if (s.indexOf(EXCLUDE_PATTERNS[i]) !== -1) return { is985:false, is211:false, noSchool:false };
   }
+  // 985和211互斥：先判985，985优先（因为211名单包含所有985）
   var is985 = _985_TOKENS.some(function(t){ return s === t; });
+  if (is985) return { is985:true, is211:false, noSchool:false };
   var is211 = _211_TOKENS.some(function(t){ return s === t; });
-  return { is985:is985, is211:is211, noSchool:false };
+  return { is985:false, is211:is211, noSchool:false };
 }
 
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
