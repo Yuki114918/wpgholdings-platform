@@ -322,6 +322,7 @@ footer span{display:block}
 <div class="top-tab-bar" id="topTabBar">
   <button class="top-tab-btn active" id="tabExtBtn" onclick="switchTopTab('external', this)">📊 外部数据快讯</button>
   <button class="top-tab-btn" id="tabIntBtn" onclick="switchTopTab('internal', this)">🔍 内部资料对比</button>
+  <button class="top-tab-btn" id="tabTrendsBtn" onclick="switchTopTab('trends', this)">🚀 HR最新趋势</button>
 </div>
 
 <div id="tab-external"><div class="report-layout">
@@ -398,6 +399,8 @@ footer span{display:block}
 </div></div><!-- /report-layout /tab-external -->
 
 <div id="tab-internal" style="display:none"><div id="internalReportBody"></div></div>
+
+<div id="tab-trends" style="display:none"><div id="trendsReportBody"></div></div>
 
 <footer>
   <span>&copy; 2026 大聯大中國區HR &middot; 數據洞察報告</span>
@@ -489,24 +492,33 @@ function executeScripts(html, container) {
   }
 }
 
-// 顶部页签切换：外部数据快讯 / 内部资料对比
+// 顶部页签切换：外部数据快讯 / 内部资料对比 / HR最新趋势
 function switchTopTab(which, btn) {
   var bar = document.getElementById('topTabBar');
   if (bar) bar.querySelectorAll('.top-tab-btn').forEach(function(b){ b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   var ext = document.getElementById('tab-external');
   var int = document.getElementById('tab-internal');
+  var trd = document.getElementById('tab-trends');
+  // 先隐藏所有
+  if (ext) ext.style.display = 'none';
+  if (int) int.style.display = 'none';
+  if (trd) trd.style.display = 'none';
+  // 显示目标
   if (which === 'internal') {
-    if (ext) ext.style.display = 'none';
     if (int) {
       int.style.display = 'block';
       if (!int.dataset.loaded) { loadComparison(); int.dataset.loaded = '1'; }
     }
-    window.scrollTo(0, 0);
+  } else if (which === 'trends') {
+    if (trd) {
+      trd.style.display = 'block';
+      if (!trd.dataset.loaded) { loadTrends(); trd.dataset.loaded = '1'; }
+    }
   } else {
-    if (int) int.style.display = 'none';
     if (ext) ext.style.display = 'flex';
   }
+  window.scrollTo(0, 0);
 }
 
 function loadComparison() {
@@ -522,6 +534,20 @@ function loadComparison() {
     })
     .catch(function(){
       c.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">内部对比报告加载失败，请确保 report-comparison.html 文件存在</div>';
+    });
+}
+
+function loadTrends() {
+  var t = document.getElementById('trendsReportBody');
+  if (!t) return;
+  t.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">正在加载 HR 趋势报告…</div>';
+  fetch('report-hr-trends.html?v=1')
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+      t.innerHTML = html;
+    })
+    .catch(function(){
+      t.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">HR 趋势报告加载失败</div>';
     });
 }
 </script>
