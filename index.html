@@ -1535,6 +1535,12 @@ function mergeEmployeeData() {
         <span class="sidebar-toggle-text">收起菜单</span>
       </div>
 
+      <div class="nav-group-label">专题报告</div>
+      <div class="nav-item" data-target="report" onclick="location.href='report.html'">
+        <span class="nav-icon">📊</span><span class="nav-label">HR 数据洞察报告</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
+      </div>
+
       <div class="nav-group-label">主导航</div>
       <div class="nav-item active" data-target="all" onclick="switchModule('all')">
         <span class="nav-icon">🏠</span><span class="nav-label">首页总览</span>
@@ -1561,11 +1567,6 @@ function mergeEmployeeData() {
         <span class="nav-icon">📋</span><span class="nav-label">劳动争议查询</span>
       </div>
 
-      <div class="nav-group-label">专题报告</div>
-      <div class="nav-item" data-target="report" onclick="location.href='report.html'">
-        <span class="nav-icon">📊</span><span class="nav-label">HR 数据洞察报告</span>
-        <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
-      </div>
     </nav>
 
     <!-- ===== 主内容区 ===== -->
@@ -4193,9 +4194,9 @@ function buildMobileNav() {
   var bar = document.getElementById('mobileNavBar');
   if (!bar) return;
   var items = [
-    ['all','🏠 总览'],['shortcuts','🚀 快捷入口'],['roster','👥 花名册'],
+    ['report','📰 外部报告'],['all','🏠 总览'],['shortcuts','🚀 快捷入口'],['roster','👥 花名册'],
     ['dashboard','📊 看板'],['todo','📝 待办'],['hr-law','⚖️ HR法令'],
-    ['labor','📋 劳动争议'],['report','📰 外部报告']
+    ['labor','📋 劳动争议']
   ];
   var html = '';
   items.forEach(function(it){
