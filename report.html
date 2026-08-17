@@ -309,6 +309,28 @@ footer span{display:block}
 </style>
 </head>
 <body>
+<div id="wpgLogin">
+  <div class="wpg-card">
+    <div class="wpg-logo">WPG</div>
+    <h1>内容已加密</h1>
+    <p>请输入访问口令以解密查看</p>
+    <input id="wpgPass" type="password" placeholder="访问口令" autocomplete="off" />
+    <button id="wpgSubmit">解 锁</button>
+    <div id="wpgErr"></div>
+  </div>
+</div>
+<style>
+#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a5f);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+.wpg-card{background:#fff;border-radius:16px;padding:36px 32px;width:320px;max-width:88vw;box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center;}
+.wpg-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;}
+.wpg-card h1{font-size:19px;color:#1e293b;margin-bottom:6px;}
+.wpg-card p{font-size:13px;color:#64748b;margin-bottom:18px;}
+#wpgPass{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;box-sizing:border-box;outline:none;}
+#wpgPass:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
+#wpgSubmit:hover{background:#1d4ed8;}
+#wpgErr{color:#dc2626;font-size:12.5px;min-height:18px;margin-top:10px;}
+</style>
 
 <!-- 平台 Header -->
 <header class="header">
@@ -398,216 +420,71 @@ footer span{display:block}
   </main><!-- /report-main -->
 </div></div><!-- /report-layout /tab-external -->
 
-<div id="tab-internal" style="display:none"><div id="internalReportBody">
-<!-- 内部资料对比报告（内联内容） -->
-<div class="cover" style="padding:28px 32px 22px;">
-  <div class="cover-row">
-    <span class="cover-badge">INTERNAL &middot; 内部资料对比</span>
-    <span class="cover-date">数据截止 2026/07</span>
-  </div>
-  <h1 style="font-size:24px;">内部资料对比 <span style="color:#0ea5a8">与同年度对标</span></h1>
-  <p class="subtitle" style="font-size:12.5px;margin-bottom:12px;">本主体为 <b>大联大中国区（WPG China Region）</b>，系大联大控股（WPG Holdings，TWSE:3702）旗下中国区 HR 职能。以下基于三份纯内部洞察报告（绩效07 / 人力07 / 招聘07）同年度数据，并与外部对标企业（文晔 &middot; 安富利 &middot; 艾睿 &middot; 大联大中国区）交叉验证；对标薪酬引用<b>大联大中国区</b>自身区间，非大联大控股集团合并口径。所有内部数据均以「同一年度」对齐，避免跨年混算。</p>
-  <div class="cover-meta">
-    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>主体</b> 大联大中国区（WPG-CN）&middot; 正职 &middot; 工作区域 A05-CN &middot; 2,065 人</div>
-    <div class="cover-meta-item"><span class="cover-meta-dot"></span> <b>内部来源</b> 大联大中国区 人员结构 / 绩效与晋升 / 招聘漏斗 三份 07 版报告</div>
-  </div>
+<div id="tab-internal" style="display:none"><div id="internalReportBody"></div>
 </div>
-<div class="tab-bar" style="margin:20px 16px 0;">
-  <button class="tab-btn active" onclick="switchInternalTab('t-flow', this)">① 人力流动（同年度）</button>
-  <button class="tab-btn" onclick="switchInternalTab('t-funnel', this)">② 招聘漏斗（同年度）</button>
-  <button class="tab-btn" onclick="switchInternalTab('t-perf', this)">③ 绩效与晋升</button>
-  <button class="tab-btn" onclick="switchInternalTab('t-group', this)">④ 集团维度拆分</button>
-  <button class="tab-btn" onclick="switchInternalTab('t-bench', this)">⑤ 内外对标（管理意见 · 预知）</button>
+<div id="tab-trends" style="display:none"><div id="trendsReportBody"></div>
 </div>
-<div class="tab-content active" id="t-flow">
-  <div class="main" style="padding:24px 16px;">
-    <div class="finding-box">
-      <div class="fb-label">核心结论</div>
-      <div class="fb-text">2026 年至今（至 7 月）<b>离职 106 人、雇用 56 人，净减 50 人</b>——离职规模接近补员的两倍，当前策略明显偏「只减不补」。将「主动离职 ÷ 新进」按同一年度对齐后，比值从 <b>2024 年 10 倍</b> 一路放大到 <b>2026 年 64 倍</b>。<br><br><b>⚠️ 关键背景：大联大中国区 2026 年 H1 停止招募，直至 8 月初才陆续恢复开放。</b>因此 64× 被冻结期人为放大（分母含极低雇用值），正常运营年份该比值应在 10–23× 区间。但冻结期造成的<b>被动失血（约 30–35 人本可补上却无法补）</b>已不可逆，需在 Q3–Q4 加速补员追赶。</div>
-    </div>
-    <div class="sec-title" style="font-size:19px;margin-top:8px;">同年度「主动离职 ÷ 新进」趋势</div>
-    <div class="sec-desc">数据为同一年度口径：该年主动离职人数与该年新进人数的倍数关系（绝对值未在三份报告中单列，比值为报告明确给出的同年度信号）。</div>
-    <div class="tbl-wrap">
-      <div class="tbl-title">主动离职 ÷ 新进（同年度）</div>
-      <div class="tbl-scroll"><table><thead><tr><th>年度</th><th>主动离职 ÷ 新进</th><th>趋势判断</th></tr></thead><tbody><tr><td>2024</td><td><span class="tag tag-y">10 倍</span></td><td>流失已高于补员，但尚可承受</td></tr><tr><td>2025</td><td><span class="tag tag-o">23 倍</span></td><td>差距快速拉大，补位压力剧增</td></tr><tr><td>2026（至 7 月）</td><td><span class="tag tag-r">64 倍</span></td><td>招聘几乎完全被流失「吞噬」</td></tr></tbody></table></div>
-    </div>
-    <div class="sec-title" style="font-size:19px;">2026 年至今（YTD 至 7 月）绝对值</div>
-    <div class="metric-row">
-      <div class="metric-card"><div class="mc-name">离职</div><div class="mc-role-val">106 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">YTD 2026/07</div></div>
-      <div class="metric-card"><div class="mc-name">雇用（新进）</div><div class="mc-role-val">56 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">YTD 2026/07</div></div>
-      <div class="metric-card"><div class="mc-name">净变动</div><div class="mc-role-val" style="color:#dc2626;">-50 <small>人</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">离职 ≫ 补员</div></div>
-      <div class="metric-card"><div class="mc-name">YTD 离职率</div><div class="mc-role-val">5.1% <small>（年化≈8.7%）</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">106 ÷ 平均在职≈2,090</div></div>
-    </div>
-    <div class="chart-wrap"><div class="chart-title">2026 YTD（至 7 月）入职 vs 离职</div><div class="chart-subtitle">同年度口径：离职 106 人 / 雇用 56 人</div><canvas id="cmpHireLeave" height="120"></canvas></div>
-    <div class="finding-box compact" style="border-left-color:#d97706;"><div class="fb-label" style="color:#92400e;">管理提示</div><div class="fb-text">「主动离职 ÷ 新进」三年从 10×→64× 持续恶化，单纯优化招聘漏斗无法根治——应把<b>主动离职率</b>与<b>招聘到岗率</b>并列为核心看板指标，先从留任治理入手。</div></div>
-  </div>
-</div>
-<div class="tab-content" id="t-funnel">
-  <div class="main" style="padding:24px 16px;">
-    <div class="finding-box"><div class="fb-label">核心结论</div><div class="fb-text">同一年度招聘漏斗呈「上头大、下头瘪」：需求 <b>561</b> 个 → 收到简历 <b>2,920</b> 份 → 最终到岗仅 <b>28</b> 人，<b>整体成功率不足 1%（0.96%）</b>。最大泄漏在两处：① 初筛（部门通过率仅 41.7%）；② Offer→到岗仅 14.6%。每需求平均对应 5 份简历、却仅 0.05 人到岗。</div></div>
-    <div class="sec-title" style="font-size:19px;">同年度招聘漏斗（简历 vs 合格/到岗）</div>
-    <div class="sec-desc">「我今年进来的简历」与「我合格（到岗）的人」同年度比对，转化率一目了然。</div>
-    <div class="tbl-wrap"><div class="tbl-title">外招漏斗全环节（2026 同年度）</div><div class="tbl-scroll"><table><thead><tr><th>环节</th><th>数量</th><th>占「收到简历」比</th><th>环节转化率</th></tr></thead><tbody><tr><td>需求（职缺）</td><td>561</td><td>—</td><td>—</td></tr><tr><td>收到简历</td><td><b>2,920</b></td><td>100%</td><td>—</td></tr><tr><td>部门筛选通过</td><td>≈1,219</td><td>41.7%</td><td><span class="tag tag-y">41.7%</span></td></tr><tr><td>面试通过</td><td>≈192*</td><td>≈6.6%</td><td><span class="tag tag-o">14.6%（Offer→到岗）</span></td></tr><tr><td>到岗</td><td><b>28</b></td><td>0.96%</td><td>—</td></tr></tbody></table></div></div>
-    <div class="flash-footnote">* 面试通过/Offer 人数按「到岗 28 ÷ Offer→到岗 14.6%」反推约 192 人，为估算值；报告原文仅给出到岗 28 与两端转化率。</div>
-    <div class="chart-wrap"><div class="chart-title">招聘漏斗（同年度：简历 2,920 → 到岗 28）</div><div class="chart-subtitle">对数视角更能看出「漏水」区间</div><canvas id="cmpFunnel" height="140"></canvas></div>
-    <div class="sec-title" style="font-size:17px;margin-top:8px;">职缺流转 &amp; 内推效能（同年度）</div>
-    <div class="metric-row col3"><div class="metric-card"><div class="mc-name">在招/待入职占比</div><div class="mc-role-val" style="color:#dc2626;">76.6%</div><div class="num-desc" style="font-size:11px;color:#6b7280;">真正已完成仅 13.2%</div></div><div class="metric-card"><div class="mc-name">平均招聘天数</div><div class="mc-role-val">53 <small>天</small></div><div class="num-desc" style="font-size:11px;color:#6b7280;">极端值达 690 天</div></div><div class="metric-card"><div class="mc-name">内推转化</div><div class="mc-role-val">33% / 67%</div><div class="num-desc" style="font-size:11px;color:#6b7280;">部门通过 / 面试通过（质优量小）</div></div></div>
-    <div class="finding-box compact"><div class="fb-text"><b>内推</b>：需求 39、投递仅 9，量严重不足，但「部门通过率 33%、面试通过率 67%」显著优于外推——是低成本高质量的突破口，应重点运营而非「随缘」。</div></div>
-  </div>
-</div>
-<div class="tab-content" id="t-bench">
-  <div class="main" style="padding:24px 16px;">
-    <div class="finding-box"><div class="fb-label">核心结论</div><div class="fb-text">大联大中国区（WPG-CN）的<b>稳定性优势突出</b>（平均年资 10.1 年、平均年龄 39.8 岁、&gt;10 年占 43.7%），是分销商客户关系护城河；但<b>招聘到岗率 &lt;1%、离职为补员 64 倍</b>是结构性短板。薪酬端：大联大中国区技术岗月薪低于美商 20–30%，靠 <b>16–17 薪</b>把年包拉回竞品水平。</div></div>
-    <div class="sec-title" style="font-size:19px;">内部（大联大中国区 WPG-CN）vs 外部对标企业</div>
-    <div class="sec-desc">外部数据取自《数据洞察报告HR参考版》对标板块（文晔 / 安富利 / 艾睿 / 大联大中国区），均为 2026 年近期口径。</div>
-    <div class="tbl-wrap"><div class="tbl-title">多维对标总表</div><div class="tbl-scroll"><table><thead><tr><th>指标</th><th>大联大中国区（WPG-CN，内部）</th><th>大联大中国区</th><th>文晔 WT</th><th>安富利 Avnet</th><th>艾睿 Arrow</th></tr></thead><tbody><tr><td><b>近期营收</b></td><td><span class="tag tag-c">内部不披露</span></td><td>NT$7,748 亿 H1<span class="hl-up">+55%</span></td><td>NT$1.08 兆 H1<span class="hl-up">+114%</span></td><td>$7.12B Q3<span class="hl-up">+34%</span></td><td>$9.47B Q1<span class="hl-up">+39%</span></td></tr><tr><td><b>在职人数</b></td><td><b>2,065</b>（CN 2026/07）</td><td>集团口径未单列</td><td>—</td><td>—</td><td>—</td></tr><tr><td><b>平均年龄</b></td><td><b>39.8 岁</b></td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td><b>平均年资</b></td><td><b>10.1 年</b></td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td><b>离职率（YTD）</b></td><td>5.1%（年化≈8.7%）</td><td>目标 &lt;5%</td><td>—</td><td>—</td><td>—</td></tr><tr><td><b>技术岗月薪</b></td><td>内部未单列</td><td>1.8~2.0 万</td><td>2.1~2.6 万</td><td>2.4~2.7 万</td><td>2.3~2.8 万</td></tr><tr><td><b>年包区间</b></td><td>内部未单列</td><td>29~34 万</td><td>29~39 万</td><td>31~38 万</td><td>30~39 万</td></tr><tr><td><b>年终月数</b></td><td>内部未单列</td><td><span class="tag tag-g">16~17 薪</span></td><td>14~15 薪</td><td>13~14 薪</td><td>13~14 薪</td></tr><tr><td><b>招聘到岗率</b></td><td><span class="tag tag-r">0.96%</span></td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div></div>
-    <div class="flash-footnote">说明：外部对标企业「在职人数 / 年龄 / 年资 / 离职率」未在原报告中单列，故以「—」标注；营收与薪酬为原报告明确给出的 2026 年近期数据。大联大中国区（WPG-CN）为 CN 区正职口径（2,065 人），与集团全球口径不可直接相加。</div>
-    <div class="sec-title" style="font-size:17px;margin-top:8px;">🔔 HR 行动提示（基于市场对标）</div>
-    <div class="sec-desc">以下提示由「内部同年度数据」与「外部对标企业（文晔 / 艾睿 / 安富利 / 大联大中国区）2026 年近期市场数据」交叉得出，并融合 <b>HRflag</b>（Gartner 2026 招聘趋势 / AI 虚拟招聘官）与 <b>HR实名俱乐部</b>（麦肯锡 HR Monitor 2026 / HR 角色转型）的行业方法论，按紧急度排序。</div>
-    <div class="tbl-wrap"><div class="tbl-title">内部 vs 市场 · HR 行动提示总表</div><div class="tbl-scroll"><table><thead><tr><th>维度</th><th>内部现状（大联大中国区 WPG-CN）</th><th>市场基准</th><th>信号</th><th>对 HR 的提示 / 建议动作</th></tr></thead><tbody><tr><td><b>离职率</b></td><td>YTD 5.1%（年化≈8.7%）；主动离职÷新进 = 64×</td><td>大联大中国区目标 &lt;5%；行业健康区间约 5–8%</td><td><span class="tag tag-r">🔴 偏高</span></td><td>建立<b>关键岗位留任预警</b>与主动离职率看板；优先治理高流失序列，而非只补缺口</td></tr><tr><td><b>招聘到岗率</b></td><td>整体 0.96%（561 需求 → 到岗 28）</td><td>健康漏斗到岗率通常 5–10%+</td><td><span class="tag tag-r">🔴 紧急</span></td><td><b>漏斗逐环诊断</b>：初筛通过率仅 41.7%、Offer→到岗 14.6% 是主漏点；同步激活内推（部门通过率 33% / 面试 67% 质优）</td></tr><tr><td><b>平均年资</b></td><td>10.1 年；&gt;10 年占 43.7%</td><td>行业约 6–7 年</td><td><span class="tag tag-g">🟢 优势</span></td><td><b>知识沉淀 + 继任规划</b>：把资深经验结构化，防「资深员工激励断层」（&gt;10 年才晋升仅 3%）</td></tr><tr><td><b>平均年龄</b></td><td>39.8 岁</td><td>行业约 37–38 岁</td><td><span class="tag tag-g">🟢 优势</span></td><td><b>青年梯队补位</b>：稳定性是客户关系护城河，但需补充新生代以防断层</td></tr><tr><td><b>技术岗现金薪酬</b></td><td>月薪 1.8–2.0 万（集团最低）</td><td>美商 2.3–2.8 万、文晔 2.1–2.6 万</td><td><span class="tag tag-y">🟡 关注</span></td><td>靠 <b>16–17 薪</b>把年包拉回 29–34 万追平竞品；关注现金薪酬竞争力，关键岗可设专项津贴</td></tr><tr><td><b>绩效区分度</b></td><td>S 级占约 70%；A+ 逐年递减至 7 人</td><td>应有清晰梯度</td><td><span class="tag tag-y">🟡 关注</span></td><td><b>修复考核区分度</b>：S 级内引入细分维度，避免「职称通胀」</td></tr><tr><td><b>晋升节奏</b></td><td>入职 1 年内晋升占 39%；&gt;10 年才晋升仅 3%</td><td>—</td><td><span class="tag tag-y">🟡 关注</span></td><td>规范晋升节奏，<b>防资深激励隐患</b>；把晋升与能力 / 贡献更紧密挂钩</td></tr></tbody></table></div></div>
-    <div class="sec-title" style="font-size:17px;margin-top:8px;">⚡ 最优先的两项行动</div>
-    <div class="org-verdict" style="border-left-color:#dc2626;"><div class="ov-title" style="color:#991b1b;">① 离职 &gt; 补员（🔴 紧急）</div><div class="ov-text">2026 YTD 离职 106 vs 雇用 56，「主动离职÷新进」三年从 10×→64× 持续恶化。招聘已无法单靠扩漏斗根治，应把<b>主动离职率</b>与<b>招聘到岗率</b>并列为核心看板指标，从留任治理入手。</div></div>
-    <div class="org-verdict" style="border-left-color:#d97706;"><div class="ov-title" style="color:#92400e;">② 漏斗漏水（🔴 紧急）</div><div class="ov-text">到岗率 0.96%、平均招聘 53 天（极端 690 天）、在招待入职占 76.6%。优先补<b>初筛</b>与<b>Offer→到岗</b>两环，并激活质优量小的<b>内推</b>通道。<br><br><span style="font-size:11.5px;color:#6b7280;">💡 <b>行业背书（HRflag / Gartner）</b>：Gartner 2026 招聘四大趋势指出「高容量招聘转向 AI 优先」——我们的漏斗问题恰好属于 AI 可大幅提效的环节。Chipotle 用 AI 虚拟招聘官将申请→上岗从 12 天压缩至 4 天，<b>核心价值不在"更会看人"，而在消除等待和重复沟通</b>。芝加哥大学 7 万人随机实验证明：AI 面试使录用概率 +12%、30 天留任 +17%——前提是 AI 只负责信息采集，最终决策归人。建议引入 AI 初筛工具处理高量标准化岗位的简历，释放 HR 精力聚焦关键岗深度判断。</span></div></div>
-  </div>
-</div>
-<div class="tab-content" id="t-perf">
-  <div class="main" style="padding:24px 16px;">
-    <div class="finding-box"><div class="fb-label">核心结论</div><div class="fb-text">考核等级<b>高度集中于 S 级（约 70%）</b>、A+ 近乎名存实亡（2025 年仅 7 人）；晋升节奏快但<b>39% 发生在入职 1 年内</b>、&gt;10 年才晋升仅 3%——存在「职称通胀」与「资深员工激励断层」双重风险。</div></div>
-    <div class="sec-title" style="font-size:19px;">考核等级分布（同年度：2021 / 2023 / 2025）</div>
-    <div class="tbl-wrap"><div class="tbl-title">年度考核等级人数</div><div class="tbl-scroll"><table><thead><tr><th>等级</th><th>2021</th><th>2023</th><th>2025</th><th>趋势</th></tr></thead><tbody><tr><td>P（最低）</td><td>7</td><td>3</td><td>2</td><td>极少量</td></tr><tr><td>S-（待改进）</td><td>79</td><td>96</td><td>67</td><td>约 2%</td></tr><tr><td><b>S（中）</b></td><td><b>2,561</b></td><td><b>2,839</b></td><td><b>2,611</b></td><td><span class="tag tag-b">约 70%（主体）</span></td></tr><tr><td>A（高）</td><td>1,028</td><td>881</td><td>1,043</td><td>约 25%</td></tr><tr><td>A+（最高）</td><td>43</td><td>8</td><td>7</td><td><span class="tag tag-r">逐年递减·名存实亡</span></td></tr></tbody></table></div></div>
-    <div class="chart-wrap"><div class="chart-title">考核等级分布（2021 / 2023 / 2025）</div><div class="chart-subtitle">S 级长期占比约 70%，区分度不足</div><canvas id="cmpGrade" height="150"></canvas></div>
-    <div class="sec-title" style="font-size:17px;margin-top:8px;">晋升时年资分布</div>
-    <div class="tbl-wrap"><div class="tbl-title">晋升事件按「晋升时年资」拆解</div><div class="tbl-scroll"><table><thead><tr><th>晋升时年资</th><th>晋升次数</th><th>占比</th></tr></thead><tbody><tr><td>1 年以下</td><td>1,819</td><td><span class="tag tag-y">39%</span></td></tr><tr><td>1~3 年</td><td>1,220</td><td>26%</td></tr><tr><td>3~5 年</td><td>905</td><td>19%</td></tr><tr><td>5~10 年</td><td>552</td><td>12%</td></tr><tr><td>&gt;10 年</td><td>135</td><td><span class="tag tag-r">3%</span></td></tr></tbody></table></div></div>
-    <div class="finding-box compact"><div class="fb-text"><b>绩效-晋升联动有效</b>：S-/P 级基本与晋升绝缘，A 级为最强晋升驱动。但 S 级占七成却晋升比例有限，且 1 年内晋升占 39%（需防「职称通胀」），&gt;10 年才晋升仅 3%（资深员工激励隐患）。建议在 S 级内部引入细分维度。</div></div>
-  </div>
-</div>
-<div class="tab-content" id="t-group">
-  <div class="main" style="padding:24px 16px;">
-    <div class="finding-box"><div class="fb-label">核心结论</div><div class="fb-text"><b>集团集中度偏高 + 结构性分化明显</b>：WPI（世平）一家占 <b>33.1%（683 人）</b>，若其业务波动将直接冲击整体盘面；YSN / SAC / AIT / LOG 四家业务主力合计约 <b>48.8%</b>。另一端是 <b>BSC / TGBC（世伟） / WPGH / GBG / VSELL</b> 等<b>职能 / 管理密集型小体量集团</b>（合计 374 人，18.1%），人数少但<b>主管密度显著偏高</b>（GBG 37%、VSELL 26%、WPGH 20.5%），是组织能力的托底中枢。<br><br><b>⚠️ 特别背景：2026 年 H1 大联大中国区停止招募，直至 8 月初才陆续恢复开放。</b>这意味着上半年「雇用 56 人」是冻结期的极低值，「主动离职÷新进 = 64×」被人为放大。下半年恢复招募后，该比值有望回落，但 H1 冻结期造成的<b>被动失血（净减 50 人）</b>已不可逆，需在 Q3–Q4 加速补员以对冲。</div></div>
-    <div class="sec-title" style="font-size:19px;">📋 集团基础画像（在职 / 主管 / 密度 / 类型）</div>
-    <div class="sec-desc">数据截止 2026/07，正职口径；主管密度 = 主管人数 ÷ 在职人数（整体平均 13.6%）。类型由业务性质与主管密度综合划分。</div>
-    <div class="tbl-wrap"><div class="tbl-title">10 个集团 / BU 基础画像（合计 2,065 人）</div><div class="tbl-scroll"><table><thead><tr><th>集团 / BU</th><th>类型</th><th>在职人数</th><th>占比</th><th>主管人数</th><th>主管密度</th><th>规模等级</th></tr></thead><tbody><tr><td><b>WPI（世平）</b></td><td>业务 / 销售型</td><td>683</td><td>33.1%</td><td>113</td><td>16.5%</td><td><span class="tag tag-r">★ 核心</span></td></tr><tr><td><b>YSN（友尚）</b></td><td>业务 / 销售型</td><td>336</td><td>16.3%</td><td>32</td><td>9.5%</td><td><span class="tag tag-o">◆ 主力</span></td></tr><tr><td><b>SAC（品佳）</b></td><td>业务 / 销售型</td><td>256</td><td>12.4%</td><td>18</td><td>7.0%</td><td><span class="tag tag-o">◆ 主力</span></td></tr><tr><td><b>AIT（诠鼎）</b></td><td>业务 / 销售型</td><td>236</td><td>11.4%</td><td>24</td><td>10.2%</td><td><span class="tag tag-o">◆ 主力</span></td></tr><tr><td><b>LOG（物流）</b></td><td>业务 / 运营型</td><td>180</td><td>8.7%</td><td>15</td><td>8.3%</td><td><span class="tag tag-y">◇ 支撑</span></td></tr><tr><td><b>BSC</b></td><td>职能 / 管理型</td><td>173</td><td>8.4%</td><td>33</td><td><span class="tag tag-o">19.1%</span></td><td><span class="tag tag-y">◇ 支撑</span></td></tr><tr><td><b>TGBC（世伟）</b></td><td>职能 / 管理型</td><td>112</td><td>5.4%</td><td>22</td><td><span class="tag tag-o">19.6%</span></td><td><span class="tag tag-y">◇ 支撑</span></td></tr><tr><td><b>WPGH</b></td><td>职能 / 管理型</td><td>39</td><td>1.9%</td><td>8</td><td><span class="tag tag-o">20.5%</span></td><td><span class="tag tag-g">· 精锐</span></td></tr><tr><td><b>GBG</b></td><td>职能 / 管理型</td><td>27</td><td>1.3%</td><td>10</td><td><span class="tag tag-r">37.0%</span></td><td><span class="tag tag-g">· 精锐</span></td></tr><tr><td><b>VSELL</b></td><td>职能 / 管理型</td><td>23</td><td>1.1%</td><td>6</td><td><span class="tag tag-r">26.1%</span></td><td><span class="tag tag-g">· 精锐</span></td></tr><tr style="background:#f1f5f9;"><td><b>合计</b></td><td>—</td><td><b>2,065</b></td><td>100%</td><td><b>281</b></td><td>13.6%</td><td>—</td></tr></tbody></table></div></div>
-    <div class="chart-wrap"><div class="chart-title">各集团在职人数与主管密度（双轴视角）</div><div class="chart-subtitle">左轴：在职人数（柱）；右轴参考：主管密度（%）— 职能型集团密度远高于业务型</div><canvas id="cmpGroup" height="170"></canvas></div>
-    <div class="org-verdict" style="border-left-color:#dc2626;"><div class="ov-title" style="color:#991b1b;">🔴 A 类：核心业务集团 — WPI / YSN / SAC / AIT（合计 1,511 人，73.2%）</div><div class="ov-text"><b>问题</b>：四家承担七成以上营收，但招聘压力极大（尤其 WPI 占总需求 33%）、H1 冻结期被动失血严重。<b>策略</b>：<br>• <b>WPI</b> 设立「关键岗位留任红名单」（TOP 50 客户经理 / FAE），现金津贴 + 晋升快车道防挖角<br>• <b>四家联合补员计划</b>：8 月恢复后优先释放技术/销售岗 HC，目标 Q3 补 ≥40 人、Q4 再补 ≥30 人<br>• <b>内激活</b>：YSN/AIT 技术岗内部转岗通道开放，减少外部依赖<br>• <b>预警线</b>：任一集团单季净减 &gt;10 人即触发集团级 HR 介入</div></div>
-    <div class="org-verdict" style="border-left-color:#d97706;"><div class="ov-title" style="color:#92400e;">🟡 B 类：运营支撑集团 — LOG / BSC / TGBC（世伟）（合计 465 人，22.5%）</div><div class="ov-text"><b>特征</b>：LOG 是供应链命脉（180 人），BSC 是共享服务中枢（173 人，主管密度 19%），TGBC（世伟）是商贸平台（112 人）。三者离职抗性强但不可大动。<b>策略</b>：LOG 物流序列设「运营稳定性奖金」；BSC 作为 HR/财务/IT 共享中心保持编制稳定；TGBC 关注跨境人才储备。</div></div>
-    <div class="org-verdict" style="border-left-color:#059669;"><div class="ov-title" style="color:#047857;">🟢 C 类：精锐职能集团 — WPGH / GBG / VSELL（合计 89 人，4.3%）</div><div class="ov-text"><b>特征</b>：人少但层级高（GBG 主管密度 37%、WPGH 20.5%），是战略决策与治理中枢。<b>策略</b>：WPGH / GBG 保持精英化继任计划覆盖 100% 关键岗位；VSELL 允许适度扩编+10–15 人/年。</div></div>
-  </div>
-</div>
-</div></div>
-
-<div id="tab-trends" style="display:none"><div id="trendsReportBody">
-<style>
-#trendsReportBody *{margin:0;padding:0;box-sizing:border-box}
-#trendsReportBody{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f8fafc;color:#1e293b;line-height:1.7;font-size:14px}
-#trendsReportBody .main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
-#trendsReportBody .cover{text-align:center;padding:36px 20px 28px;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 50%,#7c3aed 100%);color:#fff;border-radius:12px;margin-bottom:24px}
-#trendsReportBody .cover h1{font-size:24px;font-weight:700;margin-bottom:8px}
-#trendsReportBody .cover .subtitle{font-size:13px;opacity:.85;margin-bottom:14px}
-#trendsReportBody .cover-meta{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;font-size:11.5px;opacity:.75}
-#trendsReportBody .cover-meta-item{display:flex;align-items:center;gap:5px}
-#trendsReportBody .cover-dot{width:6px;height:6px;border-radius:50%;background:#0ea5a8}
-#trendsReportBody .sec-title{font-size:19px;font-weight:700;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
-#trendsReportBody .sec-desc{font-size:12.5px;color:#64748b;margin-bottom:12px}
-#trendsReportBody .sec-title .emoji{font-size:22px}
-#trendsReportBody .finding-box{border-left:4px solid #3b82f6;background:#fff;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-#trendsReportBody .fb-label{font-size:12px;font-weight:700;margin-bottom:4px}
-#trendsReportBody .fb-text{font-size:13px;color:#334155}
-#trendsReportBody .hl{color:#dc2626;font-weight:600}
-#trendsReportBody .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-#trendsReportBody .tag-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
-#trendsReportBody .tag-g{background:#f0fdf4;color:#059669;border:1px solid #bbf7d0}
-#trendsReportBody .tag-y{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
-#trendsReportBody .tag-b{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe}
-#trendsReportBody .source-tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:8px;background:#f1f5f9;color:#475569;margin-right:4px;vertical-align:middle}
-#trendsReportBody .source-hrflag{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
-#trendsReportBody .source-club{background:#fdf4ff;color:#a21caf;border:1px solid #f5d0fe}
-#trendsReportBody .source-gartner{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
-#trendsReportBody .source-mckinsey{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
-#trendsReportBody .source-shrm{background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff}
-#trendsReportBody .tbl-wrap{margin:10px 0 16px}
-#trendsReportBody .tbl-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:6px}
-#trendsReportBody .tbl-scroll{overflow-x:auto}
-#trendsReportBody table{width:100%;border-collapse-collapse;font-size:12.5px}
-#trendsReportBody th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:600;color:#1e293b;border-bottom:2px solid #e2e8f0;white-space:nowrap}
-#trendsReportBody td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
-#trendsReportBody tr:hover{background:#f8fafc}
-#trendsReportBody .trend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px;margin:14px 0}
-#trendsReportBody .trend-card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-top:4px solid}
-#trendsReportBody .trend-card.tc-blue{border-color:#2563eb}
-#trendsReportBody .trend-card.tc-purple{border-color:#7c3aed}
-#trendsReportBody .trend-card.tc-green{border-color:#059669}
-#trendsReportBody .trend-card.tc-orange{border-color:#d97706}
-#trendsReportBody .trend-card.tc-red{border-color:#dc2626}
-#trendsReportBody .tc-num{font-size:28px;font-weight:800;color:#1e293b}
-#trendsReportBody .tc-label{font-size:11.5px;color:#64748b;margin-bottom:6px}
-#trendsReportBody .tc-body{font-size:12.5px;color:#475569}
-#trendsReportBody .tc-source{font-size:10px;color:#94a3b8;margin-top:8px;padding-top:6px;border-top:1px solid #f1f5f9}
-#trendsReportBody .org-verdict{border-left:4px solid #3b82f6;background:#fff;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:10px}
-#trendsReportBody .ov-title{font-size:13.5px;font-weight:700;margin-bottom:4px}
-#trendsReportBody .ov-text{font-size:12.5px;color:#475569}
-#trendsReportBody .timeline{position:relative;padding-left:28px;margin:16px 0}
-#trendsReportBody .timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:#e2e8f0}
-#trendsReportBody .tl-item{position:relative;margin-bottom:18px}
-#trendsReportBody .tl-dot{position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 2px #2563eb}
-#trendsReportBody .tl-year{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:2px}
-#trendsReportBody .tl-text{font-size:12.5px;color:#475569}
-#trendsReportBody .ref-section{margin-top:28px;padding:16px;background:#f8fafc;border-radius:10px;font-size:11.5px;color:#64748b}
-#trendsReportBody .ref-section h3{font-size:14px;margin-bottom:8px;color:#1e293b}
-#trendsReportBody .ref-list{columns:2;column-gap:20px}
-#trendsReportBody .ref-list li{margin-bottom:4px;break-inside:avoid}
-</style>
-<div class="main">
-<div class="cover"><h1>🚀 2026 HR 最新趋势专题报告</h1><p class="subtitle">AI 重塑招聘 · 技能本位崛起 · HR 角色转型 · 人效数字化</p><div class="cover-meta"><div class="cover-meta-item"><span class="cover-dot"></span> <b>数据来源</b> HRflag / HR实名俱乐部 / Gartner / 麦肯锡 / SHRM / Korn Ferry</div><div class="cover-meta-item"><span class="cover-dot"></span> <b>视角主体</b> 大联大中国区（WPG China Region）HR 职能</div><div class="cover-meta-item"><span class="cover-dot"></span> <b>更新时间</b> 2026 年 8 月 15 日</div></div></div>
-<div class="sec-title"><span class="emoji">🤖</span> 趋势一：AI 虚拟招聘官 —— 招聘的第一道面试正在被 AI 接管</div>
-<div class="sec-desc">来源：<span class="source-tag source-hrflag">HRflag</span> <span class="source-tag source-gartner">Gartner 2026</span></div>
-<div class="trend-grid"><div class="trend-card tc-blue"><div class="tc-label">美国候选人已经历 AI 面试比例</div><div class="tc-num">63%</div><div class="tc-body">Greenhouse 2026 年 4 月调查，较半年前 +13 个百分点。</div><div class="tc-source">📎 Greenhouse Candidate Survey 2026</div></div><div class="trend-card tc-red"><div class="tc-label">每名招聘人员对应申请量增长（2年）</div><div class="tc-num">+412%</div><div class="tc-body">LinkedIn 数据显示职位申请量 +30%，但每名招聘官处理的申请量暴增 4 倍以上。</div><div class="tc-source">📎 LinkedIn / Greenhouse 2026</div></div><div class="trend-card tc-green"><div class="tc-label">AI 面试 vs 人类面试 —— 录用概率提升</div><div class="tc-num">+12%</div><div class="tc-body">芝加哥大学布斯商学院 7 万人随机实验：AI 语音面试组录用通知概率 +12%、30 天留任 +17%。</div><div class="tc-source">📎 UChicago Booth / Jabarian &amp; Henkel 2025</div></div><div class="trend-card tc-orange"><div class="tc-label">Chipotle 申请→上岗周期缩短</div><div class="tc-num">12天 → 4天</div><div class="tc-body">3500+ 家餐厅部署 Paradox 对话式 AI 平台，申请完成率从 ~50% 提升至 85%+。</div><div class="tc-source">📎 Chipotle / Paradox 2025</div></div></div>
-<div class="finding-box" style="border-left-color:#2563eb;"><div class="fb-label" style="color:#1d4ed8;">💡 三类 AI 招聘官的本质差异</div><div class="fb-text"><table style="margin-top:8px"><thead><tr><th>类型</th><th>功能</th><th>风险等级</th><th>适用场景</th></tr></thead><tbody><tr><td><b>① 流程助理</b></td><td>回答常见问题、收集资料、安排面试</td><td><span class="tag tag-g">低</span></td><td>所有企业通用</td></tr><tr><td><b>② 信息采集型</b></td><td>主持电话/视频面试、追问、生成记录摘要</td><td><span class="tag tag-y">中</span></td><td>高容量标准化岗位</td></tr><tr><td><b>③ 评价排序型</b></td><td>评分、标记、排序、分析情绪/行为</td><td><span class="tag tag-r">高</span></td><td>需严格治理与人工复核</td></tr></tbody></table></div></div>
-<div class="sec-title"><span class="emoji">🏗️</span> 趋势二：HR 从流程操作员升级为「建筑师」和「灯塔」</div>
-<div class="sec-desc">来源：<span class="source-tag source-club">HR实名俱乐部</span> <span class="source-tag source-mckinsey">麦肯锡 HR Monitor 2026</span></div>
-<div class="finding-box" style="border-left-color:#7c3aed;"><div class="fb-label" style="color:#6d28d9;">🏗️ 角色 A：建筑师（Architect）—— 重新设计工作本身</div><div class="fb-text">不是简单用 AI 替代人，而是重新思考：哪些任务分给人、哪些分给 Agent、配比如何随时间变化；重新设计组织架构、定义岗位、设定绩效激励；设计人才供应链。<br><b>未来技能重心转移</b>：问题解决能力（44%）稳居第一，创造力升至第二，数字素养从第 20 位跃升至第 6 位。</div></div>
-<div class="finding-box" style="border-left-color:#059669;"><div class="fb-label" style="color:#047857;">🔦 角色 B：灯塔（Lighthouse）—— 以身作则先完成 AI 化</div><div class="fb-text">麦肯锡强调 HR 要以身作则。如果自己的招聘/学习/绩效都还没跑在 AI 上，怎么去推动业务部门？HR 新角色从人力资源管理者升级为<b>人机协同架构师</b>，承担七类新角色。</div></div>
-<div class="sec-title"><span class="emoji">🎯</span> 趋势三：Skills as Currency —— 技能成为决策的首要货币</div>
-<div class="sec-desc">来源：<span class="source-tag source-shrm">SHRM</span> <span class="source-tag source-gartner">Gartner</span></div>
-<div class="trend-grid"><div class="trend-card tc-purple"><div class="tc-label">标注「技能优先」的岗位同比增长</div><div class="tc-num">+240%</div><div class="tc-body">LinkedIn 中国区 2026 Q1 报告。Google、IBM、特斯拉中国等已将"本科及以上"从多数技术岗 JD 中删除。</div><div class="tc-source">📎 LinkedIn China Q1 2026</div></div><div class="trend-card tc-green"><div class="tc-label">推动从岗位导向向技能导向转型的 HR/IT 领导者</div><div class="tc-num">&gt;60%</div><div class="tc-body">CompTIA 调查。SHRM 明确表示 "skills-based hiring is becoming the norm"。</div><div class="tc-source">📎 CompTIA / SHRM 2026</div></div></div>
-<div class="sec-title"><span class="emoji">🔄</span> 趋势四：内部人才市场 —— 从外部抢人到内部激活</div>
-<div class="sec-desc">来源：<span class="source-tag source-hrflag">HRflag</span> <span class="source-tag source-shrm">SHRM</span></div>
-<div class="tbl-wrap"><div class="tbl-title">内部人才市场标杆案例对比</div><div class="tbl-scroll"><table><thead><tr><th>企业</th><th>平台名称</th><th>员工注册率</th><th>月均参与率</th><th>累计项目小时</th></tr></thead><tbody><tr><td><b>Mastercard</b></td><td>"Unlocked"</td><td>93%</td><td>42%</td><td>100 万+</td></tr><tr><td><b>Schneider Electric</b></td><td>"Open Talent Market"</td><td>—</td><td>—</td><td>—</td></tr></tbody></table></div></div>
-<div class="sec-title"><span class="emoji">📊</span> 趋势五：People Analytics —— 从报表走向预测与洞察</div>
-<div class="sec-desc">来源：<span class="source-tag source-club">深蓝君 AI+HR</span> <span class="source-tag source-mckinsey">麦肯锡</span></div>
-<div class="timeline"><div class="tl-item"><div class="tl-dot"></div><div class="tl-year">过去：事后统计</div><div class="tl-text">人数、离职率、招聘周期、薪酬分布 —— 所有数据都是"已经发生的事"。</div></div><div class="tl-item"><div class="tl-dot"></div><div class="tl-year">现在：描述性分析</div><div class="tl-text">漏斗转化率、各部门离职对比、薪酬公平性分析 —— 开始回答"哪里有问题"。</div></div><div class="tl-item"><div class="tl-dot"></div><div class="tl-year">2026+：预测性洞察</div><div class="tl-text"><b>离职风险预警</b>· <b>人效预测</b>· <b>招聘渠道 ROI</b>· <b>技能缺口预判</b>· <b>人力成本预测</b>。</div></div></div>
-<div class="sec-title"><span class="emoji">⚖️</span> 趋势六：AI 治理 —— 当机器开始自主决策</div>
-<div class="sec-desc">来源：<span class="source-tag source-club">AIHR</span> <span class="source-tag source-gartner">Gartner</span></div>
-<div class="finding-box" style="border-left-color:#dc2626;"><div class="fb-label" style="color:#991b1d;">🚨 核心警示</div><div class="fb-text">• <b>AIHR 判断</b>：未来三年没有建立 AI CoE 的 HR 部门，会被业务部门绕过。<br>• <b>Gartner 预测</b>：到 2026 年 50% 组织将引入无 AI 技能评估。<br>• <b>ADP 补充</b>：Agentic AI 正在重塑 HR 技术与治理。HR 必须从工具使用者蜕变为规则制定者。</div></div>
-<div class="sec-title"><span class="emoji">💡</span> 综合启示：这些趋势对大联大中国区意味着什么？</div>
-<div class="org-verdict" style="border-left-color:#2563eb;"><div class="ov-title" style="color:#1d4ed8;">① 招聘：从「大海捞针」到「AI 初筛 + 深度判断」双轨制</div><div class="ov-text">我们到岗率 0.96% 的困境 = 行业共性。建议引入 AI 虚拟招聘官处理高量标准化初筛，释放 HR 精力聚焦关键岗深度关系建设。</div></div>
-<div class="org-verdict" style="border-left-color:#7c3aed;"><div class="ov-title" style="color:#6d28d9;">② 留任：把年资优势变成「技能资产」而非包袱</div><div class="ov-text">平均年资 10.1 年、&gt;10 年占 43.7% 是稀缺资产。建议建立动态技能画像，让年资优势可量化、可传承、可定价。</div></div>
-<div class="org-verdict" style="border-left-color:#059669;"><div class="ov-title" style="color:#047857;">③ 内部流动：启动轻量级内部人才市场试点</div><div class="ov-text">从 WPI 和 YSN 开始，每季度开放 5-10 个跨集团短期项目/导师机会。目标：Q4 内部流动率 &gt;3%（成本比外招低 60%）。</div></div>
-<div class="org-verdict" style="border-left-color:#d97706;"><div class="ov-title" style="color:#92400e;">④ HR 团队自身转型：从「流程操作」到「人机协作架构师」</div><div class="ov-text">麦肯锡的"建筑师+灯塔"双重角色要求我们先在自己的流程中试点 AI 工具。HR 不先 AI 化，无法推动组织 AI 化。</div></div>
-<div class="ref-section"><h3>📚 数据来源与参考文献</h3><ul class="ref-list"><li>HRflag：《AI 虚拟招聘官》（2026）</li><li>HR实名俱乐部 / 麦肯锡：《HR Monitor 2026》</li><li>Gartner：《2026 人才招聘四大趋势》</li><li>芝加哥大学布斯商学院：7 万人 AI 面试随机实验</li><li>Chipotle / Paradox：AI 招聘平台案例</li><li>Greenhouse：Candidate Experience Survey 2026</li><li>LinkedIn：《2025 未来招聘报告》</li><li>Mastercard："Unlocked" 内部人才市场公开数据</li><li>Korn Ferry：《2026 人才招聘趋势》</li><li>世界经济论坛：《2025 未来就业报告》</li><li>SHRM：《2026 人力资源领域人工智能现状》</li><li>ADP：Agentic AI 与 HR 技术治理报告</li></ul></div>
-</div>
-</div></div>
-
 <footer>
   <span>&copy; 2026 大聯大中國區HR &middot; 數據洞察報告</span>
   <span>本報告數據綜合自公開渠道，僅供內部決策參考，不構成投資或僱傭建議。</span>
 </footer>
 
 <script>
-// 加载报告主体内容（带版本号缓存 bust）
-fetch('report-content.html?v=7')
-  .then(r => r.text())
-  .then(html => {
-    document.getElementById('reportBodyContent').innerHTML = html;
-    document.getElementById('today-date').textContent = new Date().toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric'});
-    // 关键：innerHTML 不会执行 <script> 标签，需手动提取执行（Chart.js 图表依赖此步骤）
-    executeScripts(html, document.getElementById('reportBodyContent'));
-    // 初始化图表和交互
-    initReportCharts();
-    initReportScrollSpy();
-  })
-  .catch(() => {
-    document.getElementById('reportBodyContent').innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">报告内容加载失败，请确保 report-content.html 文件存在</div>';
+
+// ===== WPG 前端口令解密 =====
+var WPG_SALT_B64 = "d3BnaHJwb3J0YWwyMDI2ISE=";
+var WPG_VERIFIER_B64 = "8JSaSMHbZ8RBcBK8wLTwarBpW+a8G3gS0DpVjR/txMMxO5cUtGXnbg==";
+var WPG_ITER = 150000;
+var REPORT_BASE = location.hostname.indexOf('github.io') !== -1 ? '' : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/';
+var WPG_KEY=null;
+async function wpgFetchDecrypt(url){
+  var res=await fetch(url+'?v=14'); if(!res.ok) throw new Error('http'+res.status);
+  var buf=await res.arrayBuffer(); return wpgDecryptText(WPG_KEY, buf);
+}
+async function wpgAfterUnlock(){
+  try{ var ext=await wpgFetchDecrypt(REPORT_BASE+'report-content.html.enc');
+    var ec=document.getElementById('reportBodyContent'); ec.innerHTML=ext; executeScripts(ext, ec); initReportCharts(); initReportScrollSpy();
+  }catch(e){ console.error('外部报告解密失败', e); var ec=document.getElementById('reportBodyContent'); if(ec) ec.innerHTML='<div style="padding:40px;text-align:center;color:#64748b;">报告内容解密失败</div>'; }
+  try{ var int=await wpgFetchDecrypt(REPORT_BASE+'report-comparison.html.enc');
+    document.getElementById('internalReportBody').innerHTML=int; if(typeof initComparisonCharts==='function') initComparisonCharts();
+  }catch(e){ console.error('内部对比解密失败', e); }
+  try{ var trd=await wpgFetchDecrypt(REPORT_BASE+'report-hr-trends.html.enc');
+    document.getElementById('trendsReportBody').innerHTML=trd;
+  }catch(e){ console.error('趋势解密失败', e); }
+}
+
+function wpgB64ToBuf(b64){ var s=atob(b64), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u.buffer; }
+async function wpgDeriveKey(password){
+  var enc=new TextEncoder();
+  var km=await crypto.subtle.importKey('raw', enc.encode(password.toLowerCase()), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:wpgB64ToBuf(WPG_SALT_B64), iterations:WPG_ITER, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['decrypt','encrypt']);
+}
+async function wpgDecrypt(key, buf){ var iv=buf.slice(0,12), data=buf.slice(12); return crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, data); }
+async function wpgDecryptText(key, buf){ return new TextDecoder().decode(await wpgDecrypt(key, buf)); }
+async function wpgUnlock(pw){
+  try {
+    var key = await wpgDeriveKey(pw);
+    var tok = await wpgDecrypt(key, wpgB64ToBuf(WPG_VERIFIER_B64));
+    if (new TextDecoder().decode(tok) !== 'WPG-LOGIN-OK') throw new Error('bad');
+    WPG_KEY = key; return true;
+  } catch(e){ return false; }
+}
+function wpgTryUnlock(){
+  var inp=document.getElementById('wpgPass'), err=document.getElementById('wpgErr');
+  var pw = inp ? inp.value : '';
+  if(!pw){ if(err) err.textContent='请输入口令'; return; }
+  wpgUnlock(pw).then(function(ok){
+    if(!ok){ if(err) err.textContent='口令错误，请重试'; if(inp) inp.value=''; return; }
+    var box=document.getElementById('wpgLogin'); if(box) box.style.display='none';
+    document.body.classList.add('wpg-unlocked');
+    wpgAfterUnlock();
   });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var btn=document.getElementById('wpgSubmit'); if(btn) btn.addEventListener('click', wpgTryUnlock);
+  var inp=document.getElementById('wpgPass'); if(inp){ inp.focus(); inp.addEventListener('keydown', function(e){ if(e.key==='Enter') wpgTryUnlock(); }); }
+});
+
 
 function scrollToReportSec(id, el) {
   var target = document.getElementById(id);

@@ -18,33 +18,62 @@
 <script>
 // 分块加载花名册数据
 // GitHub Pages: 本地加载 / Surge等: 从 jsDelivr CDN 加载（避免Surge截断）
-var EMPLOYEES_DATA = null;
-var MGR99_NAME_SET = {};  // 全局主管姓名集合：key=姓名, value=true（数据加载后构建）
-var TOTAL_CHUNKS = 10;
-var DATA_BASE = location.hostname.indexOf('github.io') !== -1
-  ? 'data/'
-  : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@ae2a719/data/';
-(function loadEmployeeData(idx) {
-  if (idx > TOTAL_CHUNKS) {
-    mergeEmployeeData();
-    return;
+
+// ===== WPG 前端口令解密 =====
+var WPG_SALT_B64 = "d3BnaHJwb3J0YWwyMDI2ISE=";
+var WPG_VERIFIER_B64 = "8JSaSMHbZ8RBcBK8wLTwarBpW+a8G3gS0DpVjR/txMMxO5cUtGXnbg==";
+var WPG_ITER = 150000;
+var EMPLOYEES_DATA=null;
+var MGR99_NAME_SET={};
+var TOTAL_CHUNKS=10;
+var DATA_BASE = location.hostname.indexOf('github.io') !== -1 ? 'data/' : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/';
+var WPG_KEY=null;
+async function wpgAfterUnlock(){ await wpgStartRosterLoad(); }
+async function wpgStartRosterLoad(){
+  for(var idx=1; idx<=TOTAL_CHUNKS; idx++){
+    try{
+      var res=await fetch(DATA_BASE+'employees-data-part'+idx+'.js.enc?v=14');
+      if(!res.ok) throw new Error('http'+res.status);
+      var buf=await res.arrayBuffer();
+      var js=await wpgDecryptText(WPG_KEY, buf);
+      var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
+    }catch(e){ console.error('分块'+idx+'加载/解密失败', e); }
   }
-  var s = document.createElement('script');
-  s.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=13';
-  s.onload = function() { loadEmployeeData(idx + 1); };
-  s.onerror = function() {
-    console.error('花名册分块' + idx + '加载失败，重试...');
-    var r = document.createElement('script');
-    r.src = DATA_BASE + 'employees-data-part' + idx + '.js?v=12&r=' + Date.now();
-    r.onload = function() { loadEmployeeData(idx + 1); };
-    r.onerror = function() {
-      console.error('花名册分块' + idx + '重试失败，跳过');
-      loadEmployeeData(idx + 1);
-    };
-    document.head.appendChild(r);
-  };
-  document.head.appendChild(s);
-})(1);
+  mergeEmployeeData();
+}
+
+function wpgB64ToBuf(b64){ var s=atob(b64), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u.buffer; }
+async function wpgDeriveKey(password){
+  var enc=new TextEncoder();
+  var km=await crypto.subtle.importKey('raw', enc.encode(password.toLowerCase()), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt:wpgB64ToBuf(WPG_SALT_B64), iterations:WPG_ITER, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['decrypt','encrypt']);
+}
+async function wpgDecrypt(key, buf){ var iv=buf.slice(0,12), data=buf.slice(12); return crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, data); }
+async function wpgDecryptText(key, buf){ return new TextDecoder().decode(await wpgDecrypt(key, buf)); }
+async function wpgUnlock(pw){
+  try {
+    var key = await wpgDeriveKey(pw);
+    var tok = await wpgDecrypt(key, wpgB64ToBuf(WPG_VERIFIER_B64));
+    if (new TextDecoder().decode(tok) !== 'WPG-LOGIN-OK') throw new Error('bad');
+    WPG_KEY = key; return true;
+  } catch(e){ return false; }
+}
+function wpgTryUnlock(){
+  var inp=document.getElementById('wpgPass'), err=document.getElementById('wpgErr');
+  var pw = inp ? inp.value : '';
+  if(!pw){ if(err) err.textContent='请输入口令'; return; }
+  wpgUnlock(pw).then(function(ok){
+    if(!ok){ if(err) err.textContent='口令错误，请重试'; if(inp) inp.value=''; return; }
+    var box=document.getElementById('wpgLogin'); if(box) box.style.display='none';
+    document.body.classList.add('wpg-unlocked');
+    wpgAfterUnlock();
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var btn=document.getElementById('wpgSubmit'); if(btn) btn.addEventListener('click', wpgTryUnlock);
+  var inp=document.getElementById('wpgPass'); if(inp){ inp.focus(); inp.addEventListener('keydown', function(e){ if(e.key==='Enter') wpgTryUnlock(); }); }
+});
+
 function mergeEmployeeData() {
   if (EMPLOYEES_DATA) return;
   var parts = [];
@@ -1466,6 +1495,28 @@ function mergeEmployeeData() {
 </style>
 </head>
 <body>
+<div id="wpgLogin">
+  <div class="wpg-card">
+    <div class="wpg-logo">WPG</div>
+    <h1>内容已加密</h1>
+    <p>请输入访问口令以解密查看</p>
+    <input id="wpgPass" type="password" placeholder="访问口令" autocomplete="off" />
+    <button id="wpgSubmit">解 锁</button>
+    <div id="wpgErr"></div>
+  </div>
+</div>
+<style>
+#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a5f);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+.wpg-card{background:#fff;border-radius:16px;padding:36px 32px;width:320px;max-width:88vw;box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center;}
+.wpg-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;}
+.wpg-card h1{font-size:19px;color:#1e293b;margin-bottom:6px;}
+.wpg-card p{font-size:13px;color:#64748b;margin-bottom:18px;}
+#wpgPass{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;box-sizing:border-box;outline:none;}
+#wpgPass:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
+#wpgSubmit:hover{background:#1d4ed8;}
+#wpgErr{color:#dc2626;font-size:12.5px;min-height:18px;margin-top:10px;}
+</style>
 
 <!-- Header -->
 <header class="header">
