@@ -26,28 +26,71 @@ var WPG_ITER = 150000;
 var EMPLOYEES_DATA=null;
 var MGR99_NAME_SET={};
 var TOTAL_CHUNKS=10;
-var DATA_BASE = location.hostname.indexOf('github.io') !== -1 ? 'data/' : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/';
+var DATA_BASES = [
+  location.hostname.indexOf('github.io') !== -1 ? 'data/' : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
+  'https://yuki114918.github.io/wpgholdings-platform/data/'
+];
+var DATA_BASE = DATA_BASES[0];
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); }
+function wpgUpdateLoadProgress(loaded, total, failed){
+  var txt = '⏳ 数据加载中（'+loaded+'/'+total+'）';
+  if(failed && failed.length) txt += ' · 失败 '+failed.length+' 块';
+  var el = document.getElementById('dashboardLoading');
+  if(el){ el.style.color='var(--text-secondary)'; el.textContent = txt; }
+}
+function wpgShowLoadError(failed){
+  var el = document.getElementById('dashboardLoading');
+  var ghUrl = 'https://yuki114918.github.io/wpgholdings-platform/';
+  var html = '⚠️ 数据加载失败：第 '+failed.join(', ')+' 块未能拉取。'+
+             '<div style="font-size:13px;color:#7f1d1d;margin-top:6px;">当前网络可能无法访问 jsDelivr，已尝试 GitHub Pages 回退仍失败。</div>'+
+             '<button onclick="wpgStartRosterLoad()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button>'+
+             '<a href="'+ghUrl+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;margin-left:10px;color:#2563eb;font-size:14px;">或访问 GitHub Pages 版本</a>';
+  if(el){ el.innerHTML = html; el.style.color='#7f1d1d'; }
+  console.error('数据分块加载失败:', failed);
+}
+async function wpgFetchData(url){
+  var ctrl = new AbortController();
+  var t = setTimeout(function(){ ctrl.abort(); }, 30000);
+  try{
+    var res = await fetch(url, {signal: ctrl.signal});
+    if(!res.ok) throw new Error('http'+res.status);
+    var buf = await res.arrayBuffer();
+    return await wpgDecryptText(WPG_KEY, buf);
+  }finally{ clearTimeout(t); }
+}
 async function wpgStartRosterLoad(){
+  window._employeesLoading = true;
+  window._employeesLoadError = null;
+  var failed = [];
   for(var idx=1; idx<=TOTAL_CHUNKS; idx++){
-    try{
-      var res=await fetch(DATA_BASE+'employees-data-part'+idx+'.js.enc?v=14');
-      if(!res.ok) throw new Error('http'+res.status);
-      var buf=await res.arrayBuffer();
-      var js=await wpgDecryptText(WPG_KEY, buf);
-      var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
-    }catch(e){ console.error('分块'+idx+'加载/解密失败', e); }
+    var ok=false;
+    for(var b=0; b<DATA_BASES.length; b++){
+      try{
+        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-part'+idx+'.js.enc?v=14');
+        var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
+        ok=true; break;
+      }catch(e){ console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 加载失败:', e.message||e); }
+    }
+    if(!ok) failed.push(idx);
+    wpgUpdateLoadProgress(idx, TOTAL_CHUNKS, failed);
   }
   // 加载 EC 学历详情（独立加密文件，按工号建索引）
-  try {
-    var eres = await fetch(DATA_BASE + 'employees-education.js.enc?v=15');
-    if (eres.ok) {
-      var ebuf = await eres.arrayBuffer();
-      var ejs = await wpgDecryptText(WPG_KEY, ebuf);
-      var esc = document.createElement('script'); esc.textContent = ejs; document.head.appendChild(esc);
-    } else { console.warn('EC学历数据缺失(http' + eres.status + ')'); }
-  } catch(e){ console.error('EC学历加载/解密失败', e); }
+  var eduOk=false;
+  for(var b2=0; b2<DATA_BASES.length; b2++){
+    try{
+      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=15');
+      var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
+      eduOk=true; break;
+    }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 加载失败:', e.message||e); }
+  }
+  if(!eduOk) console.warn('EC学历数据最终加载失败');
+  window._employeesLoading = false;
+  if(failed.length){
+    window._employeesLoadError = failed;
+    wpgShowLoadError(failed);
+    return;
+  }
   mergeEmployeeData();
 }
 
