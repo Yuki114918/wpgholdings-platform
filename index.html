@@ -2211,7 +2211,6 @@ function mergeEmployeeData() {
   </div>
 </div>
 
-<script src="data/legal-data.js?v=4"></script>
 <script>
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -2286,6 +2285,13 @@ function updateTime() {
 }
 
 // ==================== 天气 ====================
+// 统一超时 fetch：国内网络下 open-meteo 等国外 API 常超时，8 秒拉不到立即降级，避免界面长时间挂起
+function wpgFetch(url, ms) {
+  ms = ms || 8000;
+  var ctrl = new AbortController();
+  var t = setTimeout(function(){ ctrl.abort(); }, ms);
+  return fetch(url, { signal: ctrl.signal, cache: 'no-store' }).finally(function(){ clearTimeout(t); });
+}
 const WEATHER_ICONS = {
   0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
   45: '🌫️', 48: '🌫️',
@@ -2325,7 +2331,7 @@ function setWeatherError(text) {
 }
 
 async function fetchWeatherRaw(lat, lon, cityName) {
-  const weatherRes = await fetch(
+  const weatherRes = await wpgFetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`
   );
   const weatherData = await weatherRes.json();
@@ -2340,7 +2346,7 @@ async function selectCity(cityName) {
   hideWeatherPanel();
   setWeatherLoading(cityName);
   try {
-    const geoRes = await fetch(
+    const geoRes = await wpgFetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=zh&format=json`
     );
     const geoData = await geoRes.json();
@@ -2404,13 +2410,13 @@ async function fetchWeatherByIP() {
     // 优先尝试 ipapi.co
     let data = null;
     try {
-      const res = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+      const res = await wpgFetch('https://ipapi.co/json/');
       data = await res.json();
     } catch (e) {}
 
     // ipapi.co 失败则尝试 ipinfo.io
     if (!data || data.error) {
-      const res = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+      const res = await wpgFetch('https://ipinfo.io/json');
       const info = await res.json();
       if (info.loc) {
         const [lat, lon] = info.loc.split(',').map(Number);
@@ -2442,14 +2448,18 @@ async function fetchWeather() {
     return;
   }
   lastWeatherFetch = now;
+  try {
+    const savedCity = localStorage.getItem('weatherCity');
+    const useGPS = localStorage.getItem('weatherUseGPS') === 'true';
 
-  const savedCity = localStorage.getItem('weatherCity');
-  const useGPS = localStorage.getItem('weatherUseGPS') === 'true';
-
-  if (savedCity && !useGPS) {
-    await selectCity(savedCity);
-  } else {
-    await fetchWeatherByGPS();
+    if (savedCity && !useGPS) {
+      await selectCity(savedCity);
+    } else {
+      await fetchWeatherByGPS();
+    }
+  } catch (e) {
+    console.warn('天气获取失败:', e);
+    setWeatherError('离线');
   }
 }
 
