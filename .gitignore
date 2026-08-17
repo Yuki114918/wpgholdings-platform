@@ -10,3 +10,4 @@ report-hr-trends.html
 # 构建/部署临时目录
 build/
 surge-dist/
+hr-report-dist/
