@@ -1,0 +1,8 @@
+# 明文花名册/学历（已改为 .enc 加密加载，明文不得入仓）
+data/employees-data*.js
+data/employees-education.js
+
+# 明文报告（已改为 .enc 加密加载）
+report-content.html
+report-comparison.html
+report-hr-trends.html

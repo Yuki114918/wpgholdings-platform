@@ -39,6 +39,15 @@ async function wpgStartRosterLoad(){
       var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
     }catch(e){ console.error('分块'+idx+'加载/解密失败', e); }
   }
+  // 加载 EC 学历详情（独立加密文件，按工号建索引）
+  try {
+    var eres = await fetch(DATA_BASE + 'employees-education.js.enc?v=15');
+    if (eres.ok) {
+      var ebuf = await eres.arrayBuffer();
+      var ejs = await wpgDecryptText(WPG_KEY, ebuf);
+      var esc = document.createElement('script'); esc.textContent = ejs; document.head.appendChild(esc);
+    } else { console.warn('EC学历数据缺失(http' + eres.status + ')'); }
+  } catch(e){ console.error('EC学历加载/解密失败', e); }
   mergeEmployeeData();
 }
 
@@ -3323,6 +3332,8 @@ function buildDetail(label, val, linkType) {
   return '<div class="emp-detail"><span class="detail-label">' + label + '</span>' + safe + '</div>';
 }
 
+// EC 学历数据已直接并入下方「教育背景」区块（按工号从 EMPLOYEE_EDU_MAP 注入，匹配不到回退平台原值）
+
 function renderEmployeeCard(e) {
   var name = e.ec_name || e.name || '-';
   var empId = e.id || '-';
@@ -3404,24 +3415,32 @@ function renderEmployeeCard(e) {
       /* ---- 地址 ---- */
       buildDetail('家庭地址', e.address) +
       buildDetail('派驻地址', e.dispatch_addr) +
-      /* ---- 教育背景 ---- */
-      buildDetail('学历', e.education) +
-      buildDetail('毕业院校', e.school) +
-      buildDetail('专业', e.major) +
-      buildDetail('毕业日期', e.grad_date) +
-      buildDetail('学籍状态', e.study_status) +
+      /* ---- 教育背景（数据源：员工花名册-Java-20260811-EC学历；匹配不到回退平台原值）---- */
       (function(){
-        var et = getEduType(e);
-        if (!et) return '';
-        var color = et === '全日制' ? '#16a34a' : '#dc2626';
-        var eduLabel = (e.education || '').trim();
-        if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
-        else if (eduLabel === '大專' || /專/.test(eduLabel) || eduLabel === '技術學院') eduLabel = '大专';
-        else if (eduLabel === '碩士') eduLabel = '硕士';
-        else if (eduLabel === '博士') eduLabel = '博士';
-        var combined = eduLabel + '（' + et + '）';
-        return '<div class="emp-detail"><span class="detail-label">学习形式</span>'
-          + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';" title="基于出生年份+工作经历+毕业日期推算">' + combined + '</span></div>';
+        var ec = (typeof EMPLOYEE_EDU_MAP !== 'undefined' && e && e.id)
+          ? (EMPLOYEE_EDU_MAP[String(Number(e.id))] || EMPLOYEE_EDU_MAP[String(e.id)] || null)
+          : null;
+        var eduLabelRaw = ec ? ec.xuezhi : (e.education || '');
+        var html =
+          buildDetail('学历', eduLabelRaw) +
+          buildDetail('毕业院校', ec ? ec.school : e.school) +
+          buildDetail('专业', ec ? ec.major : e.major) +
+          buildDetail('毕业日期', ec ? ec.grad : e.grad_date) +
+          buildDetail('学籍状态', ec ? ec.study : e.study_status);
+        var et = (ec && ec.eduType) ? ec.eduType : getEduType(e);
+        if (et) {
+          var color = et.indexOf('全日制') !== -1 ? '#16a34a' : (et.indexOf('非日制') !== -1 ? '#dc2626' : '#64748b');
+          var eduLabel = String(eduLabelRaw || '').trim();
+          if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
+          else if (eduLabel === '大專' || /專/.test(eduLabel) || eduLabel === '技術學院') eduLabel = '大专';
+          else if (eduLabel === '碩士') eduLabel = '硕士';
+          else if (eduLabel === '博士') eduLabel = '博士';
+          var combined = eduLabel + '（' + et + '）';
+          var title = (ec && ec.eduType) ? '基于毕业年份+工作+年龄推导(EC学历)' : '基于出生年份+工作经历+毕业日期推算';
+          html += '<div class="emp-detail"><span class="detail-label">学习形式</span>'
+            + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';" title="' + title + '">' + combined + '</span></div>';
+        }
+        return html;
       })() +
       /* ---- 部门主管 ---- */
       buildDetail('部门主管', e.mgr99) +
