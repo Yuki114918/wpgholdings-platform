@@ -65,23 +65,41 @@ async function wpgUnlock(pw){
     var tok = await wpgDecrypt(key, wpgB64ToBuf(WPG_VERIFIER_B64));
     if (new TextDecoder().decode(tok) !== 'WPG-LOGIN-OK') throw new Error('bad');
     WPG_KEY = key; return true;
-  } catch(e){ return false; }
+  } catch(e){ console.error('wpgUnlock error', e); return false; }
+}
+function wpgUnlockBtn(enable){
+  var btn=document.getElementById('wpgSubmit');
+  if(btn){ btn.disabled=!enable; btn.textContent=enable?'解 锁':'解锁中…'; }
 }
 function wpgTryUnlock(){
   var inp=document.getElementById('wpgPass'), err=document.getElementById('wpgErr');
   var pw = inp ? inp.value : '';
-  if(!pw){ if(err) err.textContent='请输入口令'; return; }
+  if(err) err.textContent='';
+  if(!pw){ if(err) err.textContent='请输入口令'; if(inp) inp.focus(); return; }
+  if(!window.crypto || !window.crypto.subtle){ if(err) err.textContent='当前环境不支持解密，请用 HTTPS 打开本页'; return; }
+  wpgUnlockBtn(false);
+  var done=false, timer=setTimeout(function(){ if(!done){ done=true; wpgUnlockBtn(true); if(err) err.textContent='响应超时，请检查网络后刷新重试'; } },12000);
   wpgUnlock(pw).then(function(ok){
-    if(!ok){ if(err) err.textContent='口令错误，请重试'; if(inp) inp.value=''; return; }
+    if(done) return; done=true; clearTimeout(timer);
+    if(!ok){ if(err) err.textContent='口令错误，请重试'; if(inp){ inp.value=''; inp.focus(); } wpgUnlockBtn(true); return; }
     var box=document.getElementById('wpgLogin'); if(box) box.style.display='none';
     document.body.classList.add('wpg-unlocked');
     wpgAfterUnlock();
+  }).catch(function(e){
+    if(done) return; done=true; clearTimeout(timer);
+    console.error('wpgUnlock rejected', e);
+    wpgUnlockBtn(true);
+    if(err) err.textContent='解锁异常：'+(e&&e.message?e.message:e)+'，请刷新重试';
   });
 }
 document.addEventListener('DOMContentLoaded', function(){
   var btn=document.getElementById('wpgSubmit'); if(btn) btn.addEventListener('click', wpgTryUnlock);
-  var inp=document.getElementById('wpgPass'); if(inp){ inp.focus(); inp.addEventListener('keydown', function(e){ if(e.key==='Enter') wpgTryUnlock(); }); }
+  var inp=document.getElementById('wpgPass'); if(inp){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter') wpgTryUnlock(); }); }
 });
+// 若有旧 Service Worker 在控制页面，注册自毁 SW 清理其缓存并注销（解决手机端旧缓存导致解锁异常）
+if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
 
 function mergeEmployeeData() {
   if (EMPLOYEES_DATA) return;
@@ -1509,8 +1527,8 @@ function mergeEmployeeData() {
     <div class="wpg-logo">WPG</div>
     <h1>内容已加密</h1>
     <p>请输入访问口令以解密查看</p>
-    <input id="wpgPass" type="password" placeholder="访问口令" autocomplete="off" />
-    <button id="wpgSubmit">解 锁</button>
+    <input id="wpgPass" type="password" placeholder="访问口令" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go" />
+    <button id="wpgSubmit" type="button">解 锁</button>
     <div id="wpgErr"></div>
   </div>
 </div>
