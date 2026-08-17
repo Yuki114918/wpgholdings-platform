@@ -49,9 +49,10 @@ function wpgShowLoadError(failed){
   if(el){ el.innerHTML = html; el.style.color='#7f1d1d'; }
   console.error('数据分块加载失败:', failed);
 }
-async function wpgFetchData(url){
+async function wpgFetchData(url, timeoutMs){
+  timeoutMs = timeoutMs || 60000;
   var ctrl = new AbortController();
-  var t = setTimeout(function(){ ctrl.abort(); }, 30000);
+  var t = setTimeout(function(){ ctrl.abort(); }, timeoutMs);
   try{
     var res = await fetch(url, {signal: ctrl.signal});
     if(!res.ok) throw new Error('http'+res.status);
@@ -59,27 +60,38 @@ async function wpgFetchData(url){
     return await wpgDecryptText(WPG_KEY, buf);
   }finally{ clearTimeout(t); }
 }
+async function wpgLoadOneChunk(idx){
+  var lastErr = null;
+  for(var b=0; b<DATA_BASES.length; b++){
+    try{
+      var js = await wpgFetchData(DATA_BASES[b]+'employees-data-part'+idx+'.js.enc?v=14', 60000);
+      var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
+      return {ok:true, idx:idx, source:DATA_BASES[b]};
+    }catch(e){ lastErr=e; console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 加载失败:', e.message||e); }
+  }
+  return {ok:false, idx:idx, error:lastErr};
+}
 async function wpgStartRosterLoad(){
   window._employeesLoading = true;
   window._employeesLoadError = null;
   var failed = [];
-  for(var idx=1; idx<=TOTAL_CHUNKS; idx++){
-    var ok=false;
-    for(var b=0; b<DATA_BASES.length; b++){
-      try{
-        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-part'+idx+'.js.enc?v=14');
-        var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
-        ok=true; break;
-      }catch(e){ console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 加载失败:', e.message||e); }
-    }
-    if(!ok) failed.push(idx);
-    wpgUpdateLoadProgress(idx, TOTAL_CHUNKS, failed);
+  var done = 0;
+  function onProgress(idx, ok){
+    if(ok) done++; else failed.push(idx);
+    wpgUpdateLoadProgress(done+failed.length, TOTAL_CHUNKS, failed);
   }
+  // 并发加载 10 个花名册分块（国内网络下单个 6-8 秒，顺序加载会卡 60-80 秒，并发可大幅压缩）
+  var chunkTasks = [];
+  for(var idx=1; idx<=TOTAL_CHUNKS; idx++) chunkTasks.push(wpgLoadOneChunk(idx));
+  var chunkResults = await Promise.all(chunkTasks);
+  chunkResults.forEach(function(r){ if(!r.ok) failed.push(r.idx); });
+  done = TOTAL_CHUNKS - failed.length;
+  wpgUpdateLoadProgress(TOTAL_CHUNKS, TOTAL_CHUNKS, failed);
   // 加载 EC 学历详情（独立加密文件，按工号建索引）
   var eduOk=false;
   for(var b2=0; b2<DATA_BASES.length; b2++){
     try{
-      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=15');
+      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=15', 60000);
       var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
       eduOk=true; break;
     }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 加载失败:', e.message||e); }
