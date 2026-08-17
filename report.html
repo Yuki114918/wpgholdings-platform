@@ -225,7 +225,7 @@ footer span{display:block}
   .sb-item.active{border-left-color:transparent;border-bottom-color:var(--primary);background:var(--primary-light)}
 }
 
-.chart-wrap{background:#fff;border:1px solid #e5e7eb;padding:20px;margin-bottom:16px}
+.chart-wrap{background:#fff;border:1px solid #e5e7eb;padding:20px;margin-bottom:16px;min-height:240px;position:relative}
 .chart-wrap .chart-title{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:4px}
 .chart-wrap .chart-subtitle{font-size:10.5px;color:#9ca3af;margin-bottom:12px}
 .chart-wrap canvas{width:100%!important;max-height:360px}
@@ -446,7 +446,7 @@ async function wpgFetchDecrypt(url, timeoutMs){
   var ctrl = new AbortController();
   var t = setTimeout(function(){ ctrl.abort(); }, timeoutMs);
   try{
-    var res = await fetch(url+(url.indexOf('?')===-1?'?v=15':'&v=15'), {signal: ctrl.signal});
+    var res = await fetch(url+(url.indexOf('?')===-1?'?v=16':'&v=16'), {signal: ctrl.signal});
     if(!res.ok) throw new Error('http'+res.status);
     var buf = await res.arrayBuffer();
     return await wpgDecryptText(WPG_KEY, buf);
@@ -646,17 +646,152 @@ window.initComparisonCharts = function() {
     return;
   }
   try {
-    var c1 = document.getElementById('cmpHireLeave');
-    if (c1 && !c1._chart) c1._chart = new Chart(c1, {type:'bar', data:{labels:['离职','雇用'], datasets:[{label:'2026 YTD（人）', data:[106,56], backgroundColor:['#dc2626','#059669']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
-    var c2 = document.getElementById('cmpFunnel');
-    if (c2 && !c2._chart) c2._chart = new Chart(c2, {type:'bar', data:{labels:['收到简历','部门通过','面试通过(估)','到岗'], datasets:[{label:'人数', data:[2920,1219,192,28], backgroundColor:['#0ea5a8','#6366f1','#d97706','#dc2626']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic', beginAtZero:true, min:10}}}});
-    var c3 = document.getElementById('cmpGrade');
-    if (c3 && !c3._chart) c3._chart = new Chart(c3, {type:'bar', data:{labels:['2021','2023','2025'], datasets:[
-      {label:'S', data:[2561,2839,2611], backgroundColor:'#6366f1'}, {label:'A', data:[1028,881,1043], backgroundColor:'#0ea5a8'},
-      {label:'A+', data:[43,8,7], backgroundColor:'#d97706'}, {label:'S-', data:[79,96,67], backgroundColor:'#94a3b8'}, {label:'P', data:[7,3,2], backgroundColor:'#cbd5e1'}
-    ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}}}});
-    var c4 = document.getElementById('cmpGroup');
-    if (c4 && !c4._chart) c4._chart = new Chart(c4, {type:'bar', data:{labels:['WPI','YSN','SAC','AIT','LOG','BSC','TGBC','WPGH','GBG','VSELL'], datasets:[{label:'在职人数', data:[683,336,256,236,180,173,112,39,27,23], backgroundColor:['#0ea5a8','#0891b2','#0d9488','#059669','#65a30d','#6366f1','#7c3aed','#9333ea','#db2777','#be123c']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+    // ① 人员结构：2026 年 1–7 月在职人数趋势
+    var cHead = document.getElementById('cmpHeadcount');
+    if (cHead && !cHead._chart) cHead._chart = new Chart(cHead, {
+      type: 'line',
+      data: {
+        labels: ['1 月', '2 月', '3 月', '4 月', '5 月', '6 月', '7 月'],
+        datasets: [{
+          label: '在职人数',
+          data: [2089, 2080, 2079, 2073, 2076, 2069, 2065],
+          borderColor: '#0ea5a8',
+          backgroundColor: 'rgba(14,165,168,0.10)',
+          borderWidth: 2,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#0ea5a8',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.25
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.y + ' 人'; } } } },
+        scales: {
+          y: { beginAtZero: false, min: 2040, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+        }
+      }
+    });
+
+    // ② 人才盘点与晋升：晋升总量趋势（2021 / 2024 / 2025 三个考核年）
+    var cPromo = document.getElementById('cmpPromoVolume');
+    if (cPromo && !cPromo._chart) cPromo._chart = new Chart(cPromo, {
+      type: 'bar',
+      data: {
+        labels: ['2021 考核年', '2024 考核年', '2025 考核年'],
+        datasets: [{
+          label: '晋升人数',
+          data: [449, 419, 303],
+          backgroundColor: ['#0ea5a8', '#6366f1', '#dc2626'],
+          borderRadius: 4,
+          barPercentage: 0.55
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.y + ' 人'; } } }
+        },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 11 } } },
+          x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+        }
+      }
+    });
+
+    // ③ 人才盘点与晋升：晋升转化率 vs 考核基数（双轴）
+    var cRate = document.getElementById('cmpPromoRate');
+    if (cRate && !cRate._chart) cRate._chart = new Chart(cRate, {
+      type: 'bar',
+      data: {
+        labels: ['2021 考核年', '2025 考核年'],
+        datasets: [
+          {
+            label: '晋升转化率',
+            data: [31.6, 16.3],
+            backgroundColor: '#0ea5a8',
+            borderRadius: 4,
+            yAxisID: 'y',
+            barPercentage: 0.5
+          },
+          {
+            label: '考核基数',
+            data: [1331, 1764],
+            type: 'line',
+            borderColor: '#6366f1',
+            backgroundColor: '#6366f1',
+            borderWidth: 2,
+            pointRadius: 5,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 11 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label + '：' + ctx.parsed.y + (ctx.datasetIndex===0?'%':' 人'); } } }
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            beginAtZero: true,
+            title: { display: true, text: '转化率 %', color: '#64748b', font: { size: 11 } },
+            grid: { color: '#f1f5f9' },
+            ticks: { color: '#64748b', font: { size: 11 }, callback: function(v){ return v + '%'; } }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            beginAtZero: true,
+            title: { display: true, text: '考核基数（人）', color: '#64748b', font: { size: 11 } },
+            grid: { display: false },
+            ticks: { color: '#64748b', font: { size: 11 } }
+          },
+          x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11 } } }
+        }
+      }
+    });
+
+    // ④ 招聘管理洞察：招聘漏斗 8 环节
+    var cFunnel = document.getElementById('cmpRecruitFunnel');
+    if (cFunnel && !cFunnel._chart) cFunnel._chart = new Chart(cFunnel, {
+      type: 'bar',
+      data: {
+        labels: ['收到简历', 'HR 发起筛选', '部门筛选通过', '邀请面试', '到面', '面试通过', '发放 Offer', '到岗'],
+        datasets: [{
+          label: '人数',
+          data: [2920, 1223, 549, 424, 308, 130, 103, 56],
+          backgroundColor: ['#0ea5a8', '#0891b2', '#0d9488', '#059669', '#65a30d', '#d97706', '#dc2626', '#7f1d1d'],
+          borderRadius: 4,
+          barPercentage: 0.6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.x + ' 人'; } } }
+        },
+        scales: {
+          x: { type: 'logarithmic', beginAtZero: true, min: 10, grid: { color: '#f1f5f9' }, ticks: { color: '#64748b', font: { size: 10 } } },
+          y: { grid: { display: false }, ticks: { color: '#475569', font: { size: 11, weight: '500' } } }
+        }
+      }
+    });
   } catch(e) { console.warn('[Comparison] chart init error:', e); }
 };
 </script>
