@@ -91,7 +91,7 @@ async function wpgStartRosterLoad(){
   var eduOk=false;
   for(var b2=0; b2<DATA_BASES.length; b2++){
     try{
-      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=15', 60000);
+      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=16', 60000);
       var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
       eduOk=true; break;
     }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 加载失败:', e.message||e); }
@@ -1669,7 +1669,7 @@ function mergeEmployeeData() {
       </div>
 
       <div class="nav-group-label">专题报告</div>
-      <div class="nav-item" data-target="report" onclick="location.href='report.html?v=19'">
+      <div class="nav-item" data-target="report" onclick="location.href='report.html?v=20'">
         <span class="nav-icon">📊</span><span class="nav-label">HR 数据洞察报告</span>
         <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
       </div>
@@ -3166,8 +3166,9 @@ function getSchoolTags(school, edu){
 }
 
 // ==================== 派生判断：最高学历是否全日制（仅 CN） ====================
-// 思路：从出生年份按全日制进度推算「应毕业年」，再与工作经历/入司/毕业年份比对。
-//   全日制进度（6岁入学）：小学6→12岁；初中3→15；高中3→18；大专3→21；本科4→22；硕士3→25；博士3→28
+// 思路：从出生年月按全日制进度推算「应毕业年」，再与工作经历/入司/毕业年份比对。
+//   全日制进度（6岁入学，9月开学）：小学6→12岁；初中3→15；高中3→18；大专3→21；本科4→22；硕士3→25；博士3→28
+//   9月1日及之后出生者需推迟一年入学，因此毕业年龄也相应 +1。
 //   若最早工作（或入司）早于应毕业年 → 在读期间已就业 → 非全日制
 //   若无就业信号，则用毕业年份与应毕业年比对：明显晚毕业 → 边工作边读 → 非全日制
 function _parseYear4(s) {
@@ -3175,8 +3176,17 @@ function _parseYear4(s) {
   var m = String(s).match(/(\d{4})/);
   return m ? parseInt(m[1], 10) : null;
 }
+function _eduEnrollmentDelay(birthday) {
+  // CN 区 9 月开学：9月1日及之后出生需推迟一年入学/入园
+  if (!birthday) return 0;
+  var m = String(birthday).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return 0;
+  var month = parseInt(m[2], 10);
+  return (month >= 9) ? 1 : 0;
+}
 function _eduFullTimeGradAge(edu) {
-  // 返回「从6岁入学算起的全日制毕业年龄」，未知返回 null
+  // 返回「6岁入学（9月前出生）算起的全日制毕业年龄」，未知返回 null
+  // 9月及之后出生者实际毕业年龄 = 返回值 + 1
   switch (edu) {
     case '小學': return 12;
     case '初中': case '國中': return 15;
@@ -3193,9 +3203,11 @@ function getEduType(e) {
   var by = _parseYear4(e.birthday);
   var edu = (e.education || '').trim();
   if (!by || !edu) return null;
-  var expAge = _eduFullTimeGradAge(edu);
-  if (expAge == null) return null;              // 学历层级无法映射（如(空)）
-  var expGradYear = by + expAge;                // 全日制应毕业年
+  var baseAge = _eduFullTimeGradAge(edu);
+  if (baseAge == null) return null;              // 学历层级无法映射（如(空)）
+  var delay = _eduEnrollmentDelay(e.birthday);   // 9月开学导致的入学推迟年数（0或1）
+  var expAge = baseAge + delay;                  // 实际全日制毕业年龄
+  var expGradYear = by + expAge;                 // 全日制应毕业年
 
   // ★ 信号A（最高优先级）：毕业年龄异常 —— 毕业时年龄远超全日制正常年龄
   //   典型场景：自考/成人大专或本科、边工作边读、专升本等
@@ -3642,7 +3654,7 @@ var _dashCache = null;           // 缓存: {fullData, dimCounts} 避免重复�
 // 归属集团：G01~G10 中文码 → 英文码（以英文码为规范）
 var GROUP_NORM_MAP = {
   'G01-世平集團': 'WPIg', 'G02-品佳集團': 'AITg', 'G03-詮鼎集團': 'SACg',
-  'G04-友尚集團': 'YSNg', 'G05-後勤支援中心': 'TGH', 'G06-運籌': 'LOG',
+  'G04-友尚集團': 'YSNg', 'G05-後勤支援中心': 'BSC', 'G06-運籌': 'LOG',
   'G07-控股公司': 'BSC', 'G08-海外事業群': 'HOLDINGS', 'G09-鑫聯大控股': 'HOLDINGS',
   'G10-其他': 'GBG'
 };

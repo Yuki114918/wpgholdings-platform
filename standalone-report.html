@@ -446,7 +446,7 @@ async function wpgFetchDecrypt(url, timeoutMs){
   var ctrl = new AbortController();
   var t = setTimeout(function(){ ctrl.abort(); }, timeoutMs);
   try{
-    var res = await fetch(url+(url.indexOf('?')===-1?'?v=19':'&v=19'), {signal: ctrl.signal});
+    var res = await fetch(url+(url.indexOf('?')===-1?'?v=20':'&v=20'), {signal: ctrl.signal});
     if(!res.ok) throw new Error('http'+res.status);
     var buf = await res.arrayBuffer();
     return await wpgDecryptText(WPG_KEY, buf);
