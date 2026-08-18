@@ -3134,9 +3134,14 @@ var SCHOOL_211 = [
 function _normSchool(s){ return toSimplified(String(s == null ? '' : s)).replace(/[()（）]/g,'').replace(/\s/g,''); }
 var _985_TOKENS = SCHOOL_985.map(_normSchool);
 var _211_TOKENS = SCHOOL_211.map(_normSchool);
-function getSchoolTags(school){
+function getSchoolTags(school, edu){
   var s = _normSchool(school);
   if (!s) return { is985:false, is211:false, noSchool:true };
+  // 大专/专科/高职/中专/高中/初中/小学等低层次学历，即使院校名命中 985/211 也不显示标签
+  var eduNorm = toSimplified(String(edu == null ? '' : edu)).replace(/\s/g,'');
+  if (/大专|大專|专科|專科|高职|高職|二专|二專|三专|三專|五专|五專|技术学院|技術學院|中专|中專|高中|高職|初中|國中|小学|小學/.test(eduNorm)) {
+    return { is985:false, is211:false, noSchool:false };
+  }
   // 排除继续教育/成人教育/网络教育/函授/夜大/自考等非全日制学历
   var EXCLUDE_PATTERNS = ['继续教育', '繼續教育', '成人教育', '网络教育', '網絡教育', '函授', '夜大', '自考', '进修班', '進修班', '培训', '培訓', '专修', '專修',
     '教育学院', '教育學院', '职业技术学院', '職業技術學院', '职业学院', '職業學院',
@@ -3265,7 +3270,7 @@ function buildEmployeeSearchIndex() {
   if (!EMPLOYEES_DATA) return;
   EMP_SEARCH_INDEX = EMPLOYEES_DATA.map(function(e) {
     var t = employeeSearchText(e);
-    var tags = getSchoolTags(e.school);
+    var tags = getSchoolTags(e.school, e.education);
     e._is985 = tags.is985;
     e._is211 = tags.is211;
     e._noSchool = tags.noSchool;
@@ -3949,7 +3954,7 @@ function buildDashboard(){
   if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_is985')) {
     console.warn('[Dashboard] _is985 not found, recomputing...');
     for (var si = 0; si < EMPLOYEES_DATA.length; si++) {
-      var st = getSchoolTags(EMPLOYEES_DATA[si].school);
+      var st = getSchoolTags(EMPLOYEES_DATA[si].school, EMPLOYEES_DATA[si].education);
       EMPLOYEES_DATA[si]._is985 = st.is985;
       EMPLOYEES_DATA[si]._is211 = st.is211;
       EMPLOYEES_DATA[si]._noSchool = st.noSchool;

@@ -22,12 +22,14 @@ mkdir -p "$SURGE_DIST/icons" "$HR_DIST/icons"
 echo "==> [2/5] 同步工作台文件到 surge-dist (wpgholdings-todo)"
 cp "$REPO/index.html" "$REPO/work-platform.html" "$REPO/report.html" "$SURGE_DIST/"
 cp "$REPO/"*.enc "$SURGE_DIST/"
+cp "$REPO/chart.umd.min.js" "$SURGE_DIST/"
 cp "$REPO/manifest.json" "$REPO/sw.js" "$SURGE_DIST/"
 cp "$REPO/icon-192.png" "$REPO/icon-512.png" "$SURGE_DIST/icons/"
 
 echo "==> [3/5] 同步独立报告到 hr-report-dist (hr-insight-report)"
 cp "$REPO/standalone-report.html" "$HR_DIST/index.html"
 cp "$REPO/"*.enc "$HR_DIST/"
+cp "$REPO/chart.umd.min.js" "$HR_DIST/"
 cp "$REPO/manifest.json" "$REPO/sw.js" "$HR_DIST/"
 cp "$REPO/icon-192.png" "$REPO/icon-512.png" "$HR_DIST/icons/"
 
@@ -43,9 +45,11 @@ for url in \
   "https://wpgholdings-todo.surge.sh/report-comparison.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-content.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-hr-trends.html.enc" \
+  "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
   "https://hr-insight-report.surge.sh/" \
   "https://hr-insight-report.surge.sh/report-content.html.enc" \
   "https://hr-insight-report.surge.sh/report-comparison.html.enc" \
+  "https://hr-insight-report.surge.sh/chart.umd.min.js" \
   "https://yuki114918.github.io/wpgholdings-platform/report.html" ; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
   echo "  $code  $url"

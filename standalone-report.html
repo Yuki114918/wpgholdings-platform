@@ -6,19 +6,20 @@
 <title>HR 数据洞察报告 · 独立参考版</title>
 <meta name="description" content="数据洞察报告 - 电子元器件分销行业 HR 决策支持">
 <script>
-/* Chart.js 加载（主 CDN + fallback） */
+/* Chart.js 加载：cdnjs → bootcdn → 本地 chart.umd.min.js 兜底，避免图表空白 */
 (function(){
-  function tryLoad(src, isFallback){
+  function tryLoad(src){
     var s = document.createElement('script');
     s.src = src;
     s.onerror = function(){
-      if(!isFallback){ tryLoad('https://cdn.bootcdn.net/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', true); }
-      else { window._chartLoadError = true; console.warn('[Chart] All CDNs failed'); }
+      if(src.indexOf('cdnjs.cloudflare') !== -1){ tryLoad('https://cdn.bootcdn.net/ajax/libs/Chart.js/4.5.0/chart.umd.min.js'); }
+      else if(src.indexOf('bootcdn') !== -1){ tryLoad('chart.umd.min.js'); }
+      else { window._chartLoadError = true; console.warn('[Chart] All Chart.js sources failed'); }
     };
     s.onload = function(){ window._chartLoaded = true; };
     document.head.appendChild(s);
   }
-  tryLoad('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js', false);
+  tryLoad('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js');
 })();
 </script>
 <style>
@@ -462,6 +463,17 @@ async function wpgLoadReportFile(name){
   }
   throw lastErr || new Error(name+' 全部源加载失败');
 }
+function waitForChart(timeoutMs){
+  return new Promise(function(resolve){
+    if(window.Chart || window._chartLoadError){ resolve(); return; }
+    var start = Date.now();
+    var t = setInterval(function(){
+      if(window.Chart || window._chartLoadError || Date.now() - start > timeoutMs){
+        clearInterval(t); resolve();
+      }
+    }, 80);
+  });
+}
 async function wpgAfterUnlock(){
   var ec=document.getElementById('reportBodyContent');
   var ic=document.getElementById('internalReportBody');
@@ -469,7 +481,8 @@ async function wpgAfterUnlock(){
   if(ec) ec.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 外部数据快讯加载中…</div>';
   if(ic) ic.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 内部资料对比加载中…</div>';
   if(tc) tc.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ HR最新趋势加载中…</div>';
-  try{ var ext=await wpgLoadReportFile('report-content.html.enc');
+  try{
+    var [ext, _] = await Promise.all([wpgLoadReportFile('report-content.html.enc'), waitForChart(10000)]);
     if(ec){ ec.innerHTML=ext; executeScripts(ext, ec); initReportCharts(); initReportScrollSpy(); }
   }catch(e){ console.error('外部报告解密失败', e); if(ec) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
   try{ var int=await wpgLoadReportFile('report-comparison.html.enc');
