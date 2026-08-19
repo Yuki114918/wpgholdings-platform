@@ -4097,7 +4097,8 @@ function buildDashboard(){
       D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
       counts = Object.keys(map).map(function(k){return {label:k, val:k, cnt:map[k]};});
       counts.sort(function(a,b){return b.cnt-a.cnt;});
-      // 不再截断 TOP N，显示全部
+      // 高基数维度（职称/Job Function/部门等）显示 TOP 50，避免一次性生成海量 DOM 导致页面卡死
+      if (counts.length > 50) counts = counts.slice(0, 50);
     }
     var max = counts.reduce(function(m,c){return Math.max(m,c.cnt);},1);
 
