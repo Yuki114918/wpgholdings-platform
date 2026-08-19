@@ -9,7 +9,7 @@
 <meta http-equiv="Expires" content="0">
 <title>开放式工作平台 v17</title>
 <meta name="description" content="工作平台 · 员工花名册 · HR法令查询 · 快捷入口">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#f97316">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="工作平台">
@@ -44,8 +44,8 @@ function wpgShowLoadError(failed){
   var ghUrl = 'https://yuki114918.github.io/wpgholdings-platform/';
   var html = '⚠️ 数据加载失败：第 '+failed.join(', ')+' 块未能拉取。'+
              '<div style="font-size:13px;color:#7f1d1d;margin-top:6px;">当前网络可能无法访问 jsDelivr，已尝试 GitHub Pages 回退仍失败。</div>'+
-             '<button onclick="wpgStartRosterLoad()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button>'+
-             '<a href="'+ghUrl+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;margin-left:10px;color:#2563eb;font-size:14px;">或访问 GitHub Pages 版本</a>';
+             '<button onclick="wpgStartRosterLoad()" style="margin-top:10px;padding:6px 14px;background:#f97316;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button>'+
+             '<a href="'+ghUrl+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;margin-left:10px;color:#f97316;font-size:14px;">或访问 GitHub Pages 版本</a>';
   if(el){ el.innerHTML = html; el.style.color='#7f1d1d'; }
   console.error('数据分块加载失败:', failed);
 }
@@ -182,9 +182,9 @@ function mergeEmployeeData() {
 </script>
 <style>
   :root {
-    --primary: #2563eb;
-    --primary-light: #eff6ff;
-    --primary-dark: #1d4ed8;
+    --primary: #f97316;
+    --primary-light: #fff7ed;
+    --primary-dark: #ea580c;
     --bg: #f8fafc;
     --card-bg: #ffffff;
     --text: #1e293b;
@@ -211,7 +211,7 @@ function mergeEmployeeData() {
 
   /* Header */
   .header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #431407 0%, #f97316 100%);
     color: white;
     padding: 20px 32px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
@@ -231,7 +231,7 @@ function mergeEmployeeData() {
 
   /* Work Status Bar */
   .work-status-bar {
-    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    background: linear-gradient(135deg, #fff7ed 0%, #f0fdf4 100%);
     border-bottom: 1px solid var(--border);
     padding: 10px 32px;
     display: flex;
@@ -249,17 +249,17 @@ function mergeEmployeeData() {
   }
   .work-status-bar .ws-label { color: var(--text-secondary); font-size: 13px; }
   .work-status-bar .ws-value { font-weight: 600; }
-  .work-status-bar .ws-timer { font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; font-size: 16px; font-weight: 700; color: #2563eb; }
+  .work-status-bar .ws-timer { font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; font-size: 16px; font-weight: 700; color: #f97316; }
   .work-status-bar .ws-timer.off { color: #16a34a; }
-  .work-status-bar .ws-timer.rest { color: #9333ea; }
+  .work-status-bar .ws-timer.rest { color: #f97316; }
   .work-status-bar .ws-divider { width: 1px; height: 24px; background: var(--border); }
   .work-status-bar .ws-calendar-link {
     display: flex; align-items: center; gap: 6px;
     padding: 4px 14px; border-radius: 6px;
-    background: #2563eb; color: #fff; text-decoration: none;
+    background: #f97316; color: #fff; text-decoration: none;
     font-weight: 500; font-size: 13px; transition: background .2s;
   }
-  .work-status-bar .ws-calendar-link:hover { background: #1d4ed8; }
+  .work-status-bar .ws-calendar-link:hover { background: #ea580c; }
 
   /* Weather panel */
   .weather-panel {
@@ -278,9 +278,9 @@ function mergeEmployeeData() {
   .weather-close:hover { color: var(--text-primary); }
   .weather-current {
     padding: 8px 10px; border-radius: 8px; cursor: pointer;
-    background: #f0f7ff; margin-bottom: 10px; transition: background .2s;
+    background: #fff7ed; margin-bottom: 10px; transition: background .2s;
   }
-  .weather-current:hover { background: #e0efff; }
+  .weather-current:hover { background: #ffedd5; }
   .weather-cities {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   }
@@ -363,15 +363,15 @@ function mergeEmployeeData() {
     font-size: 24px;
     flex-shrink: 0;
   }
-  .card-icon.blue { background: #dbeafe; color: #2563eb; }
+  .card-icon.blue { background: #ffedd5; color: #f97316; }
   .card-icon.green { background: #dcfce7; color: #16a34a; }
-  .card-icon.purple { background: #f3e8ff; color: #9333ea; }
+  .card-icon.purple { background: #fce7f3; color: #f97316; }
   .card-icon.orange { background: #fff7ed; color: #ea580c; }
-  .card-icon.teal { background: #ccfbf1; color: #0d9488; }
+  .card-icon.teal { background: #ffedd5; color: #c2410c; }
   .card-icon.red { background: #fee2e2; color: #dc2626; }
   .card-icon.pink { background: #fce7f3; color: #db2777; }
   .card-icon.amber { background: #fef3c7; color: #d97706; }
-  .card-icon.cyan { background: #cffafe; color: #0891b2; }
+  .card-icon.cyan { background: #fee2e2; color: #dc2626; }
 
   .quick-sub-header {
     grid-column: 1 / -1;
@@ -495,7 +495,7 @@ function mergeEmployeeData() {
     background: var(--primary-light);
     border-radius: 10px;
     padding: 20px;
-    border: 1px solid #dbeafe;
+    border: 1px solid #ffedd5;
   }
   .legal-card h4 {
     font-size: 15px;
@@ -545,7 +545,7 @@ function mergeEmployeeData() {
     text-decoration-color: rgba(59,130,246,.4);
     transition: color .2s, text-decoration-color .2s;
   }
-  .econ-basis-link:hover { color: #1d4ed8; text-decoration-color: #1d4ed8; }
+  .econ-basis-link:hover { color: #ea580c; text-decoration-color: #ea580c; }
   .econ-basis-link::after {
     content: '↗';
     font-size: 11px;
@@ -633,9 +633,9 @@ function mergeEmployeeData() {
   .case-type.wage { background: #fef3c7; color: #92400e; }
   .case-type.termination { background: #fce7f3; color: #9d174d; }
   .case-type.injury { background: #ffedd5; color: #9a3412; }
-  .case-type.contract { background: #dbeafe; color: #1e40af; }
+  .case-type.contract { background: #ffedd5; color: #b45309; }
   .case-type.insurance { background: #dcfce7; color: #166534; }
-  .case-type.overtime { background: #f3e8ff; color: #6b21a8; }
+  .case-type.overtime { background: #fef3c7; color: #7c2d12; }
 
   .case-detail {
     margin-top: 20px;
@@ -719,7 +719,7 @@ function mergeEmployeeData() {
   .todo-stat-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
   .todo-stat-pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
   .todo-stat-done { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-  .todo-stat-total { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .todo-stat-total { background: #fff7ed; color: #f97316; border: 1px solid #fed7aa; }
 
   .todo-add-btn {
     display: inline-flex;
@@ -820,7 +820,7 @@ function mergeEmployeeData() {
     border: 1px solid var(--border);
     transition: all 0.2s;
   }
-  .todo-item:hover { border-color: #bfdbfe; box-shadow: var(--shadow-md); }
+  .todo-item:hover { border-color: #fed7aa; box-shadow: var(--shadow-md); }
   .todo-item.done { opacity: 0.6; }
   .todo-item.done .todo-title { text-decoration: line-through; }
 
@@ -866,8 +866,8 @@ function mergeEmployeeData() {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 11px;
-    background: #eff6ff;
-    color: #2563eb;
+    background: #fff7ed;
+    color: #f97316;
   }
   .todo-due { font-size: 12px; }
   .todo-due.overdue { color: #dc2626; font-weight: 600; }
@@ -1073,7 +1073,7 @@ function mergeEmployeeData() {
     border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
     user-select: none;
   }
-  .dim-filter-chip:hover { background: #dbeafe; }
+  .dim-filter-chip:hover { background: #ffedd5; }
   .dim-filter-chip .chip-x { font-size: 11px; opacity: 0.7; }
   .dim-filter-chip .chip-x:hover { opacity: 1; }
   .employee-result-area { padding: 16px; }
@@ -1232,7 +1232,7 @@ function mergeEmployeeData() {
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
-    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    background: linear-gradient(135deg, #431407, #f97316);
     color: white;
     font-size: 16px;
     font-weight: 600;
@@ -1318,7 +1318,7 @@ function mergeEmployeeData() {
     display: flex;
     align-items: center;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #1e3a5f, #2563eb);
+    background: linear-gradient(135deg, #431407, #f97316);
     color: white;
     gap: 14px;
     flex-shrink: 0;
@@ -1492,7 +1492,7 @@ function mergeEmployeeData() {
     margin-left:6px; vertical-align:middle;
   }
   .school-tag.t985 { background:#fef3c7; color:#b45309; }
-  .school-tag.t211 { background:#dbeafe; color:#1d4ed8; }
+  .school-tag.t211 { background:#ffedd5; color:#ea580c; }
   .school-tag.tnoschool { background:#e2e8f0; color:#475569; }
   .emp-head-tags { margin-left:6px; display:inline-flex; gap:4px; }
   .emp-head-tags .school-tag { margin-left:0; }
@@ -1540,7 +1540,7 @@ function mergeEmployeeData() {
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;
   }
   .dash-bar-track { flex:1; background:#f1f5f9; border-radius:6px; height:18px; overflow:hidden; }
-  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#3b82f6,#2563eb); border-radius:6px; transition:width .4s; }
+  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#fb923c,#f97316); border-radius:6px; transition:width .4s; }
   .dash-bar-val { width:56px; flex-shrink:0; font-size:12px; color:var(--text-secondary); text-align:left; }
   .dash-bar-row.active .dash-bar-fill { background:linear-gradient(90deg,#f59e0b,#d97706); }
   .dash-bar-row.active .dash-bar-label { color:#d97706; font-weight:600; }
@@ -1588,15 +1588,15 @@ function mergeEmployeeData() {
   </div>
 </div>
 <style>
-#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a5f);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c1917,#431407);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
 .wpg-card{background:#fff;border-radius:16px;padding:36px 32px;width:320px;max-width:88vw;box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center;}
-.wpg-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;}
+.wpg-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#f97316,#f97316);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;}
 .wpg-card h1{font-size:19px;color:#1e293b;margin-bottom:6px;}
 .wpg-card p{font-size:13px;color:#64748b;margin-bottom:18px;}
 #wpgPass{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;box-sizing:border-box;outline:none;}
-#wpgPass:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
-#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
-#wpgSubmit:hover{background:#1d4ed8;}
+#wpgPass:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#f97316;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
+#wpgSubmit:hover{background:#ea580c;}
 #wpgErr{color:#dc2626;font-size:12.5px;min-height:18px;margin-top:10px;}
 </style>
 
@@ -2809,7 +2809,7 @@ function renderNationalLaws() {
             <li onclick="showPolicyDetail('${l.title.replace(/'/g, "\\'")}', '${l.desc.replace(/'/g, "\\'")}——${l.chapters}', '${l.ref.replace(/'/g, "\\'")}', '全国', '${(l.url || '').replace(/'/g, "\\'")}')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);">
               <div style="font-weight:600;color:var(--text);">${l.title}</div>
               <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${l.desc.substring(0, 60)}...</div>
-              <div style="font-size:11px;color:#3b82f6;margin-top:3px;">📖 ${l.ref}</div>
+              <div style="font-size:11px;color:#fb923c;margin-top:3px;">📖 ${l.ref}</div>
             </li>
           `).join('')}
         </ul>
@@ -4040,16 +4040,16 @@ function buildDashboard(){
 
   // 维度图表 —— 颜色方案 + 全量显示（无TOP限制）
   var DIM_COLORS = [
-    '#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed',
-    '#0891b2', '#be185d', '#4f46e5', '#059669', '#ca8a04',
-    '#e11d48', '#6366f1', '#0d9488', '#b45309', '#a855f7'
+    '#f97316', '#dc2626', '#d97706', '#16a34a', '#be185d',
+    '#b45309', '#ca8a04', '#db2777', '#059669', '#c2410c',
+    '#e11d48', '#9f1239', '#7c2d12', '#a16207', '#f59e0b'
   ];
   var dims = [
     {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#16a34a','离职':'#dc2626'}},
-    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#7c3aed','211':'#2563eb','dualfei':'#64748b','noschool':'#94a3b8'}},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#be185d','211':'#ea580c','dualfei':'#64748b','noschool':'#94a3b8'}},
     {key:'eduType', title:'学习形式(CN)', vals:null, colors:{}}, // 动态色，按学历+形式组合
-    {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#2563eb','女':'#e11d48'}},
-    {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#4f46e5','非主管':'#38bdf8'}},
+    {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#f97316','女':'#e11d48'}},
+    {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#f97316','非主管':'#fb923c'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
     {key:'job_series', title:'职系', vals:null},           // ★ 新增：高级职系分类（S-銷售/T-技術/AC-行政等35类）
