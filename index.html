@@ -9,7 +9,7 @@
 <meta http-equiv="Expires" content="0">
 <title>开放式工作平台 v17</title>
 <meta name="description" content="工作平台 · 员工花名册 · HR法令查询 · 快捷入口">
-<meta name="theme-color" content="#f97316">
+<meta name="theme-color" content="#004E8C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="工作平台">
@@ -43,10 +43,10 @@ function wpgShowLoadError(failed){
   var el = document.getElementById('dashboardLoading');
   var ghUrl = 'https://yuki114918.github.io/wpgholdings-platform/';
   var html = '⚠️ 数据加载失败：第 '+failed.join(', ')+' 块未能拉取。'+
-             '<div style="font-size:13px;color:#7f1d1d;margin-top:6px;">当前网络可能无法访问 jsDelivr，已尝试 GitHub Pages 回退仍失败。</div>'+
-             '<button onclick="wpgStartRosterLoad()" style="margin-top:10px;padding:6px 14px;background:#f97316;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button>'+
-             '<a href="'+ghUrl+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;margin-left:10px;color:#f97316;font-size:14px;">或访问 GitHub Pages 版本</a>';
-  if(el){ el.innerHTML = html; el.style.color='#7f1d1d'; }
+             '<div style="font-size:13px;color:#7A1D2B;margin-top:6px;">当前网络可能无法访问 jsDelivr，已尝试 GitHub Pages 回退仍失败。</div>'+
+             '<button onclick="wpgStartRosterLoad()" style="margin-top:10px;padding:6px 14px;background:#004E8C;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button>'+
+             '<a href="'+ghUrl+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;margin-left:10px;color:#004E8C;font-size:14px;">或访问 GitHub Pages 版本</a>';
+  if(el){ el.innerHTML = html; el.style.color='#7A1D2B'; }
   console.error('数据分块加载失败:', failed);
 }
 async function wpgFetchData(url, timeoutMs){
@@ -182,17 +182,17 @@ function mergeEmployeeData() {
 </script>
 <style>
   :root {
-    --primary: #f97316;
-    --primary-light: #fff7ed;
-    --primary-dark: #ea580c;
-    --bg: #f8fafc;
+    --primary: #004E8C;
+    --primary-light: #E8F4FC;
+    --primary-dark: #003A6B;
+    --bg: #EDF7FC;
     --card-bg: #ffffff;
     --text: #1e293b;
-    --text-secondary: #64748b;
-    --border: #e2e8f0;
-    --success: #16a34a;
-    --warning: #d97706;
-    --danger: #dc2626;
+    --text-secondary: #5A6C7D;
+    --border: #D0E6F3;
+    --success: #00A651;
+    --warning: #F37021;
+    --danger: #E31937;
     --radius: 12px;
     --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
     --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
@@ -211,7 +211,7 @@ function mergeEmployeeData() {
 
   /* Header */
   .header {
-    background: linear-gradient(135deg, #431407 0%, #f97316 100%);
+    background: linear-gradient(135deg, #003A6B 0%, #004E8C 100%);
     color: white;
     padding: 20px 32px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
@@ -231,7 +231,7 @@ function mergeEmployeeData() {
 
   /* Work Status Bar */
   .work-status-bar {
-    background: linear-gradient(135deg, #fff7ed 0%, #f0fdf4 100%);
+    background: #ffffff;
     border-bottom: 1px solid var(--border);
     padding: 10px 32px;
     display: flex;
@@ -249,17 +249,17 @@ function mergeEmployeeData() {
   }
   .work-status-bar .ws-label { color: var(--text-secondary); font-size: 13px; }
   .work-status-bar .ws-value { font-weight: 600; }
-  .work-status-bar .ws-timer { font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; font-size: 16px; font-weight: 700; color: #f97316; }
-  .work-status-bar .ws-timer.off { color: #16a34a; }
-  .work-status-bar .ws-timer.rest { color: #f97316; }
+  .work-status-bar .ws-timer { font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace; font-size: 16px; font-weight: 700; color: #F37021; }
+  .work-status-bar .ws-timer.off { color: #00A651; }
+  .work-status-bar .ws-timer.rest { color: #F37021; }
   .work-status-bar .ws-divider { width: 1px; height: 24px; background: var(--border); }
   .work-status-bar .ws-calendar-link {
     display: flex; align-items: center; gap: 6px;
     padding: 4px 14px; border-radius: 6px;
-    background: #f97316; color: #fff; text-decoration: none;
+    background: #004E8C; color: #fff; text-decoration: none;
     font-weight: 500; font-size: 13px; transition: background .2s;
   }
-  .work-status-bar .ws-calendar-link:hover { background: #ea580c; }
+  .work-status-bar .ws-calendar-link:hover { background: #003A6B; }
 
   /* Weather panel */
   .weather-panel {
@@ -278,9 +278,9 @@ function mergeEmployeeData() {
   .weather-close:hover { color: var(--text-primary); }
   .weather-current {
     padding: 8px 10px; border-radius: 8px; cursor: pointer;
-    background: #fff7ed; margin-bottom: 10px; transition: background .2s;
+    background: #E8F4FC; margin-bottom: 10px; transition: background .2s;
   }
-  .weather-current:hover { background: #ffedd5; }
+  .weather-current:hover { background: #D6EAF8; }
   .weather-cities {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   }
@@ -363,15 +363,15 @@ function mergeEmployeeData() {
     font-size: 24px;
     flex-shrink: 0;
   }
-  .card-icon.blue { background: #ffedd5; color: #f97316; }
-  .card-icon.green { background: #dcfce7; color: #16a34a; }
-  .card-icon.purple { background: #fce7f3; color: #f97316; }
-  .card-icon.orange { background: #fff7ed; color: #ea580c; }
-  .card-icon.teal { background: #ffedd5; color: #c2410c; }
-  .card-icon.red { background: #fee2e2; color: #dc2626; }
-  .card-icon.pink { background: #fce7f3; color: #db2777; }
-  .card-icon.amber { background: #fef3c7; color: #d97706; }
-  .card-icon.cyan { background: #fee2e2; color: #dc2626; }
+  .card-icon.blue { background: #E8F4FC; color: #004E8C; }
+  .card-icon.green { background: #E6F6EE; color: #00A651; }
+  .card-icon.purple { background: #FDECEF; color: #E31937; }
+  .card-icon.orange { background: #FFF2EA; color: #F37021; }
+  .card-icon.teal { background: #E8F4FC; color: #004E8C; }
+  .card-icon.red { background: #FDECEF; color: #E31937; }
+  .card-icon.pink { background: #FFF2EA; color: #F37021; }
+  .card-icon.amber { background: #FFF2EA; color: #F37021; }
+  .card-icon.cyan { background: #E8F4FC; color: #004E8C; }
 
   .quick-sub-header {
     grid-column: 1 / -1;
@@ -495,7 +495,7 @@ function mergeEmployeeData() {
     background: var(--primary-light);
     border-radius: 10px;
     padding: 20px;
-    border: 1px solid #ffedd5;
+    border: 1px solid #E8F4FC;
   }
   .legal-card h4 {
     font-size: 15px;
@@ -533,7 +533,7 @@ function mergeEmployeeData() {
   .econ-row + .econ-row { border-top: 1px solid #f1f5f9; }
   .econ-label { font-size: 13px; color: var(--text-secondary); }
   .econ-value { font-weight: 600; text-align: right; }
-  .econ-value.highlight-red { color: #dc2626; font-size: 16px; }
+  .econ-value.highlight-red { color: #E31937; font-size: 16px; }
   .econ-basis-link {
     display: inline-flex;
     align-items: center;
@@ -545,7 +545,7 @@ function mergeEmployeeData() {
     text-decoration-color: rgba(59,130,246,.4);
     transition: color .2s, text-decoration-color .2s;
   }
-  .econ-basis-link:hover { color: #ea580c; text-decoration-color: #ea580c; }
+  .econ-basis-link:hover { color: #F37021; text-decoration-color: #F37021; }
   .econ-basis-link::after {
     content: '↗';
     font-size: 11px;
@@ -630,19 +630,19 @@ function mergeEmployeeData() {
     font-size: 12px;
     font-weight: 500;
   }
-  .case-type.wage { background: #fef3c7; color: #92400e; }
-  .case-type.termination { background: #fce7f3; color: #9d174d; }
-  .case-type.injury { background: #ffedd5; color: #9a3412; }
-  .case-type.contract { background: #ffedd5; color: #c2410c; }
-  .case-type.insurance { background: #dcfce7; color: #166534; }
-  .case-type.overtime { background: #fef3c7; color: #7c2d12; }
+  .case-type.wage { background: #FFF2EA; color: #92400e; }
+  .case-type.termination { background: #FDECEF; color: #9d174d; }
+  .case-type.injury { background: #E8F4FC; color: #8B3A1F; }
+  .case-type.contract { background: #E8F4FC; color: #A33D1E; }
+  .case-type.insurance { background: #D4F2E0; color: #166534; }
+  .case-type.overtime { background: #FFF2EA; color: #7c2d12; }
 
   .case-detail {
     margin-top: 20px;
     padding: 20px;
     background: #fffbeb;
     border-radius: 10px;
-    border: 1px solid #fde68a;
+    border: 1px solid #FCE8B2;
     display: none;
   }
   .case-detail.active { display: block; }
@@ -716,10 +716,10 @@ function mergeEmployeeData() {
   .todo-stat-card:hover { transform: translateY(-1px); }
   .todo-stat-card .stat-num { font-size: 28px; line-height: 1.2; }
   .todo-stat-card .stat-label { font-size: 12px; opacity: 0.75; margin-top: 2px; }
-  .todo-stat-urgent { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-  .todo-stat-pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
-  .todo-stat-done { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-  .todo-stat-total { background: #fff7ed; color: #f97316; border: 1px solid #fed7aa; }
+  .todo-stat-urgent { background: #FDECEF; color: #E31937; border: 1px solid #F8B9C2; }
+  .todo-stat-pending { background: #fffbeb; color: #d97706; border: 1px solid #FCE8B2; }
+  .todo-stat-done { background: #E6F6EE; color: #00A651; border: 1px solid #B8E6CC; }
+  .todo-stat-total { background: #E8F4FC; color: #F37021; border: 1px solid #FDD5BD; }
 
   .todo-add-btn {
     display: inline-flex;
@@ -820,7 +820,7 @@ function mergeEmployeeData() {
     border: 1px solid var(--border);
     transition: all 0.2s;
   }
-  .todo-item:hover { border-color: #fed7aa; box-shadow: var(--shadow-md); }
+  .todo-item:hover { border-color: #FDD5BD; box-shadow: var(--shadow-md); }
   .todo-item.done { opacity: 0.6; }
   .todo-item.done .todo-title { text-decoration: line-through; }
 
@@ -857,7 +857,7 @@ function mergeEmployeeData() {
     font-weight: 600;
     white-space: nowrap;
   }
-  .priority-urgent { background: #fef2f2; color: #dc2626; }
+  .priority-urgent { background: #FDECEF; color: #E31937; }
   .priority-normal { background: #fffbeb; color: #d97706; }
   .priority-low { background: #f1f5f9; color: #64748b; }
 
@@ -866,11 +866,11 @@ function mergeEmployeeData() {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 11px;
-    background: #fff7ed;
-    color: #f97316;
+    background: #E8F4FC;
+    color: #F37021;
   }
   .todo-due { font-size: 12px; }
-  .todo-due.overdue { color: #dc2626; font-weight: 600; }
+  .todo-due.overdue { color: #E31937; font-weight: 600; }
   .todo-due.today { color: #d97706; font-weight: 600; }
 
   .todo-actions {
@@ -889,7 +889,7 @@ function mergeEmployeeData() {
     transition: all 0.2s;
   }
   .todo-actions button:hover { background: #f1f5f9; }
-  .todo-actions .btn-del:hover { background: #fef2f2; color: #dc2626; }
+  .todo-actions .btn-del:hover { background: #FDECEF; color: #E31937; }
 
   .todo-empty { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
   .todo-empty .empty-icon { font-size: 48px; margin-bottom: 12px; }
@@ -904,7 +904,7 @@ function mergeEmployeeData() {
   .todo-sync-input.active { display: block; }
   .todo-sync-status { font-size: 11px; color: var(--text-secondary); }
   .todo-sync-status.synced { color: #059669; }
-  .todo-sync-status.error { color: #dc2626; }
+  .todo-sync-status.error { color: #E31937; }
   .todo-sync-panel { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .todo-sync-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .todo-sync-hint { font-size: 11px; color: var(--text-secondary); }
@@ -1073,7 +1073,7 @@ function mergeEmployeeData() {
     border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
     user-select: none;
   }
-  .dim-filter-chip:hover { background: #ffedd5; }
+  .dim-filter-chip:hover { background: #E8F4FC; }
   .dim-filter-chip .chip-x { font-size: 11px; opacity: 0.7; }
   .dim-filter-chip .chip-x:hover { opacity: 1; }
   .employee-result-area { padding: 16px; }
@@ -1112,24 +1112,24 @@ function mergeEmployeeData() {
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 10px;
-    background: #dcfce7;
-    color: #16a34a;
+    background: #D4F2E0;
+    color: #00A651;
     font-weight: 500;
   }
   .emp-card .emp-badge.inactive {
     background: #fee2e2;
-    color: #dc2626;
+    color: #E31937;
   }
   .emp-card .emp-details .leave-date-row {
     grid-column: 1 / -1;
-    background: #fef2f2;
-    border-left: 3px solid #dc2626;
+    background: #FDECEF;
+    border-left: 3px solid #E31937;
     padding: 4px 8px;
     margin: 2px 0;
     border-radius: 4px;
   }
   .emp-card .emp-details .leave-date-val {
-    color: #dc2626;
+    color: #E31937;
     font-weight: 700;
   }
   .emp-card .emp-details .leave-reason-row {
@@ -1232,7 +1232,7 @@ function mergeEmployeeData() {
     align-items: center;
     justify-content: space-between;
     padding: 14px 20px;
-    background: linear-gradient(135deg, #431407, #f97316);
+    background: linear-gradient(135deg, #003A6B, #F37021);
     color: white;
     font-size: 16px;
     font-weight: 600;
@@ -1255,12 +1255,12 @@ function mergeEmployeeData() {
   .peoplus-login-info {
     padding: 12px 20px;
     background: #fefce8;
-    border-bottom: 1px solid #fde68a;
+    border-bottom: 1px solid #FCE8B2;
     font-size: 13px;
     line-height: 1.6;
   }
   .peoplus-login-info code {
-    background: #fef3c7;
+    background: #FFF2EA;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 13px;
@@ -1318,7 +1318,7 @@ function mergeEmployeeData() {
     display: flex;
     align-items: center;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #431407, #f97316);
+    background: linear-gradient(135deg, #003A6B, #F37021);
     color: white;
     gap: 14px;
     flex-shrink: 0;
@@ -1491,8 +1491,8 @@ function mergeEmployeeData() {
     display:inline-block; padding:1px 6px; border-radius:6px; font-size:11px; font-weight:700;
     margin-left:6px; vertical-align:middle;
   }
-  .school-tag.t985 { background:#fef3c7; color:#b45309; }
-  .school-tag.t211 { background:#ffedd5; color:#ea580c; }
+  .school-tag.t985 { background:#FFF2EA; color:#b45309; }
+  .school-tag.t211 { background:#E8F4FC; color:#F37021; }
   .school-tag.tnoschool { background:#e2e8f0; color:#475569; }
   .emp-head-tags { margin-left:6px; display:inline-flex; gap:4px; }
   .emp-head-tags .school-tag { margin-left:0; }
@@ -1520,9 +1520,9 @@ function mergeEmployeeData() {
   }
   .dash-stat .ds-val { font-size:24px; font-weight:700; color:var(--primary); }
   .dash-stat .ds-label { font-size:12px; color:var(--text-secondary); margin-top:2px; }
-  .dash-stat-hl { background:linear-gradient(135deg,#fef2f2,#fee2e2) !important; border-color:#fca5a5 !important; }
-  .dash-stat-hl .ds-val { color:#dc2626 !important; font-size:28px; }
-  .dash-stat-hl .ds-label { color:#991b1b !important; font-weight:600; }
+  .dash-stat-hl { background:linear-gradient(135deg,#FDECEF,#fee2e2) !important; border-color:#fca5a5 !important; }
+  .dash-stat-hl .ds-val { color:#E31937 !important; font-size:28px; }
+  .dash-stat-hl .ds-label { color:#991B2B !important; font-weight:600; }
   .dash-stat-sm .ds-val { font-size:16px; }
   .dash-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
   .dash-card {
@@ -1540,7 +1540,7 @@ function mergeEmployeeData() {
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;
   }
   .dash-bar-track { flex:1; background:#f1f5f9; border-radius:6px; height:18px; overflow:hidden; }
-  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#fb923c,#f97316); border-radius:6px; transition:width .4s; }
+  .dash-bar-fill { height:100%; background:linear-gradient(90deg,#F37021,#F37021); border-radius:6px; transition:width .4s; }
   .dash-bar-val { width:56px; flex-shrink:0; font-size:12px; color:var(--text-secondary); text-align:left; }
   .dash-bar-row.active .dash-bar-fill { background:linear-gradient(90deg,#f59e0b,#d97706); }
   .dash-bar-row.active .dash-bar-label { color:#d97706; font-weight:600; }
@@ -1565,10 +1565,10 @@ function mergeEmployeeData() {
   .dash-filter-count { margin-left:auto; font-size:12px; color:var(--text-secondary); font-weight:600; }
   .dash-asof {
     display:inline-flex; align-items:center; gap:6px; margin:6px 0 10px;
-    padding:6px 14px; background:linear-gradient(135deg,#fff7ed,#ffedd5);
-    border:1px solid #fed7aa; border-radius:999px; font-size:13px; color:#9a3412; font-weight:600;
+    padding:6px 14px; background:linear-gradient(135deg,#E8F4FC,#E8F4FC);
+    border:1px solid #FDD5BD; border-radius:999px; font-size:13px; color:#8B3A1F; font-weight:600;
   }
-  .dash-asof strong { color:#c2410c; }
+  .dash-asof strong { color:#A33D1E; }
 
   @media (max-width: 860px) {
     .dash-filter-bar { flex-direction:column; align-items:stretch; }
@@ -1579,7 +1579,7 @@ function mergeEmployeeData() {
 <body>
 <div id="wpgLogin">
   <div class="wpg-card">
-    <div class="wpg-logo">WPG</div>
+    <div class="wpg-logo"><svg viewBox='0 0 120 44' xmlns='http://www.w3.org/2000/svg' style='width:54px;height:auto;display:block;'><defs><linearGradient id='wpgArc2' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='#009FE3'/><stop offset='55%' stop-color='#F37021'/><stop offset='100%' stop-color='#F37021'/></linearGradient></defs><ellipse cx='60' cy='22' rx='55' ry='19' fill='none' stroke='url(#wpgArc2)' stroke-width='3.5'/><text x='14' y='32' font-family='Arial Black, Arial, sans-serif' font-size='28' font-weight='900'><tspan fill='#004E8C'>w</tspan><tspan fill='#00A651'>p</tspan><tspan fill='#E31937'>g</tspan></text></svg></div>
     <h1>内容已加密</h1>
     <p>请输入访问口令以解密查看</p>
     <input id="wpgPass" type="password" placeholder="访问口令" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go" />
@@ -1588,22 +1588,22 @@ function mergeEmployeeData() {
   </div>
 </div>
 <style>
-#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c1917,#431407);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
-.wpg-card{background:#fff;border-radius:16px;padding:36px 32px;width:320px;max-width:88vw;box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center;}
-.wpg-logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#f97316,#f97316);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:18px;}
+#wpgLogin{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#EDF7FC 0%,#D6EAF8 100%);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+.wpg-card{background:#fff;border-radius:16px;padding:36px 32px;width:320px;max-width:88vw;box-shadow:0 20px 50px rgba(0,78,140,.12);text-align:center;}
+.wpg-logo{width:56px;height:56px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 4px 12px rgba(0,78,140,.15);}
 .wpg-card h1{font-size:19px;color:#1e293b;margin-bottom:6px;}
 .wpg-card p{font-size:13px;color:#64748b;margin-bottom:18px;}
 #wpgPass{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;box-sizing:border-box;outline:none;}
-#wpgPass:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
-#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#f97316;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
-#wpgSubmit:hover{background:#ea580c;}
-#wpgErr{color:#dc2626;font-size:12.5px;min-height:18px;margin-top:10px;}
+#wpgPass:focus{border-color:#004E8C;box-shadow:0 0 0 3px rgba(0,78,140,.15);}
+#wpgSubmit{width:100%;margin-top:12px;padding:12px;border:none;border-radius:10px;background:#004E8C;color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
+#wpgSubmit:hover{background:#003A6B;}
+#wpgErr{color:#E31937;font-size:12.5px;min-height:18px;margin-top:10px;}
 </style>
 
 <!-- Header -->
 <header class="header">
   <div class="header-inner">
-    <h1 style="cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="scrollToTop()" title="点击返回顶部"><svg viewBox='0 0 110 44' xmlns='http://www.w3.org/2000/svg' style='height:36px;width:auto;display:block;'><defs><linearGradient id='rgrad' x1='0%' y1='0%' x2='100%' y2='0%'><stop offset='0%' stop-color='#3b82f6'/><stop offset='100%' stop-color='#10b981'/></linearGradient></defs><path d='M16,4 C13,-1 6,-1 6,7 C6,13 16,20 16,20 C16,20 26,13 26,7 C26,-1 19,-1 16,4 Z' fill='#ff6b35'/><text x='0' y='42' font-family='Arial Black, Arial, sans-serif' font-size='38' font-weight='900'><tspan fill='#ef4444'>i</tspan><tspan fill='#f97316'>H</tspan><tspan fill='url(#rgrad)'>R</tspan></text></svg> 开放式工作平台</h1>
+    <h1 style="cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="scrollToTop()" title="点击返回顶部"><svg viewBox='0 0 180 54' xmlns='http://www.w3.org/2000/svg' style='height:38px;width:auto;display:block;'><defs><linearGradient id='wpgArc' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='#009FE3'/><stop offset='55%' stop-color='#F37021'/><stop offset='100%' stop-color='#F37021'/></linearGradient></defs><ellipse cx='90' cy='27' rx='82' ry='24' fill='none' stroke='url(#wpgArc)' stroke-width='4'/><text x='24' y='41' font-family='Arial Black, Arial, sans-serif' font-size='36' font-weight='900'><tspan fill='#004E8C'>w</tspan><tspan fill='#00A651'>p</tspan><tspan fill='#E31937'>g</tspan></text></svg> 开放式工作平台</h1>
     <span class="header-time" id="headerTime"></span>
   </div>
 </header>
@@ -1651,7 +1651,7 @@ function mergeEmployeeData() {
   <div class="ws-item" style="cursor:pointer;gap:4px;" onclick="switchModule('todo')" title="点击跳转到待办事项">
     <span>📝</span>
     <span class="ws-value" id="todoStats">0 待办</span>
-    <span class="ws-label" id="todoUrgentStats" style="color:#dc2626;"></span>
+    <span class="ws-label" id="todoUrgentStats" style="color:#E31937;"></span>
   </div>
 </div>
 
@@ -2557,8 +2557,8 @@ function renderCityData(cityKey) {
         </ul>
       </div>
 
-      <div class="legal-card econ-comp-card" style="border-left: 4px solid #dc2626;">
-        <h4><span class="dot" style="background:#dc2626;"></span>⚖️ 经济补偿金计算标准</h4>
+      <div class="legal-card econ-comp-card" style="border-left: 4px solid #E31937;">
+        <h4><span class="dot" style="background:#E31937;"></span>⚖️ 经济补偿金计算标准</h4>
         <div class="econ-comp-summary">
           <div class="econ-row"><span class="econ-label">月社平工资（封顶基数）</span><span class="econ-value">¥${data.econCompAvg}/月</span></div>
           <div class="econ-row"><span class="econ-label">三倍封顶线</span><span class="econ-value highlight-red">¥${data.econCompCap}/月</span></div>
@@ -2567,12 +2567,12 @@ function renderCityData(cityKey) {
             <a class="econ-basis-link" href="${data.econCompBasis.url}" target="_blank" rel="noopener" title="点击查看官方数据来源">${data.econCompBasis.text}</a>
           </div>
         </div>
-        <div class="econ-formula" style="margin-top:10px;padding:10px;background:#fef2f2;border-radius:8px;font-size:13px;line-height:1.8;">
+        <div class="econ-formula" style="margin-top:10px;padding:10px;background:#FDECEF;border-radius:8px;font-size:13px;line-height:1.8;">
           <strong>🔢 计算公式：</strong><br>
           经济补偿金(N) = 离职前12个月月均工资 × 工作年限<br>
           违法解除赔偿金(2N) = N × 2<br>
           代通知金(N+1) = N + 1个月工资（仅适用于《劳动合同法》第40条情形）<br>
-          <span style="color:#dc2626;">⚠ 月薪超过三倍封顶线时，按封顶线计算，且年限封顶12年</span>
+          <span style="color:#E31937;">⚠ 月薪超过三倍封顶线时，按封顶线计算，且年限封顶12年</span>
         </div>
       </div>
     </div>
@@ -2809,7 +2809,7 @@ function renderNationalLaws() {
             <li onclick="showPolicyDetail('${l.title.replace(/'/g, "\\'")}', '${l.desc.replace(/'/g, "\\'")}——${l.chapters}', '${l.ref.replace(/'/g, "\\'")}', '全国', '${(l.url || '').replace(/'/g, "\\'")}')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);">
               <div style="font-weight:600;color:var(--text);">${l.title}</div>
               <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${l.desc.substring(0, 60)}...</div>
-              <div style="font-size:11px;color:#fb923c;margin-top:3px;">📖 ${l.ref}</div>
+              <div style="font-size:11px;color:#F37021;margin-top:3px;">📖 ${l.ref}</div>
             </li>
           `).join('')}
         </ul>
@@ -3529,7 +3529,7 @@ function renderEmployeeCard(e) {
           buildDetail('学籍状态', ec ? ec.study : e.study_status);
         var et = (ec && ec.eduType) ? ec.eduType : getEduType(e);
         if (et) {
-          var color = et.indexOf('全日制') !== -1 ? '#16a34a' : (et.indexOf('非日制') !== -1 ? '#dc2626' : '#64748b');
+          var color = et.indexOf('全日制') !== -1 ? '#00A651' : (et.indexOf('非日制') !== -1 ? '#E31937' : '#64748b');
           var eduLabel = String(eduLabelRaw || '').trim();
           if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
           else if (eduLabel === '大專' || /專/.test(eduLabel) || eduLabel === '技術學院') eduLabel = '大专';
@@ -4040,16 +4040,16 @@ function buildDashboard(){
 
   // 维度图表 —— 颜色方案 + 全量显示（无TOP限制）
   var DIM_COLORS = [
-    '#0b5fa9', '#e31c25', '#28a745', '#f2c94c', '#85c1e9',
-    '#0d3b66', '#9e9e9e', '#a9cce3', '#c0392b', '#5dade2',
-    '#34495e', '#f39c12', '#1f4e79', '#e74c3c', '#7f8c8d'
+    '#004E8C', '#E31937', '#00A651', '#F37021', '#5DADE2',
+    '#003A6B', '#9e9e9e', '#AED6F1', '#C0392B', '#85C1E9',
+    '#34495e', '#F39C12', '#1F4E79', '#E74C3C', '#7F8C8D'
   ];
   var dims = [
-    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#28a745','离职':'#e31c25'}},
-    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#0b5fa9','211':'#5dade2','dualfei':'#7f8c8d','noschool':'#bdbdbd'}},
+    {key:'status', title:'在职状态', vals:[['在职','在职'],['离职','离职']], colors:{'在职':'#00A651','离职':'#E31937'}},
+    {key:'schoolTag', title:'院校标签', vals:[['985','985'],['211','211'],['dualfei','双非'],['noschool','无院校']], tag:true, colors:{'985':'#004E8C','211':'#5DADE2','dualfei':'#7F8C8D','noschool':'#BDBDBD'}},
     {key:'eduType', title:'学习形式(CN)', vals:null, colors:{}}, // 动态色，按学历+形式组合
-    {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#0b5fa9','女':'#e31c25'}},
-    {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#0b5fa9','非主管':'#85c1e9'}},
+    {key:'gender', title:'性别', vals:[['男','男'],['女','女']], colors:{'男':'#004E8C','女':'#E31937'}},
+    {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#004E8C','非主管':'#85C1E9'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
     {key:'job_series', title:'职系', vals:null},           // ★ 新增：高级职系分类（S-銷售/T-技術/AC-行政等35类）
@@ -4150,7 +4150,7 @@ function buildDashboard(){
           subItems.forEach(function(s){
             var sPct = (s.cnt/subMax*100).toFixed(1);
             var sEsc = String(s.val).replace(/'/g,"\\'");
-            var sColor = sEsc.indexOf('非全日制') !== -1 ? '#dc2626' : '#16a34a';
+            var sColor = sEsc.indexOf('非全日制') !== -1 ? '#E31937' : '#00A651';
             subHtml += '<div class="dash-bar-row" onclick="jumpToRosterFilter(\'eduType\',\''+sEsc+'\')" title="点击跳转到花名册：'+s.label+'" data-label="'+sEsc.toLowerCase()+'" style="padding:3px 0;">'+
               '<div class="dash-bar-label" style="font-size:12px;opacity:0.85;">'+s.label+'</div>'+
               '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:'+sPct+'%;background:'+sColor+';"></div></div>'+
