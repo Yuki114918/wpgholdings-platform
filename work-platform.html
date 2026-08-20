@@ -1963,12 +1963,15 @@ function mergeEmployeeData() {
       <div class="roster-pagination-bottom" id="rosterPaginationBottom" style="display:none;"></div>
 
       <!-- 退休人员名册 -->
-      <div class="retire-roster-block" id="retireRosterBlock">
+      <div class="retire-roster-block collapsed" id="retireRosterBlock">
         <style>
           .retire-roster-block{margin-top:24px;padding:18px 20px;background:#fff;border:1px solid var(--border);border-radius:14px;}
-          .retire-roster-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+          .retire-roster-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;cursor:pointer;user-select:none;}
           .retire-roster-head h3{margin:0;font-size:17px;color:var(--primary);}
           .retire-roster-head .sub{font-size:12.5px;color:var(--text-secondary);}
+          .retire-roster-head .collapse-arrow{margin-left:auto;font-size:12px;color:var(--text-secondary);transition:transform .3s;}
+          .retire-roster-block.collapsed .retire-roster-head .collapse-arrow{transform:rotate(-90deg);}
+          .retire-roster-block.collapsed .retire-roster-body{display:none;}
           .retire-roster-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
           .retire-roster-bar label{font-size:13px;font-weight:600;color:var(--text);}
           .retire-roster-bar input[type=date]{padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;}
@@ -1978,7 +1981,7 @@ function mergeEmployeeData() {
           .retire-roster-btn:hover{opacity:.88;}
           .retire-roster-summary{margin:8px 0 10px;font-size:13px;color:var(--text);}
           .retire-roster-table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;}
-          table.retire-table{width:100%;border-collapse:collapse;font-size:13px;min-width:880px;}
+          table.retire-table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px;}
           table.retire-table th{position:sticky;top:0;background:var(--primary);color:#fff;padding:9px 10px;text-align:left;white-space:nowrap;z-index:2;}
           table.retire-table td{padding:8px 10px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
           table.retire-table tr:nth-child(even) td{background:#f8fbfd;}
@@ -1987,18 +1990,21 @@ function mergeEmployeeData() {
           .retire-tag.cn{background:#e8f1fa;color:#004E8C;}
           .retire-tag.other{background:#fef3e2;color:#b45309;}
         </style>
-        <div class="retire-roster-head">
+        <div class="retire-roster-head" onclick="toggleRetireRosterBlock()">
           <h3>🎂 退休人员名册</h3>
-          <span class="sub">大陆按渐进式延迟退休（男60→63 / 女主管55→58 / 女非主管50→55）；台湾及其他地区按 65 岁</span>
+          <span class="sub">大陆按渐进式延迟退休；台湾及其他地区按 65 岁（仅在职）</span>
+          <span class="collapse-arrow" id="retireRosterArrow">▼</span>
         </div>
-        <div class="retire-roster-bar">
-          <label>起始日期</label>
-          <input type="date" id="retireStartDate" onchange="renderRetireRoster()">
-          <span class="retire-roster-hint">统计区间：<strong>起始日期前推 6 个月</strong> ～ <strong>起始日期</strong>（含）内到龄退休人员</span>
-          <button class="retire-roster-btn" onclick="exportRetireRoster()" style="margin-left:auto;">⬇ 导出 CSV</button>
+        <div class="retire-roster-body" id="retireRosterBody">
+          <div class="retire-roster-bar">
+            <label>起始日期</label>
+            <input type="date" id="retireStartDate" onchange="renderRetireRoster()">
+            <span class="retire-roster-hint">统计区间：<strong>起始日期前推 6 个月</strong> ～ <strong>起始日期</strong>（含）内到龄退休人员</span>
+            <button class="retire-roster-btn" onclick="exportRetireRoster()" style="margin-left:auto;">⬇ 导出 CSV</button>
+          </div>
+          <div class="retire-roster-summary" id="retireRosterSummary"></div>
+          <div class="retire-roster-table-wrap" id="retireRosterTableWrap"></div>
         </div>
-        <div class="retire-roster-summary" id="retireRosterSummary"></div>
-        <div class="retire-roster-table-wrap" id="retireRosterTableWrap"></div>
       </div>
     </div>
   </section>
@@ -3430,7 +3436,10 @@ var RETIRE_ROSTER_CACHE = null;
 function getRetireRosterList() {
   if (RETIRE_ROSTER_CACHE) return RETIRE_ROSTER_CACHE;
   RETIRE_ROSTER_CACHE = [];
-  (EMPLOYEES_DATA || []).forEach(function(e){ var r = getRosterRetireInfo(e); if (r) RETIRE_ROSTER_CACHE.push(r); });
+  (EMPLOYEES_DATA || []).forEach(function(e){
+    if ((e.status || '') !== '在职') return;   // 仅在职
+    var r = getRosterRetireInfo(e); if (r) RETIRE_ROSTER_CACHE.push(r);
+  });
   return RETIRE_ROSTER_CACHE;
 }
 function _retireStartDate() {
@@ -3464,19 +3473,23 @@ function renderRetireRoster() {
   rows.forEach(function(r){ if (r.isCN) cnCount++; if (r.monthsToRetire < 60) hotCount++; });
   if (sum) sum.innerHTML = '共 <strong>' + rows.length + '</strong> 人（' + v.replace(/-/g, '/') + ' 前推 6 个月区间）&nbsp;·&nbsp; 大陆 ' + cnCount + ' 人 &nbsp;·&nbsp; 台湾/其他65岁 ' + (rows.length - cnCount) + ' 人 &nbsp;·&nbsp; <span style="color:#E31937;font-weight:700;">距退休&lt;5年 ' + hotCount + ' 人</span>';
   if (!rows.length) { wrap.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);font-size:13px;">该区间内暂无到龄退休人员</div>'; return; }
-  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>工号</th><th>姓名</th><th>邮箱</th><th>绩效主管</th><th>退休年龄</th><th>退休日期</th><th>类别</th><th>状态</th></tr></thead><tbody>';
+  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>工号</th><th>姓名</th><th>地区</th><th>工作子区域</th><th>邮箱</th><th>绩效主管</th><th>退休年龄</th><th>退休日期</th><th>类别</th><th>状态</th></tr></thead><tbody>';
   rows.forEach(function(r, i){
     var e = r.e;
     var name = e.ec_name || e.name || '-';
     var email = e.email || '-';
     var mgr = e.perf_mgr || e.mgr99 || '-';
     var hot = r.monthsToRetire < 60;
+    var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
+    var subRegion = e.sub_region || '-';
     var status = (e.status || '') === '在职' ? '在职' : '离职';
     html += '<tr class="' + (hot ? 'hot' : '') + '">'
       + '<td>' + (i + 1) + '</td>'
       + '<td>' + escHtml(e.group || '-') + '</td>'
       + '<td>' + escHtml(e.id || '-') + '</td>'
       + '<td>' + escHtml(name) + '</td>'
+      + '<td>' + escHtml(region) + '</td>'
+      + '<td>' + escHtml(subRegion) + '</td>'
       + '<td>' + (email === '-' ? '-' : '<a class="clickable-link" href="mailto:' + escHtml(email) + '">' + escHtml(email) + '</a>') + '</td>'
       + '<td>' + escHtml(mgr) + '</td>'
       + '<td>' + escHtml(r.ageLabel) + '</td>'
@@ -3494,17 +3507,25 @@ function initRetireRoster() {
     var d = new Date();
     inp.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-  renderRetireRoster();
+  var block = document.getElementById('retireRosterBlock');
+  try {
+    var saved = localStorage.getItem('wpgholdings_retire_collapsed');
+    if (saved === '0') block.classList.remove('collapsed');
+    else block.classList.add('collapsed');
+  } catch(e) {}
+  if (block && !block.classList.contains('collapsed')) renderRetireRoster();
 }
 function exportRetireRoster() {
   var v = _retireStartDate();
   var rows = _retireWindowRows();
-  var lines = ['集团,工号,姓名,邮箱,绩效主管,退休年龄,退休日期,类别,状态'];
+  var lines = ['集团,工号,姓名,地区,工作子区域,邮箱,绩效主管,退休年龄,退休日期,类别,状态'];
   rows.forEach(function(r){
     var e = r.e;
+    var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
+    var subRegion = e.sub_region || '-';
     var f = function(x){ return '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"'; };
-    lines.push([f(e.group || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'), f(e.email || '-'),
-                f(e.perf_mgr || e.mgr99 || '-'), f(r.ageLabel), f(r.retireLabel),
+    lines.push([f(e.group || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'), f(region), f(subRegion),
+                f(e.email || '-'), f(e.perf_mgr || e.mgr99 || '-'), f(r.ageLabel), f(r.retireLabel),
                 f(r.isCN ? '大陆·延迟退休' : '65岁'), f((e.status || '') === '在职' ? '在职' : '离职')].join(','));
   });
   var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -3513,6 +3534,14 @@ function exportRetireRoster() {
   a.download = '退休人员名册_' + v.replace(/-/g, '') + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function toggleRetireRosterBlock() {
+  var block = document.getElementById('retireRosterBlock');
+  if (!block) return;
+  block.classList.toggle('collapsed');
+  var collapsed = block.classList.contains('collapsed');
+  try { localStorage.setItem('wpgholdings_retire_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  if (!collapsed) renderRetireRoster();
 }
 
 function _eduFullTimeGradAge(edu) {
