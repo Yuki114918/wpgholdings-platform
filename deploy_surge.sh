@@ -20,7 +20,7 @@ rm -rf "$SURGE_DIST" "$HR_DIST" 2>/dev/null || true
 mkdir -p "$SURGE_DIST/icons" "$HR_DIST/icons"
 
 echo "==> [2/5] 同步工作台文件到 surge-dist (wpgholdings-todo)"
-cp "$REPO/index.html" "$REPO/work-platform.html" "$REPO/report.html" "$SURGE_DIST/"
+cp "$REPO/index.html" "$REPO/work-platform.html" "$REPO/report.html" "$REPO/landing.html" "$SURGE_DIST/"
 cp "$REPO/"*.enc "$SURGE_DIST/"
 cp "$REPO/chart.umd.min.js" "$SURGE_DIST/"
 cp "$REPO/manifest.json" "$REPO/sw.js" "$SURGE_DIST/"
