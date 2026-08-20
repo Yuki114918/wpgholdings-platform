@@ -174,6 +174,7 @@ function mergeEmployeeData() {
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
   buildEmployeeSearchIndex();
   runRosterSearch();  // 初始加载即展示分页列表
+  initRetireRoster(); // 退休人员名册初始化（默认当天，前推6个月）
   buildDashboard();
   // 安全兜底：确保看板在 DOM 完全就绪后渲染
   setTimeout(function(){ if(EMPLOYEES_DATA) buildDashboard(); }, 500);
@@ -1960,6 +1961,45 @@ function mergeEmployeeData() {
       </div>
       <div id="employeeCards" class="emp-cards-grid"></div>
       <div class="roster-pagination-bottom" id="rosterPaginationBottom" style="display:none;"></div>
+
+      <!-- 退休人员名册 -->
+      <div class="retire-roster-block" id="retireRosterBlock">
+        <style>
+          .retire-roster-block{margin-top:24px;padding:18px 20px;background:#fff;border:1px solid var(--border);border-radius:14px;}
+          .retire-roster-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+          .retire-roster-head h3{margin:0;font-size:17px;color:var(--primary);}
+          .retire-roster-head .sub{font-size:12.5px;color:var(--text-secondary);}
+          .retire-roster-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+          .retire-roster-bar label{font-size:13px;font-weight:600;color:var(--text);}
+          .retire-roster-bar input[type=date]{padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;}
+          .retire-roster-hint{font-size:12px;color:var(--text-secondary);}
+          .retire-roster-hint strong{color:var(--primary);}
+          .retire-roster-btn{padding:7px 14px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;cursor:pointer;}
+          .retire-roster-btn:hover{opacity:.88;}
+          .retire-roster-summary{margin:8px 0 10px;font-size:13px;color:var(--text);}
+          .retire-roster-table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;}
+          table.retire-table{width:100%;border-collapse:collapse;font-size:13px;min-width:880px;}
+          table.retire-table th{position:sticky;top:0;background:var(--primary);color:#fff;padding:9px 10px;text-align:left;white-space:nowrap;z-index:2;}
+          table.retire-table td{padding:8px 10px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
+          table.retire-table tr:nth-child(even) td{background:#f8fbfd;}
+          table.retire-table tr.hot td{color:#E31937;font-weight:600;}
+          .retire-tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+          .retire-tag.cn{background:#e8f1fa;color:#004E8C;}
+          .retire-tag.other{background:#fef3e2;color:#b45309;}
+        </style>
+        <div class="retire-roster-head">
+          <h3>🎂 退休人员名册</h3>
+          <span class="sub">大陆按渐进式延迟退休（男60→63 / 女主管55→58 / 女非主管50→55）；台湾及其他地区按 65 岁</span>
+        </div>
+        <div class="retire-roster-bar">
+          <label>起始日期</label>
+          <input type="date" id="retireStartDate" onchange="renderRetireRoster()">
+          <span class="retire-roster-hint">统计区间：<strong>起始日期前推 6 个月</strong> ～ <strong>起始日期</strong>（含）内到龄退休人员</span>
+          <button class="retire-roster-btn" onclick="exportRetireRoster()" style="margin-left:auto;">⬇ 导出 CSV</button>
+        </div>
+        <div class="retire-roster-summary" id="retireRosterSummary"></div>
+        <div class="retire-roster-table-wrap" id="retireRosterTableWrap"></div>
+      </div>
     </div>
   </section>
 
@@ -3281,12 +3321,17 @@ function _eduEnrollmentDelay(birthday) {
 }
 
 // ==================== 中国延迟退休（2025-01-01 起施行渐进式延迟）====================
-// 男：原60→63（每4个月延1个月）；女干部(原55)→58（每4个月延1）；女工人(原50)→55（每2个月延1）
+// 男：原60→63（每4个月延1个月）；女主管/管理职(原55)→58（每4个月延1）；女非主管/操作岗(原50)→55（每2个月延1）
 // 仅对 nationality==='中国'（CN）员工计算；非 CN（含台湾等）不显示。
+// 女职工类别由「是否主管」字段判定（TRUE/主管=管理职），不再使用岗位关键词。
+function _isSupervisorField(e) {
+  if (!e) return false;
+  var v = String(e.is_manager || e.is_supervisor || '').toUpperCase();
+  return (v === 'TRUE' || v === '主管' || v === '是');
+}
 function _isFemaleWorker(e) {
-  // 一线操作/生产/仓储/物流作业岗 → 视为「女工人」（原法定50岁）；其余默认「女干部」（原法定55岁）
-  var js = ((e.job_series || '') + ' ' + (e.position || '') + ' ' + (e.title || '')).toLowerCase();
-  return /運籌|倉務|船務|作業|操作|生產|產線|倉庫|司機|裝卸|包裝|理貨|物流|搬運|作業員/.test(js);
+  // 主管(TRUE)=管理职(原55岁)；非主管=操作岗(原50岁)
+  return !_isSupervisorField(e);
 }
 function getRetireInfo(e) {
   if (!e || (e.nationality || '') !== '中国') return null;     // 仅 CN
@@ -3337,7 +3382,7 @@ function retireDetailHtml(e) {
   if (!r) return '';
   var color = r.within5y ? '#E31937' : '#004E8C';
   var weight = r.within5y ? '700' : '600';
-  var typeLabel = (r.gender === '女') ? (r.isWorker ? '（女工人·原50）' : '（女干部·原55）') : '';
+  var typeLabel = (r.gender === '女') ? (r.isWorker ? '（非主管·原50）' : '（主管·原55）') : '';
   var tag = (r.monthsToRetire < 0)
     ? ' <span style="font-size:11px;">⚠已到法定退休年龄</span>'
     : ' <span style="font-size:11px;">⚠距退休' + r.monthsToRetire + '个月</span>';
@@ -3345,6 +3390,131 @@ function retireDetailHtml(e) {
     + '<span style="color:' + color + ';font-weight:' + weight + ';">'
     + r.ageLabel + typeLabel + ' · ' + r.retireLabel + (r.within5y ? tag : '') + '</span></div>';
 }
+function calcAgeLabel(e) {
+  // 按出生日期计算当前周岁（取整岁）
+  if (!e || !e.birthday) return '';
+  var m = String(e.birthday).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return '';
+  var by = +m[1], bm = +m[2], bd = +m[3];
+  var now = new Date();
+  var age = now.getFullYear() - by;
+  if ((now.getMonth() + 1) < bm || ((now.getMonth() + 1) === bm && now.getDate() < bd)) age--;
+  return age + ' 岁';
+}
+
+// ==================== 退休人员名册（CN 延迟退休 + 台湾/其他 65 岁）====================
+function getRosterRetireInfo(e) {
+  if (!e || !e.birthday) return null;
+  var m = String(e.birthday).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  var by = +m[1], bm = +m[2];
+  var cn = (e.nationality || '') === '中国';
+  var ry, rm, ageLabel, baseNote;
+  if (cn) {
+    var r = getRetireInfo(e);
+    if (!r) return null;
+    ry = r.retireYear; rm = r.retireMonth; ageLabel = r.ageLabel;
+    baseNote = (e.gender === '女') ? (r.isWorker ? '女·非主管(原50)' : '女·主管(原55)') : '男(原60)';
+    return { e: e, isCN: true, ageLabel: ageLabel, retireYear: ry, retireMonth: rm,
+             retireLabel: ry + '年' + rm + '月', baseNote: baseNote, monthsToRetire: r.monthsToRetire };
+  }
+  // 非 CN（台湾/香港/其他地区）：统一按 65 岁
+  ry = by + 65; rm = bm;
+  if (rm > 12) { ry += 1; rm -= 12; }
+  var now = new Date();
+  return { e: e, isCN: false, ageLabel: '65岁', retireYear: ry, retireMonth: rm,
+           retireLabel: ry + '年' + rm + '月', baseNote: '65岁',
+           monthsToRetire: (ry - now.getFullYear()) * 12 + (rm - (now.getMonth() + 1)) };
+}
+var RETIRE_ROSTER_CACHE = null;
+function getRetireRosterList() {
+  if (RETIRE_ROSTER_CACHE) return RETIRE_ROSTER_CACHE;
+  RETIRE_ROSTER_CACHE = [];
+  (EMPLOYEES_DATA || []).forEach(function(e){ var r = getRosterRetireInfo(e); if (r) RETIRE_ROSTER_CACHE.push(r); });
+  return RETIRE_ROSTER_CACHE;
+}
+function _retireStartDate() {
+  var inp = document.getElementById('retireStartDate');
+  var v = inp ? (inp.value || '').trim() : '';
+  return v || '2026-08-20';
+}
+function _retireWindowRows() {
+  var v = _retireStartDate();
+  var pm = v.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!pm) return [];
+  var endM = (+pm[1]) * 12 + (+pm[2] - 1);   // 起始年月（0基）
+  var startM = endM - 6;                     // 前推6个月
+  var rows = [];
+  getRetireRosterList().forEach(function(r){
+    var rm0 = r.retireYear * 12 + (r.retireMonth - 1);
+    if (rm0 >= startM && rm0 <= endM) rows.push(r);
+  });
+  rows.sort(function(a,b){
+    return (a.retireYear - b.retireYear) || (a.retireMonth - b.retireMonth) || String(a.e.id).localeCompare(String(b.e.id));
+  });
+  return rows;
+}
+function renderRetireRoster() {
+  var wrap = document.getElementById('retireRosterTableWrap');
+  var sum = document.getElementById('retireRosterSummary');
+  if (!wrap || !EMPLOYEES_DATA) return;
+  var v = _retireStartDate();
+  var rows = _retireWindowRows();
+  var cnCount = 0, hotCount = 0;
+  rows.forEach(function(r){ if (r.isCN) cnCount++; if (r.monthsToRetire < 60) hotCount++; });
+  if (sum) sum.innerHTML = '共 <strong>' + rows.length + '</strong> 人（' + v.replace(/-/g, '/') + ' 前推 6 个月区间）&nbsp;·&nbsp; 大陆 ' + cnCount + ' 人 &nbsp;·&nbsp; 台湾/其他65岁 ' + (rows.length - cnCount) + ' 人 &nbsp;·&nbsp; <span style="color:#E31937;font-weight:700;">距退休&lt;5年 ' + hotCount + ' 人</span>';
+  if (!rows.length) { wrap.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);font-size:13px;">该区间内暂无到龄退休人员</div>'; return; }
+  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>工号</th><th>姓名</th><th>邮箱</th><th>绩效主管</th><th>退休年龄</th><th>退休日期</th><th>类别</th><th>状态</th></tr></thead><tbody>';
+  rows.forEach(function(r, i){
+    var e = r.e;
+    var name = e.ec_name || e.name || '-';
+    var email = e.email || '-';
+    var mgr = e.perf_mgr || e.mgr99 || '-';
+    var hot = r.monthsToRetire < 60;
+    var status = (e.status || '') === '在职' ? '在职' : '离职';
+    html += '<tr class="' + (hot ? 'hot' : '') + '">'
+      + '<td>' + (i + 1) + '</td>'
+      + '<td>' + escHtml(e.group || '-') + '</td>'
+      + '<td>' + escHtml(e.id || '-') + '</td>'
+      + '<td>' + escHtml(name) + '</td>'
+      + '<td>' + (email === '-' ? '-' : '<a class="clickable-link" href="mailto:' + escHtml(email) + '">' + escHtml(email) + '</a>') + '</td>'
+      + '<td>' + escHtml(mgr) + '</td>'
+      + '<td>' + escHtml(r.ageLabel) + '</td>'
+      + '<td><strong>' + escHtml(r.retireLabel) + '</strong></td>'
+      + '<td><span class="retire-tag ' + (r.isCN ? 'cn' : 'other') + '">' + escHtml(r.isCN ? '大陆·延迟退休' : '65岁') + '</span></td>'
+      + '<td>' + status + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+function initRetireRoster() {
+  var inp = document.getElementById('retireStartDate');
+  if (inp && !inp.value) {
+    var d = new Date();
+    inp.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  renderRetireRoster();
+}
+function exportRetireRoster() {
+  var v = _retireStartDate();
+  var rows = _retireWindowRows();
+  var lines = ['集团,工号,姓名,邮箱,绩效主管,退休年龄,退休日期,类别,状态'];
+  rows.forEach(function(r){
+    var e = r.e;
+    var f = function(x){ return '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"'; };
+    lines.push([f(e.group || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'), f(e.email || '-'),
+                f(e.perf_mgr || e.mgr99 || '-'), f(r.ageLabel), f(r.retireLabel),
+                f(r.isCN ? '大陆·延迟退休' : '65岁'), f((e.status || '') === '在职' ? '在职' : '离职')].join(','));
+  });
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '退休人员名册_' + v.replace(/-/g, '') + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
 function _eduFullTimeGradAge(edu) {
   // 返回「6岁入学（9月前出生）算起的全日制毕业年龄」，未知返回 null
   // 9月及之后出生者实际毕业年龄 = 返回值 + 1
@@ -3655,10 +3825,11 @@ function renderEmployeeCard(e) {
       buildDetail('归属集团', e.group) +
       buildDetail('公司', e.company) +
       buildDetail('岗位', e.position) +
-      buildDetail('是否主管', isDeptManager(e) ? 'TRUE' : e.is_manager) +
+      buildDetail('是否主管', _isSupervisorField(e) ? 'TRUE' : 'FALSE') +
       /* ---- 基本信息 ---- */
       buildDetail('性别', e.gender) +
       buildDetail('出生日期', e.birthday) +
+      buildDetail('年龄', calcAgeLabel(e)) +
       retireDetailHtml(e) +
       buildDetail('用工类型', e.hire_type) +
       buildDetail('到职日期', e.join_date) +
