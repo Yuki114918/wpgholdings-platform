@@ -25,6 +25,7 @@ cp "$REPO/"*.enc "$SURGE_DIST/"
 cp "$REPO/chart.umd.min.js" "$SURGE_DIST/"
 cp "$REPO/manifest.json" "$REPO/sw.js" "$SURGE_DIST/"
 cp "$REPO/icon-192.png" "$REPO/icon-512.png" "$SURGE_DIST/icons/"
+cp -r "$REPO/images" "$SURGE_DIST/" 2>/dev/null || true
 
 echo "==> [3/5] 同步独立报告到 hr-report-dist (hr-insight-report)"
 cp "$REPO/standalone-report.html" "$HR_DIST/index.html"
