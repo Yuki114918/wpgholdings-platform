@@ -3279,6 +3279,72 @@ function _eduEnrollmentDelay(birthday) {
   var month = parseInt(m[2], 10);
   return (month >= 9) ? 1 : 0;
 }
+
+// ==================== 中国延迟退休（2025-01-01 起施行渐进式延迟）====================
+// 男：原60→63（每4个月延1个月）；女干部(原55)→58（每4个月延1）；女工人(原50)→55（每2个月延1）
+// 仅对 nationality==='中国'（CN）员工计算；非 CN（含台湾等）不显示。
+function _isFemaleWorker(e) {
+  // 一线操作/生产/仓储/物流作业岗 → 视为「女工人」（原法定50岁）；其余默认「女干部」（原法定55岁）
+  var js = ((e.job_series || '') + ' ' + (e.position || '') + ' ' + (e.title || '')).toLowerCase();
+  return /運籌|倉務|船務|作業|操作|生產|產線|倉庫|司機|裝卸|包裝|理貨|物流|搬運|作業員/.test(js);
+}
+function getRetireInfo(e) {
+  if (!e || (e.nationality || '') !== '中国') return null;     // 仅 CN
+  var g = (e.gender || '').trim();
+  if (!e.birthday || (g !== '男' && g !== '女')) return null;
+  var m = String(e.birthday).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  var by = parseInt(m[1], 10), bm = parseInt(m[2], 10);
+  var isWorker = (g === '女') && _isFemaleWorker(e);
+  var base, step, startY, capY, capM, capAge;
+  if (g === '男')       { base = 60; step = 4; startY = 1965; capY = 1976; capM = 9;  capAge = 63; }
+  else if (isWorker)   { base = 50; step = 2; startY = 1975; capY = 1984; capM = 11; capAge = 55; }
+  else                 { base = 55; step = 4; startY = 1970; capY = 1981; capM = 9;  capAge = 58; }
+  var retireAgeMonths;
+  if (by < startY) {
+    retireAgeMonths = base * 12;                                   // 改革前已超原法定年龄
+  } else if (by > capY || (by === capY && bm >= capM)) {
+    retireAgeMonths = capAge * 12;                                 // 已达封顶年龄
+  } else {
+    var monthsFromStart = (by - startY) * 12 + (bm - 1);
+    var delay = Math.floor(monthsFromStart / step) + 1;            // 每 step 个月延 1 个月
+    retireAgeMonths = base * 12 + delay;
+  }
+  // 退休年月 = 出生年月 + 退休年龄
+  var ry = by + Math.floor(retireAgeMonths / 12);
+  var rm = bm + (retireAgeMonths % 12);
+  if (rm > 12) { ry += 1; rm -= 12; }
+  var ageYears = Math.floor(retireAgeMonths / 12);
+  var ageMonths = retireAgeMonths % 12;
+  var ageLabel = ageYears + '岁' + (ageMonths ? ageMonths + '个月' : '');
+  // 距退休月数（相对当前）
+  var now = new Date();
+  var monthsToRetire = (ry - now.getFullYear()) * 12 + (rm - (now.getMonth() + 1));
+  var within5y = monthsToRetire < 60;                             // 距退休<5年(含已到龄)标红
+  return {
+    ageLabel: ageLabel,
+    retireYear: ry,
+    retireMonth: rm,
+    retireLabel: ry + '年' + rm + '月',
+    monthsToRetire: monthsToRetire,
+    within5y: within5y,
+    isWorker: isWorker,
+    gender: g
+  };
+}
+function retireDetailHtml(e) {
+  var r = getRetireInfo(e);
+  if (!r) return '';
+  var color = r.within5y ? '#E31937' : '#004E8C';
+  var weight = r.within5y ? '700' : '600';
+  var typeLabel = (r.gender === '女') ? (r.isWorker ? '（女工人·原50）' : '（女干部·原55）') : '';
+  var tag = (r.monthsToRetire < 0)
+    ? ' <span style="font-size:11px;">⚠已到法定退休年龄</span>'
+    : ' <span style="font-size:11px;">⚠距退休' + r.monthsToRetire + '个月</span>';
+  return '<div class="emp-detail"><span class="detail-label">预计退休(延迟后)</span>'
+    + '<span style="color:' + color + ';font-weight:' + weight + ';">'
+    + r.ageLabel + typeLabel + ' · ' + r.retireLabel + (r.within5y ? tag : '') + '</span></div>';
+}
 function _eduFullTimeGradAge(edu) {
   // 返回「6岁入学（9月前出生）算起的全日制毕业年龄」，未知返回 null
   // 9月及之后出生者实际毕业年龄 = 返回值 + 1
@@ -3593,6 +3659,7 @@ function renderEmployeeCard(e) {
       /* ---- 基本信息 ---- */
       buildDetail('性别', e.gender) +
       buildDetail('出生日期', e.birthday) +
+      retireDetailHtml(e) +
       buildDetail('用工类型', e.hire_type) +
       buildDetail('到职日期', e.join_date) +
       (e.tenure ? buildDetail('司龄', e.tenure) : '') +
