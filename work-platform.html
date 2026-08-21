@@ -4172,11 +4172,11 @@ function populateDashboardFilters() {
   if (!EMPLOYEES_DATA || !EMPLOYEES_DATA.length) return;
   var D = EMPLOYEES_DATA;
 
-  // 归属集团（归一化后去重）
+  // 归属集团（归一化后去重，显示友好名称）
   var groups = [...new Set(D.map(getNormGroup).filter(Boolean))].sort();
   var selG = document.getElementById('dashFilterGroup');
   if (selG) { selG.innerHTML = '<option value="">归属集团（所有）</option>' +
-    groups.map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join(''); }
+    groups.map(function(g){return '<option value="'+g+'">'+(GROUP_DISPLAY[g]||g)+'</option>';}).join(''); }
 
   // 工作子区域
   var regions = [...new Set(D.map(function(e){return e.sub_region||''}).filter(Boolean))].sort();
@@ -4414,6 +4414,7 @@ function buildDashboard(){
     {key:'is_supervisor', title:'主管职比例', vals:[['主管','主管'],['非主管','非主管']], colors:{'主管':'#004E8C','非主管':'#85C1E9'}},
     {key:'hire_type', title:'用工类型', vals:null},
     {key:'business_unit', title:'事业体', vals:null},
+    {key:'group', title:'归属集团', vals:null, displayMap:GROUP_DISPLAY, colors:{'WPIg':'#004E8C','AITg':'#E31937','SACg':'#00A651','YSNg':'#F37021','BSC':'#5DADE2','TGH':'#9b59b6','LOG':'#34495e','HOLDINGS':'#003A6B','GBG':'#7F8C8D'}},  // ★ 新增：归属集团分布
     {key:'job_series', title:'职系', vals:null},           // ★ 新增：高级职系分类（S-銷售/T-技術/AC-行政等35类）
     {key:'job_function', title:'Job Function', vals:null},   // 具体岗位（从position归一化，与职系联动）
     {key:'dept_99', title:'部门(99层)', vals:null, searchable:true},
@@ -4457,7 +4458,11 @@ function buildDashboard(){
     } else {
       var map = {};
       D.forEach(function(e){ var k = getDimValue(e, dim.key); if (k) map[k]=(map[k]||0)+1; });
-      counts = Object.keys(map).map(function(k){return {label:k, val:k, cnt:map[k]};});
+      counts = Object.keys(map).map(function(k){
+        // ★ displayMap：把规范码翻译成友好显示名（标签和跳转值都保留原始码）
+        var displayLabel = (dim.displayMap && dim.displayMap[k]) ? dim.displayMap[k] : k;
+        return {label:displayLabel, val:k, cnt:map[k]};
+      });
       counts.sort(function(a,b){return b.cnt-a.cnt;});
       // 高基数维度（职称/Job Function/部门等）显示 TOP 50，避免一次性生成海量 DOM 导致页面卡死
       if (counts.length > 50) counts = counts.slice(0, 50);
@@ -4562,7 +4567,8 @@ function jumpToRosterFilter(dim, val) {
   // 设置为真正的维度筛选（非文本搜索），避免佘瑞琦(总监)等不含'主管'文本的人被漏判
   var labelMap = {
     'is_supervisor': { '主管':'主管职', '非主管':'非主管职' },
-    'schoolTag': { '985':'985 院校', '211':'211 院校', 'dualfei':'双非院校', 'noschool':'无院校' }
+    'schoolTag': { '985':'985 院校', '211':'211 院校', 'dualfei':'双非院校', 'noschool':'无院校' },
+    'group': GROUP_DISPLAY  // ★ 归属集团跳转到花名册时显示友好名称
   };
   var lbl = (labelMap[dim] && labelMap[dim][val]) || val;
   rosterDimFilter = { key: dim, val: val, label: '筛选：' + lbl };
