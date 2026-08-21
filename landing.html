@@ -56,17 +56,6 @@
   .halo{position:absolute;left:50%;top:16%;width:110%;height:110%;transform:translate(-50%,-8%);border-radius:50%;background:radial-gradient(circle,rgba(255,94,138,.28),rgba(155,107,255,.18) 45%,transparent 70%);filter:blur(6px);animation:haloPulse 3.6s ease-in-out infinite;z-index:0}
   @keyframes haloPulse{0%,100%{opacity:.65;transform:translate(-50%,-8%) scale(1)}50%{opacity:1;transform:translate(-50%,-8%) scale(1.08)}}
 
-  /* ===== 打招呼气泡 ===== */
-  .speech{position:absolute;top:-2%;left:50%;transform:translateX(-50%);z-index:20;background:#fff;border:2px solid #FFD9E2;border-radius:24px;padding:14px 24px;box-shadow:0 18px 44px rgba(255,94,138,.28);min-width:min(72vw,380px);max-width:min(86vw,480px);opacity:0;animation:bubblePop .7s cubic-bezier(.22,1.36,.48,1) 2.5s both}
-  .speech::after{content:"";position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);border:12px solid transparent;border-top:14px solid #FFD9E2}
-  .speech::before{content:"";position:absolute;left:calc(50% - 9px);bottom:-8px;border:9px solid transparent;border-top:10px solid #fff;z-index:1}
-  @keyframes bubblePop{0%{opacity:0;transform:translateX(-50%) scale(.5) translateY(20px)}60%{opacity:1;transform:translateX(-50%) scale(1.06) translateY(-4px)}100%{opacity:1;transform:translateX(-50%) scale(1) translateY(0)}}
-  .speech h2{font-size:clamp(20px,2.8vw,30px);font-weight:900;color:var(--ink);line-height:1.4;word-break:break-word;white-space:normal;overflow:visible}
-  .speech h2 .hl{color:#FF2E7E}
-  .caret{display:inline-block;width:3px;height:1.05em;background:#FF2E7E;vertical-align:-0.15em;margin-left:3px;animation:blink .8s steps(1) infinite}
-  @keyframes blink{50%{opacity:0}}
-  .speech p{margin-top:6px;font-size:13px;color:#9CA3AF;letter-spacing:1px}
-
   /* ===== 功能卡飞入（均匀环绕小i的椭圆轨道） ===== */
   .fly-layer{position:absolute;inset:0;z-index:10;pointer-events:none}
   .fly-card{position:absolute;width:min(36vw,200px);background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:12px;box-shadow:0 18px 44px rgba(60,40,120,.16);opacity:0;cursor:default;transition:transform .35s,box-shadow .35s}
@@ -82,7 +71,7 @@
   .fc4{left:79.6%;top:37.9%;animation:pptFly4 1.2s cubic-bezier(.22,1.36,.48,1) 3.85s both}   /* 右中: 员工花名册 */
   .fc5{left:11.3%;top:61.9%;animation:pptFly5 1.2s cubic-bezier(.22,1.36,.48,1) 4.1s both}    /* 左下: 人力数据看板 */
   .fc6{left:67.9%;top:61.9%;animation:pptFly6 1.2s cubic-bezier(.22,1.36,.48,1) 4.35s both}   /* 右下: 待办事项 */
-  .fc7{left:39.6%;top:3.9%;animation:pptFly7 1.2s cubic-bezier(.22,1.36,.48,1) 4.6s both}    /* 正上: HR法令查询 */
+  .fc7{left:39.6%;top:1.5%;animation:pptFly7 1.2s cubic-bezier(.22,1.36,.48,1) 4.6s both}    /* 正上: HR法令查询 */
   .fc8{left:39.6%;top:71.9%;animation:pptFly8 1.2s cubic-bezier(.22,1.36,.48,1) 4.85s both}   /* 正下: 劳动争议查询 */
   @keyframes pptFly1{0%{opacity:0;transform:translate(-280px,-220px) rotate(-22deg) scale(.5)}70%{opacity:1;transform:translate(18px,14px) rotate(4deg) scale(1.06)}100%{opacity:1;transform:none}}
   @keyframes pptFly2{0%{opacity:0;transform:translate(280px,-220px) rotate(22deg) scale(.5)}70%{opacity:1;transform:translate(-18px,14px) rotate(-4deg) scale(1.06)}100%{opacity:1;transform:none}}
@@ -106,7 +95,7 @@
     .fc1{left:7%;top:16%} .fc2{left:auto;right:7%;top:16%}
     .fc3{left:-1%;top:39%} .fc4{left:auto;right:-1%;top:39%}
     .fc5{left:7%;top:62%} .fc6{left:auto;right:7%;top:62%}
-    .fc7{left:calc(50% - 80px);top:6%} .fc8{left:calc(50% - 80px);top:76%}
+    .fc7{left:calc(50% - 80px);top:4%} .fc8{left:calc(50% - 80px);top:78%}
   }
 
   /* 迷你预览图（示例图） */
@@ -171,12 +160,6 @@
   <div class="stage">
     <div class="halo"></div>
 
-    <!-- 打招呼气泡 -->
-    <div class="speech" id="speech">
-      <h2 id="speechText"></h2>
-      <p>—— 这是你的开放式工作平台 ——</p>
-    </div>
-
     <!-- 小i 去背 3D 出场 -->
     <div class="mascot-wrap">
       <div class="mascot-3d" id="mascot3d">
@@ -208,7 +191,7 @@
 <div class="cta">
   <div class="cta-box">
     <h2>和小 i 一起，把 HR 做得更聪明</h2>
-    <p>打开工作台，即刻体验花名册、看板、法令与劳动争议全场景能力</p>
+    <p>从洞察到决策，从合规到体验，让每一次人事互动都更智能、更高效</p>
     <a href="https://wpgholdings-todo.surge.sh/" target="_blank">🚀 立即进入平台</a>
   </div>
 </div>
@@ -256,17 +239,6 @@ MODULES.forEach((m,i)=>{
   d.innerHTML = '<div class="pv">'+m.svg+'</div><h3><i></i>'+m.nm+'</h3><p>'+m.ds+'</p>';
   grid.appendChild(d);
 });
-
-/* ================= 打字机打招呼（完整显示不截断） ================= */
-const txt = 'Hi 我是人事小 i，这是我的工作平台';
-const el = document.getElementById('speechText');
-let ti = 0;
-setTimeout(()=>{
-  const iv = setInterval(()=>{
-    el.textContent = txt.slice(0, ++ti);
-    if(ti >= txt.length){ clearInterval(iv); }
-  }, 70);
-}, 2650);
 
 /* ================= 滚动入场 + 数字滚动 ================= */
 const io = new IntersectionObserver(es=>{
