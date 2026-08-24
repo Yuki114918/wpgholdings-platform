@@ -487,7 +487,7 @@ async function wpgAfterUnlock(){
     if(ec){ ec.innerHTML=ext; executeScripts(ext, ec); initReportCharts(); initReportScrollSpy(); }
   }catch(e){ console.error('外部报告解密失败', e); if(ec) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
   try{ var int=await wpgLoadReportFile('report-comparison.html.enc');
-    if(ic){ ic.innerHTML=int; if(typeof initComparisonCharts==='function') initComparisonCharts(); }
+    if(ic){ ic.innerHTML=int; executeScripts(int, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); }
   }catch(e){ console.error('内部对比解密失败', e); if(ic) ic.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 内部资料对比加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
   try{ var trd=await wpgLoadReportFile('report-hr-trends.html.enc');
     if(tc) tc.innerHTML=trd;
