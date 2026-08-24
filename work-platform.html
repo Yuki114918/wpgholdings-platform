@@ -27,15 +27,17 @@ var EMPLOYEES_DATA=null;
 var MGR99_NAME_SET={};
 var TOTAL_CHUNKS=10;
 var DATA_BASES = [
-  location.hostname.indexOf('github.io') !== -1 ? 'data/' : 'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
+  // GitHub Pages 对 2MB 大文件在国内网络下极慢/卡死，统一走 jsDelivr；失败再回退 GitHub Pages
+  'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
   'https://yuki114918.github.io/wpgholdings-platform/data/'
 ];
 var DATA_BASE = DATA_BASES[0];
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); }
-function wpgUpdateLoadProgress(loaded, total, failed){
+function wpgUpdateLoadProgress(loaded, total, failed, extra){
   var txt = '⏳ 数据加载中（'+loaded+'/'+total+'）';
   if(failed && failed.length) txt += ' · 失败 '+failed.length+' 块';
+  if(extra) txt += extra;
   var el = document.getElementById('dashboardLoading');
   if(el){ el.style.color='var(--text-secondary)'; el.textContent = txt; }
 }
@@ -71,6 +73,20 @@ async function wpgLoadOneChunk(idx){
   }
   return {ok:false, idx:idx, error:lastErr};
 }
+// 限制并发池，避免一次开 10 个连接导致网络拥塞
+async function wpgRunWithConcurrency(tasks, concurrency){
+  var results = new Array(tasks.length);
+  var running = 0, index = 0;
+  return new Promise(function(resolve, reject){
+    function startNext(){
+      if (index >= tasks.length) { if (running === 0) resolve(results); return; }
+      var i = index++;
+      running++;
+      tasks[i]().then(function(r){ results[i]=r; running--; startNext(); }, function(e){ results[i]=e; running--; startNext(); });
+    }
+    for (var k=0; k<Math.min(concurrency, tasks.length); k++) startNext();
+  });
+}
 async function wpgStartRosterLoad(){
   window._employeesLoading = true;
   window._employeesLoadError = null;
@@ -80,10 +96,14 @@ async function wpgStartRosterLoad(){
     if(ok) done++; else failed.push(idx);
     wpgUpdateLoadProgress(done+failed.length, TOTAL_CHUNKS, failed);
   }
-  // 并发加载 10 个花名册分块（国内网络下单个 6-8 秒，顺序加载会卡 60-80 秒，并发可大幅压缩）
+  // 并发加载 10 个花名册分块：限制 3 并发，国内网络/浏览器连接数更友好
   var chunkTasks = [];
-  for(var idx=1; idx<=TOTAL_CHUNKS; idx++) chunkTasks.push(wpgLoadOneChunk(idx));
-  var chunkResults = await Promise.all(chunkTasks);
+  for(var idx=1; idx<=TOTAL_CHUNKS; idx++){
+    (function(i){
+      chunkTasks.push(function(){ return wpgLoadOneChunk(i).then(function(r){ onProgress(i, r.ok); return r; }); });
+    })(idx);
+  }
+  var chunkResults = await wpgRunWithConcurrency(chunkTasks, 3);
   chunkResults.forEach(function(r){ if(!r.ok) failed.push(r.idx); });
   done = TOTAL_CHUNKS - failed.length;
   wpgUpdateLoadProgress(TOTAL_CHUNKS, TOTAL_CHUNKS, failed);
@@ -91,6 +111,7 @@ async function wpgStartRosterLoad(){
   var eduOk=false;
   for(var b2=0; b2<DATA_BASES.length; b2++){
     try{
+      wpgUpdateLoadProgress(done+failed.length, TOTAL_CHUNKS, failed, '，正在加载学历数据…');
       var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v18.js.enc', 60000);
       var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
       eduOk=true; break;
