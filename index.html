@@ -3949,8 +3949,10 @@ function renderEmployeeCard(e) {
           buildDetail('专业', ec ? ec.major : e.major) +
           buildDetail('毕业日期', ec ? ec.grad : e.grad_date) +
           buildDetail('学籍状态', ec ? ec.study : e.study_status);
-        var et = (ec && ec.eduType && ec.eduType.indexOf('外派') === -1) ? ec.eduType : getEduType(e);
-        if (et && et.indexOf('外派') === -1 && e.is_overseas !== 'TRUE') {
+        var workLoc = ((e.city || '') + ' ' + (e.sub_region || '')).trim().toLowerCase();
+        var isTaipei = workLoc.indexOf('台北') !== -1 || workLoc.indexOf('taipei') !== -1;
+        var et = (!isTaipei && ec && ec.eduType && ec.eduType.indexOf('外派') === -1) ? ec.eduType : getEduType(e);
+        if (et && et.indexOf('外派') === -1 && e.is_overseas !== 'TRUE' && !isTaipei) {
           var color = et.indexOf('全日制') !== -1 ? '#00A651' : (et.indexOf('非日制') !== -1 ? '#E31937' : '#64748b');
           var eduLabel = String(eduLabelRaw || '').trim();
           if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
