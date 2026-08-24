@@ -64,7 +64,7 @@ async function wpgLoadOneChunk(idx){
   var lastErr = null;
   for(var b=0; b<DATA_BASES.length; b++){
     try{
-      var js = await wpgFetchData(DATA_BASES[b]+'employees-data-part'+idx+'.js.enc?v=16', 60000);
+      var js = await wpgFetchData(DATA_BASES[b]+'employees-data-part'+idx+'.js.enc?v=17', 60000);
       var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
       return {ok:true, idx:idx, source:DATA_BASES[b]};
     }catch(e){ lastErr=e; console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 加载失败:', e.message||e); }
@@ -91,7 +91,7 @@ async function wpgStartRosterLoad(){
   var eduOk=false;
   for(var b2=0; b2<DATA_BASES.length; b2++){
     try{
-      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=16', 60000);
+      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education.js.enc?v=17', 60000);
       var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
       eduOk=true; break;
     }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 加载失败:', e.message||e); }
@@ -3560,6 +3560,7 @@ function _eduFullTimeGradAge(edu) {
 }
 function getEduType(e) {
   if (!e || e.nationality !== '中国') return null; // 只判断 CN
+  if (e.is_overseas === 'TRUE') return null;      // 外派人员免判断
   var by = _parseYear4(e.birthday);
   var edu = (e.education || '').trim();
   if (!by || !edu) return null;
@@ -3834,6 +3835,27 @@ function renderEmployeeCard(e) {
       + '</details>';
   }
 
+  // EC 多状态履历（离职再入职 / 主职兼任等）
+  var ecRecordsHtml = '';
+  if (e.ec_records && e.ec_records.length > 1) {
+    ecRecordsHtml = '<details class="work-details"><summary>📝 EC 履历记录（' + e.ec_records.length + ' 条）</summary>'
+      + e.ec_records.map(function(r){
+          var isRecActive = (r.status || '') === '在職';
+          var badge = '<span class="emp-badge' + (isRecActive ? '' : ' inactive') + '" style="margin-left:8px;">' + (isRecActive ? '在职' : '离职') + '</span>';
+          var primaryTag = r.primary === 'Y'
+            ? '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:#e2e8f0;color:#475569;margin-left:6px;">主职</span>'
+            : '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:#f1f5f9;color:#64748b;margin-left:6px;">兼任</span>';
+          return '<div class="we-item">'
+            + '<div><strong>' + escHtml(r.dept_99 || r.dept_100 || '-') + '</strong>' + badge + primaryTag + '</div>'
+            + '<small>' + escHtml(r.position || '-') + (r.sub_region ? ' · ' + escHtml(r.sub_region) : '') + '</small>'
+            + (r.perf_mgr ? '<br/><small>绩效主管：' + escHtml(r.perf_mgr) + '</small>' : '')
+            + (r.join_date || r.leave_date ? '<br/><small>' + (r.join_date || '') + ' ~ ' + (r.leave_date || '至今') + '</small>' : '')
+            + (r.event_reason ? '<br/><small>事件：' + escHtml(r.event_reason) + '</small>' : '')
+            + '</div>';
+        }).join('')
+      + '</details>';
+  }
+
   return '<div class="emp-card">' +
     '<div class="emp-header">' +
       '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
@@ -3889,8 +3911,8 @@ function renderEmployeeCard(e) {
           buildDetail('专业', ec ? ec.major : e.major) +
           buildDetail('毕业日期', ec ? ec.grad : e.grad_date) +
           buildDetail('学籍状态', ec ? ec.study : e.study_status);
-        var et = (ec && ec.eduType) ? ec.eduType : getEduType(e);
-        if (et) {
+        var et = (ec && ec.eduType && ec.eduType.indexOf('外派') === -1) ? ec.eduType : getEduType(e);
+        if (et && et.indexOf('外派') === -1 && e.is_overseas !== 'TRUE') {
           var color = et.indexOf('全日制') !== -1 ? '#00A651' : (et.indexOf('非日制') !== -1 ? '#E31937' : '#64748b');
           var eduLabel = String(eduLabelRaw || '').trim();
           if (eduLabel === '大學' || eduLabel === '本科') eduLabel = '本科';
@@ -3922,6 +3944,7 @@ function renderEmployeeCard(e) {
       /* ---- 展开区域 ---- */
       perfHtml +
       workHtml +
+      ecRecordsHtml +
     '</div></div>';
 }
 
