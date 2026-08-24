@@ -3270,7 +3270,9 @@ var trad2simp = {
   '廳':'厅','樓':'楼','兩':'两','實':'实','質':'质','認':'认','證':'证',
   '護':'护','協':'协','參':'参','據':'据','壓':'压','與':'与','準':'准',
   '進':'进','達':'达','連':'连','擴':'扩','選':'选','標':'标','衛':'卫',
-  '築':'筑','豈':'岂','陣':'阵','獎':'奖','學':'学', // 學 already exists but ensure
+  '築':'筑','豈':'岂','陣':'阵','獎':'奖',
+  // 补充：常见姓名繁体（饒→饶 等）
+  '饒':'饶','車':'车','於':'于',
 };
 
 function toSimplified(str) {
@@ -3595,6 +3597,8 @@ function _eduFullTimeGradAge(edu) {
 function getEduType(e) {
   if (!e || e.nationality !== '中国') return null; // 只判断 CN
   if (e.is_overseas === 'TRUE') return null;      // 外派人员免判断
+  var workLoc = ((e.city || '') + ' ' + (e.sub_region || '')).trim().toLowerCase();
+  if (workLoc.indexOf('台北') !== -1 || workLoc.indexOf('taipei') !== -1) return null; // 台北工作地点免判断
   var by = _parseYear4(e.birthday);
   var edu = (e.education || '').trim();
   if (!by || !edu) return null;
