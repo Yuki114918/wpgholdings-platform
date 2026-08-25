@@ -3927,7 +3927,7 @@ function renderEmployeeCard(e) {
       buildDetail('手机', e.phone, 'tel') +
       buildDetail('邮箱', e.email, 'mail') +
       /* ---- 工作地点 ---- */
-      buildDetail('工作城市', e.city) +
+      buildDetail('工作城市', getCityDisplay(getNormCity(e)) || e.city) +
       buildDetail('工作子区域', e.sub_region) +
       /* ---- 紧急联络人 ---- */
       (e.emerg_name ? ('<div class="emp-detail"><span class="detail-label">紧急联络人</span>'
@@ -4100,15 +4100,39 @@ var JOB_SERIES_NORM_MAP = {
   '信管': 'I-資訊', '財務': 'AF-財會', '業務效能 (BEPG)': 'AB-營運幕僚'
 };
 
-// 城市：纯英文名 → City前缀代码（以City前缀为规范）
+// 城市：纯英文名 / 旧编码 → 规范 City前缀代码（用于去重合并）
 var CITY_NORM_MAP = {
   'Taipei': 'City1-Taipei', 'Taoyuan': 'City2-Taoyuan', 'Hsinchu': 'City3-Hsinchu',
   'Kaohsiung': 'City4-Kaohsiung', 'Hongkong': 'City5-Hongkong', 'Shenzhen': 'City6-Shenzhen',
   'Beijing': 'City9-Beijing', 'Suzhou': 'City13-Suzhou', 'Chengdu': 'City10-Chengdu',
   'Hangzhou': 'City14-Hangzhou', 'Nanjing': 'City16-Nanjing', 'Wuhan': 'City19-Wuhan',
   'Shanghai': 'City8-Shanghai', 'Dongguan': 'City39-Dongguan', "Xi'an": 'City24-Xi\'an',
-  'Zhuhai': 'City17-Zhuhai', 'Chongqing': 'City38-Chongqing', 'Qingdao': 'City15-Qingdao'
+  'Zhuhai': 'City17-Zhuhai', 'Chongqing': 'City38-Chongqing', 'Qingdao': 'City15-Qingdao',
+  'Singapore': 'City12-Singapore', 'HF-Hefei': 'Hefei'
 };
+
+// 城市显示名：规范代码 / 英文名 → 中文
+var CITY_DISPLAY = {
+  'City1-Taipei': '台北', 'City2-Taoyuan': '桃园', 'City3-Hsinchu': '新竹',
+  'City4-Kaohsiung': '高雄', 'City5-Hongkong': '香港', 'City6-Shenzhen': '深圳',
+  'City8-Shanghai': '上海', 'City9-Beijing': '北京', 'City10-Chengdu': '成都',
+  'City12-Singapore': '新加坡', 'City13-Suzhou': '苏州', 'City14-Hangzhou': '杭州',
+  'City15-Qingdao': '青岛', 'City16-Nanjing': '南京', 'City17-Zhuhai': '珠海',
+  'City19-Wuhan': '武汉', 'City24-Xi\'an': '西安', 'City38-Chongqing': '重庆',
+  'City39-Dongguan': '东莞', 'City73-Taichung': '台中',
+  'Taipei': '台北', 'Taoyuan': '桃园', 'Hsinchu': '新竹', 'Kaohsiung': '高雄',
+  'Hongkong': '香港', 'Shenzhen': '深圳', 'Beijing': '北京', 'Suzhou': '苏州',
+  'Chengdu': '成都', 'Hangzhou': '杭州', 'Nanjing': '南京', 'Wuhan': '武汉',
+  'Shanghai': '上海', 'Dongguan': '东莞', "Xi'an": '西安', 'Zhuhai': '珠海',
+  'Chongqing': '重庆', 'Qingdao': '青岛', 'Singapore': '新加坡', 'Taichung': '台中',
+  'Hefei': '合肥', 'HF-Hefei': '合肥', 'Guangzhou': '广州', 'Xiamen': '厦门',
+  'Dalian': '大连', 'Fuzhou': '福州', 'Fuqing': '福清', 'Ningbo': '宁波',
+  'Changsha': '长沙', 'Shenyang': '沈阳', 'Mianyang': '绵阳', 'Yantai': '烟台',
+  'Tianjin': '天津', 'Zhengzhou': '郑州', 'Jinan': '济南', 'Shijiazhuang': '石家庄',
+  'Taiyuan': '太原'
+};
+
+function getCityDisplay(cityCode) { return CITY_DISPLAY[cityCode] || cityCode || ''; }
 
 // 统一归一化函数
 function normalizeField(val, normMap) {
@@ -4253,11 +4277,11 @@ function populateDashboardFilters() {
   if (selJ) { selJ.innerHTML = '<option value="">职系（所有）</option>' +
     series.map(function(j){return '<option value="'+j+'">'+j+'</option>';}).join(''); }
 
-  // 工作城市（归一化后去重）
+  // 工作城市（归一化后去重，显示中文）
   var cities = [...new Set(D.map(getNormCity).filter(Boolean))].sort();
   var selC = document.getElementById('dashFilterCity');
   if (selC) { selC.innerHTML = '<option value="">工作城市（所有）</option>' +
-    cities.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join(''); }
+    cities.map(function(c){return '<option value="'+c+'">'+(CITY_DISPLAY[c]||c)+'</option>';}).join(''); }
 
   // 主管/非主管
   var selSup = document.getElementById('dashFilterSupervisor');
