@@ -482,13 +482,13 @@ async function wpgAfterUnlock(){
   if(ic) ic.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 内部资料对比加载中…</div>';
   if(tc) tc.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ HR最新趋势加载中…</div>';
   try{
-    var [ext, _] = await Promise.all([wpgLoadReportFile('report-content-v1.html.enc'), waitForChart(10000)]);
+    var [ext, _] = await Promise.all([wpgLoadReportFile('report-content-v2.html.enc'), waitForChart(10000)]);
     if(ec){ ec.innerHTML=ext; executeScripts(ext, ec); initReportCharts(); initReportScrollSpy(); }
   }catch(e){ console.error('外部报告解密失败', e); if(ec) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
-  try{ var int=await wpgLoadReportFile('report-comparison-v1.html.enc');
+  try{ var int=await wpgLoadReportFile('report-comparison-v2.html.enc');
     if(ic){ ic.innerHTML=int; if(typeof initComparisonCharts==='function') initComparisonCharts(); }
   }catch(e){ console.error('内部对比解密失败', e); if(ic) ic.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 内部资料对比加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
-  try{ var trd=await wpgLoadReportFile('report-hr-trends-v1.html.enc');
+  try{ var trd=await wpgLoadReportFile('report-hr-trends-v2.html.enc');
     if(tc) tc.innerHTML=trd;
   }catch(e){ console.error('趋势解密失败', e); if(tc) tc.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ HR最新趋势加载失败：'+(e&&e.message?e.message:e)+'</div>'; }
 }
@@ -627,7 +627,14 @@ function switchTopTab(which, btn) {
   if (trd) trd.style.display = 'none';
   // 显示目标
   if (which === 'internal') {
-    if (int) { int.style.display = 'block'; initComparisonCharts(); }
+    if (int) {
+      int.style.display = 'block';
+      if (typeof initComparisonCharts === 'function') initComparisonCharts();
+      // 内部页签初始为隐藏，图表在解锁时于 0 尺寸容器创建；显示后强制 resize 触发重绘
+      requestAnimationFrame(function(){
+        try { int.querySelectorAll('canvas').forEach(function(cv){ if (cv._chart) cv._chart.resize(); }); } catch(e){}
+      });
+    }
   } else if (which === 'trends') {
     if (trd) trd.style.display = 'block';
   } else {
@@ -650,8 +657,9 @@ window.switchInternalTab = function(id, btn) {
   });
 };
 
-// 内部对比图表初始化（Chart.js 加载后自动执行）
-window.initComparisonCharts = function() {
+// 内部对比图表初始化（旧版本已弃用：原本只处理 cmpHeadcount 等不存在的 canvas，属死代码）
+// 实际 46 张图由解密片段 report-comparison 内定义的 window.initComparisonCharts 接管，故此处重命名以避免冲突
+window.initComparisonChartsLegacy = function() {
   if (!window.Chart) {
     if (!window._chartInitRetries) window._chartInitRetries = 0;
     if (window._chartInitRetries < 10) { window._chartInitRetries++; setTimeout(function(){ window.initComparisonCharts(); }, 300); return; }
