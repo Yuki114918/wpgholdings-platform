@@ -439,7 +439,8 @@ var WPG_ITER = 150000;
 // 报告内容源：GitHub Pages 优先（公开仓库带 CORS，国内比 jsDelivr 稳），github.io 同域时走本地
 var REPORT_BASES = [
   location.hostname.indexOf('github.io') !== -1 ? '' : 'https://yuki114918.github.io/wpgholdings-platform/',
-  'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/'
+  'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/',
+  'https://gcore.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/'
 ];
 var WPG_KEY=null;
 async function wpgFetchDecrypt(url, timeoutMs){
@@ -454,14 +455,21 @@ async function wpgFetchDecrypt(url, timeoutMs){
   }finally{ clearTimeout(t); }
 }
 async function wpgLoadReportFile(name){
+  var cached = wpgGetCachedReport(name);
   var lastErr = null;
   for(var b=0; b<REPORT_BASES.length; b++){
-    try{
-      var base = REPORT_BASES[b];
-      var url = base ? base + name : name;
-      return await wpgFetchDecrypt(url, 60000);
-    }catch(e){ lastErr=e; console.warn(name+' 从 '+REPORT_BASES[b]+' 加载失败:', e.message||e); }
+    for(var attempt=0; attempt<2; attempt++){
+      try{
+        var base = REPORT_BASES[b];
+        var url = base ? base + name : name;
+        var timeout = attempt===0 ? 20000 : 50000;
+        var html = await wpgFetchDecrypt(url, timeout);
+        wpgSetCachedReport(name, html);
+        return html;
+      }catch(e){ lastErr=e; console.warn(name+' 从 '+REPORT_BASES[b]+' 尝试'+(attempt+1)+'失败:', e.message||e); }
+    }
   }
+  if(cached){ console.warn(name+' 在线加载失败，使用缓存版本'); return cached; }
   throw lastErr || new Error(name+' 全部源加载失败');
 }
 function waitForChart(timeoutMs){
@@ -479,19 +487,31 @@ async function wpgAfterUnlock(){
   var ec=document.getElementById('reportBodyContent');
   var ic=document.getElementById('internalReportBody');
   var tc=document.getElementById('trendsReportBody');
-  if(ec) ec.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 外部数据快讯加载中…</div>';
-  if(ic) ic.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 内部资料对比加载中…</div>';
-  if(tc) tc.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ HR最新趋势加载中…</div>';
+  function renderExternal(html){ if(!ec) return; ec.innerHTML=html; executeScripts(html, ec); initReportCharts(); initReportScrollSpy(); }
+  function renderInternal(html){ if(!ic) return; ic.innerHTML=html; executeScripts(html, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); }
+  function renderTrends(html){ if(tc) tc.innerHTML=html; }
+
+  // 先尝试从缓存立即渲染，减少重复进入时的等待
+  var cachedExt = wpgGetCachedReport('report-content-v4.html.enc');
+  var cachedInt = wpgGetCachedReport('report-comparison-v3.html.enc');
+  var cachedTrd = wpgGetCachedReport('report-hr-trends-v2.html.enc');
+  if(cachedExt) renderExternal(cachedExt); else if(ec) ec.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 外部数据快讯加载中…</div>';
+  if(cachedInt) renderInternal(cachedInt); else if(ic) ic.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 内部资料对比加载中…</div>';
+  if(cachedTrd) renderTrends(cachedTrd); else if(tc) tc.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ HR最新趋势加载中…</div>';
+
+  // 优先拉取并渲染外部报告（默认首页），用户最快看到内容
   try{
     var [ext, _] = await Promise.all([wpgLoadReportFile('report-content-v4.html.enc'), waitForChart(10000)]);
-    if(ec){ ec.innerHTML=ext; executeScripts(ext, ec); initReportCharts(); initReportScrollSpy(); }
-  }catch(e){ console.error('外部报告解密失败', e); if(ec) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
+    if(!cachedExt || ext !== cachedExt) renderExternal(ext);
+  }catch(e){ console.error('外部报告解密失败', e); if(ec && !cachedExt) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
+
+  // 内部与趋势在后台加载，不阻塞首页呈现
   try{ var int=await wpgLoadReportFile('report-comparison-v3.html.enc');
-    if(ic){ ic.innerHTML=int; executeScripts(int, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); }
-  }catch(e){ console.error('内部对比解密失败', e); if(ic) ic.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 内部资料对比加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
+    if(!cachedInt || int !== cachedInt) renderInternal(int);
+  }catch(e){ console.error('内部对比解密失败', e); if(ic && !cachedInt) ic.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 内部资料对比加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
   try{ var trd=await wpgLoadReportFile('report-hr-trends-v2.html.enc');
-    if(tc) tc.innerHTML=trd;
-  }catch(e){ console.error('趋势解密失败', e); if(tc) tc.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ HR最新趋势加载失败：'+(e&&e.message?e.message:e)+'</div>'; }
+    if(!cachedTrd || trd !== cachedTrd) renderTrends(trd);
+  }catch(e){ console.error('趋势解密失败', e); if(tc && !cachedTrd) tc.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ HR最新趋势加载失败：'+(e&&e.message?e.message:e)+'</div>'; }
 }
 
 function wpgB64ToBuf(b64){ var s=atob(b64), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i); return u.buffer; }
@@ -502,6 +522,21 @@ async function wpgDeriveKey(password){
 }
 async function wpgDecrypt(key, buf){ var iv=buf.slice(0,12), data=buf.slice(12); return crypto.subtle.decrypt({name:'AES-GCM', iv:iv}, key, data); }
 async function wpgDecryptText(key, buf){ return new TextDecoder().decode(await wpgDecrypt(key, buf)); }
+// sessionStorage 缓存解密后的报告（文件名带版本，版本 bump 自动失效；关闭标签即清空）
+function wpgReportCacheKey(name){ return 'wpgReportCache:'+name; }
+function wpgGetCachedReport(name){
+  try{
+    var item = sessionStorage.getItem(wpgReportCacheKey(name));
+    if(!item) return null;
+    var obj = JSON.parse(item);
+    if(!obj || !obj.html) return null;
+    if(Date.now() - obj.ts > 30*60*1000) return null; // 同一会话 30 分钟
+    return obj.html;
+  }catch(e){ return null; }
+}
+function wpgSetCachedReport(name, html){
+  try{ sessionStorage.setItem(wpgReportCacheKey(name), JSON.stringify({html:html, ts:Date.now()})); }catch(e){}
+}
 async function wpgUnlock(pw){
   try {
     var key = await wpgDeriveKey(pw);

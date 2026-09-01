@@ -27,17 +27,20 @@ var EMPLOYEES_DATA=null;
 var MGR99_NAME_SET={};
 var TOTAL_CHUNKS=10;
 var DATA_BASES = [
-  // GitHub Pages 对 2MB 大文件在国内网络下极慢/卡死，统一走 jsDelivr；失败再回退 GitHub Pages
+  // jsDelivr 主节点 + GCore 镜像 + GitHub Pages 回退；GCore 在国内部分网络更快
   'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
+  'https://gcore.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
   'https://yuki114918.github.io/wpgholdings-platform/data/'
 ];
 var DATA_BASE = DATA_BASES[0];
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); }
+function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
 function wpgUpdateLoadProgress(loaded, total, failed, extra){
   var txt = '⏳ 数据加载中（'+loaded+'/'+total+'）';
   if(failed && failed.length) txt += ' · 失败 '+failed.length+' 块';
   if(extra) txt += extra;
+  else if(window.WPG_LOAD_EXTRA) txt += window.WPG_LOAD_EXTRA;
   var el = document.getElementById('dashboardLoading');
   if(el){ el.style.color='var(--text-secondary)'; el.textContent = txt; }
 }
@@ -65,12 +68,19 @@ async function wpgFetchData(url, timeoutMs){
 async function wpgLoadOneChunk(idx){
   var lastErr = null;
   for(var b=0; b<DATA_BASES.length; b++){
-    try{
-      var js = await wpgFetchData(DATA_BASES[b]+'employees-data-v18-part'+idx+'.js.enc', 60000);
-      var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
-      return {ok:true, idx:idx, source:DATA_BASES[b]};
-    }catch(e){ lastErr=e; console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 加载失败:', e.message||e); }
+    for(var attempt=0; attempt<2; attempt++){
+      try{
+        window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+ (attempt?'重试 ':'') + wpgBaseName(DATA_BASES[b]);
+        wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
+        var timeout = attempt===0 ? 16000 : 45000;
+        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-v18-part'+idx+'.js.enc', timeout);
+        window.WPG_LOAD_EXTRA = '';
+        var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
+        return {ok:true, idx:idx, source:DATA_BASES[b]};
+      }catch(e){ lastErr=e; console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 尝试'+(attempt+1)+'失败:', e.message||e); }
+    }
   }
+  window.WPG_LOAD_EXTRA = '';
   return {ok:false, idx:idx, error:lastErr};
 }
 // 限制并发池，避免一次开 10 个连接导致网络拥塞
@@ -90,38 +100,42 @@ async function wpgRunWithConcurrency(tasks, concurrency){
 async function wpgStartRosterLoad(){
   window._employeesLoading = true;
   window._employeesLoadError = null;
-  var failed = [];
-  var done = 0;
+  window._wpgFailed = [];
+  window._wpgDone = 0;
   function onProgress(idx, ok){
-    if(ok) done++; else failed.push(idx);
-    wpgUpdateLoadProgress(done+failed.length, TOTAL_CHUNKS, failed);
+    if(ok) window._wpgDone++; else window._wpgFailed.push(idx);
+    wpgUpdateLoadProgress(window._wpgDone+window._wpgFailed.length, TOTAL_CHUNKS, window._wpgFailed);
   }
-  // 并发加载 10 个花名册分块：限制 3 并发，国内网络/浏览器连接数更友好
+  // 并发加载 10 个花名册分块：限制 5 并发，国内网络/浏览器连接数更友好
   var chunkTasks = [];
   for(var idx=1; idx<=TOTAL_CHUNKS; idx++){
     (function(i){
       chunkTasks.push(function(){ return wpgLoadOneChunk(i).then(function(r){ onProgress(i, r.ok); return r; }); });
     })(idx);
   }
-  var chunkResults = await wpgRunWithConcurrency(chunkTasks, 3);
-  chunkResults.forEach(function(r){ if(!r.ok) failed.push(r.idx); });
-  done = TOTAL_CHUNKS - failed.length;
-  wpgUpdateLoadProgress(TOTAL_CHUNKS, TOTAL_CHUNKS, failed);
+  var chunkResults = await wpgRunWithConcurrency(chunkTasks, 5);
+  chunkResults.forEach(function(r){ if(!r.ok) window._wpgFailed.push(r.idx); });
+  window._wpgDone = TOTAL_CHUNKS - window._wpgFailed.length;
+  wpgUpdateLoadProgress(TOTAL_CHUNKS, TOTAL_CHUNKS, window._wpgFailed);
   // 加载 EC 学历详情（独立加密文件，按工号建索引）
   var eduOk=false;
   for(var b2=0; b2<DATA_BASES.length; b2++){
-    try{
-      wpgUpdateLoadProgress(done+failed.length, TOTAL_CHUNKS, failed, '，正在加载学历数据…');
-      var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v18.js.enc', 60000);
-      var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
-      eduOk=true; break;
-    }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 加载失败:', e.message||e); }
+    for(var attempt2=0; attempt2<2; attempt2++){
+      try{
+        wpgUpdateLoadProgress(window._wpgDone+window._wpgFailed.length, TOTAL_CHUNKS, window._wpgFailed, '，正在加载学历数据…');
+        var timeout2 = attempt2===0 ? 16000 : 45000;
+        var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v18.js.enc', timeout2);
+        var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
+        eduOk=true; break;
+      }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 尝试'+(attempt2+1)+'失败:', e.message||e); }
+    }
+    if(eduOk) break;
   }
   if(!eduOk) console.warn('EC学历数据最终加载失败');
   window._employeesLoading = false;
-  if(failed.length){
-    window._employeesLoadError = failed;
-    wpgShowLoadError(failed);
+  if(window._wpgFailed.length){
+    window._employeesLoadError = window._wpgFailed;
+    wpgShowLoadError(window._wpgFailed);
     return;
   }
   mergeEmployeeData();
