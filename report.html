@@ -493,7 +493,7 @@ async function wpgAfterUnlock(){
 
   // 先尝试从缓存立即渲染，减少重复进入时的等待
   var cachedExt = wpgGetCachedReport('report-content-v4.html.enc');
-  var cachedInt = wpgGetCachedReport('report-comparison-v3.html.enc');
+  var cachedInt = wpgGetCachedReport('report-comparison-v4.html.enc');
   var cachedTrd = wpgGetCachedReport('report-hr-trends-v2.html.enc');
   if(cachedExt) renderExternal(cachedExt); else if(ec) ec.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 外部数据快讯加载中…</div>';
   if(cachedInt) renderInternal(cachedInt); else if(ic) ic.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;">⏳ 内部资料对比加载中…</div>';
@@ -506,7 +506,7 @@ async function wpgAfterUnlock(){
   }catch(e){ console.error('外部报告解密失败', e); if(ec && !cachedExt) ec.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 外部数据快讯加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
 
   // 内部与趋势在后台加载，不阻塞首页呈现
-  try{ var int=await wpgLoadReportFile('report-comparison-v3.html.enc');
+  try{ var int=await wpgLoadReportFile('report-comparison-v4.html.enc');
     if(!cachedInt || int !== cachedInt) renderInternal(int);
   }catch(e){ console.error('内部对比解密失败', e); if(ic && !cachedInt) ic.innerHTML='<div style="padding:40px;text-align:center;color:#7f1d1d;">⚠️ 内部资料对比加载失败：'+(e&&e.message?e.message:e)+'<br><button onclick="wpgAfterUnlock()" style="margin-top:10px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;">重新加载</button></div>'; }
   try{ var trd=await wpgLoadReportFile('report-hr-trends-v2.html.enc');
