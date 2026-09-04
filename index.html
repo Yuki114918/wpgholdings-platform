@@ -3669,6 +3669,34 @@ function getEduTypeDetail(e) {
   return eduLabel + '（' + et + '）';
 }
 
+// 综合 EC 学历 + 工作经历/年龄推导，返回最终学习形式
+// 规则：EC 或推导任何一方判定为非全日制，即按非全日制；否则全日制
+function getEffectiveEduType(e) {
+  var ec = (typeof EMPLOYEE_EDU_MAP !== 'undefined' && e && e.id)
+    ? (EMPLOYEE_EDU_MAP[String(Number(e.id))] || EMPLOYEE_EDU_MAP[String(e.id)] || null)
+    : null;
+  var ecEt = (ec && ec.eduType) || '';
+  var derived = getEduType(e);
+  // EC 端已明确为非全日制（含「非日制」）
+  if (ecEt.indexOf('非') !== -1) return '非全日制';
+  // 推导端判定为非全日制（工作/年龄冲突）
+  if (derived === '非全日制') return '非全日制';
+  // EC 或推导任一为全日制
+  if (ecEt.indexOf('全日制') !== -1 || derived === '全日制') return '全日制';
+  return derived;
+}
+
+// 最终学历标签：非全日制不享受 985/211 标签
+function applyEduTags(e) {
+  var tags = getSchoolTags(e.school, e.education);
+  var et = getEffectiveEduType(e);
+  var nonFullTime = (et === '非全日制');
+  e._is985 = tags.is985 && !nonFullTime;
+  e._is211 = tags.is211 && !nonFullTime;
+  e._noSchool = tags.noSchool;
+  e._eduType = et;
+}
+
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
 var employeeSearchResults = [];
 var employeeDisplayPage = 1;
@@ -3695,12 +3723,8 @@ function buildEmployeeSearchIndex() {
   if (!EMPLOYEES_DATA) return;
   EMP_SEARCH_INDEX = EMPLOYEES_DATA.map(function(e) {
     var t = employeeSearchText(e);
-    var tags = getSchoolTags(e.school, e.education);
-    e._is985 = tags.is985;
-    e._is211 = tags.is211;
-    e._noSchool = tags.noSchool;
-    var tagTxt = (tags.is985 ? ' 985' : '') + (tags.is211 ? ' 211' : '');
-    e._eduType = getEduType(e); // 最高学历全日制/非全日制（仅CN）
+    applyEduTags(e);
+    var tagTxt = (e._is985 ? ' 985' : '') + (e._is211 ? ' 211' : '');
     var eduTxt = e._eduType ? ' ' + e._eduType : '';
     return t + ' ' + toSimplified(t) + tagTxt + eduTxt;
   });
@@ -3965,7 +3989,8 @@ function renderEmployeeCard(e) {
           buildDetail('学籍状态', ec ? ec.study : e.study_status);
         var workLoc = ((e.city || '') + ' ' + (e.sub_region || '')).trim().toLowerCase();
         var isTaipei = workLoc.indexOf('台北') !== -1 || workLoc.indexOf('taipei') !== -1;
-        var et = (!isTaipei && ec && ec.eduType && ec.eduType.indexOf('外派') === -1) ? ec.eduType : getEduType(e);
+        var ecEt = (ec && ec.eduType) || '';
+        var et = e._eduType || getEffectiveEduType(e);
         if (et && et.indexOf('外派') === -1 && e.is_overseas !== 'TRUE' && !isTaipei) {
           var color = et.indexOf('全日制') !== -1 ? '#00A651' : (et.indexOf('非日制') !== -1 ? '#E31937' : '#64748b');
           var eduLabel = String(eduLabelRaw || '').trim();
@@ -3974,7 +3999,11 @@ function renderEmployeeCard(e) {
           else if (eduLabel === '碩士') eduLabel = '硕士';
           else if (eduLabel === '博士') eduLabel = '博士';
           var combined = eduLabel + '（' + et + '）';
-          var title = (ec && ec.eduType) ? '基于毕业年份+工作+年龄推导(EC学历)' : '基于出生年份+工作经历+毕业日期推算';
+          var title = '基于出生年份+工作经历+毕业日期交叉验证';
+          if (ecEt) {
+            if (ecEt !== et) title = 'EC原标「' + ecEt + '」，工作经历交叉验证为「' + et + '」';
+            else title = 'EC学历：' + ecEt + '（工作经历交叉验证一致）';
+          }
           html += '<div class="emp-detail"><span class="detail-label">学习形式</span>'
             + '<span style="display:inline-block;padding:1px 9px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:' + color + ';" title="' + title + '">' + combined + '</span></div>';
         }
@@ -4429,16 +4458,12 @@ function buildDashboard(){
   if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_is985')) {
     console.warn('[Dashboard] _is985 not found, recomputing...');
     for (var si = 0; si < EMPLOYEES_DATA.length; si++) {
-      var st = getSchoolTags(EMPLOYEES_DATA[si].school, EMPLOYEES_DATA[si].education);
-      EMPLOYEES_DATA[si]._is985 = st.is985;
-      EMPLOYEES_DATA[si]._is211 = st.is211;
-      EMPLOYEES_DATA[si]._noSchool = st.noSchool;
-      EMPLOYEES_DATA[si]._eduType = getEduType(EMPLOYEES_DATA[si]);
+      applyEduTags(EMPLOYEES_DATA[si]);
     }
   } else if (EMPLOYEES_DATA.length > 0 && !EMPLOYEES_DATA[0].hasOwnProperty('_eduType')) {
     console.warn('[Dashboard] _eduType not found, recomputing...');
     for (var si2 = 0; si2 < EMPLOYEES_DATA.length; si2++) {
-      EMPLOYEES_DATA[si2]._eduType = getEduType(EMPLOYEES_DATA[si2]);
+      applyEduTags(EMPLOYEES_DATA[si2]);
     }
   }
 
