@@ -73,7 +73,7 @@ async function wpgLoadOneChunk(idx){
         window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+ (attempt?'重试 ':'') + wpgBaseName(DATA_BASES[b]);
         wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
         var timeout = attempt===0 ? 16000 : 45000;
-        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-v18-part'+idx+'.js.enc', timeout);
+        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-v19-part'+idx+'.js.enc', timeout);
         window.WPG_LOAD_EXTRA = '';
         var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
         return {ok:true, idx:idx, source:DATA_BASES[b]};
@@ -124,7 +124,7 @@ async function wpgStartRosterLoad(){
       try{
         wpgUpdateLoadProgress(window._wpgDone+window._wpgFailed.length, TOTAL_CHUNKS, window._wpgFailed, '，正在加载学历数据…');
         var timeout2 = attempt2===0 ? 16000 : 45000;
-        var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v18.js.enc', timeout2);
+        var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v19.js.enc', timeout2);
         var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
         eduOk=true; break;
       }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 尝试'+(attempt2+1)+'失败:', e.message||e); }
