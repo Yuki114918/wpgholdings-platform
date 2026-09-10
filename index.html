@@ -1606,6 +1606,8 @@ function mergeEmployeeData() {
     background:#fff; color:var(--text); cursor:pointer; outline:none; min-width:130px;
   }
   .dash-filter-select:focus { border-color:var(--primary); }
+  .dash-filter-date { padding:5px 8px; border:1px solid var(--border); border-radius:8px; font-size:13px; background:#fff; color:var(--text); outline:none; font-family:inherit; }
+  .dash-filter-date:focus { border-color:var(--primary); }
   .dash-filter-btn {
     padding:6px 14px; border:1px solid var(--border); border-radius:8px;
     background:#f1f5f9; color:var(--text); font-size:12px; cursor:pointer; transition:all .15s;
@@ -1821,7 +1823,7 @@ function mergeEmployeeData() {
         <span class="card-arrow">→</span>
       </a>
 
-      <a class="quick-card" href="https://5f2a668b40d54420a98a63194ab6fa8e.app.workbuddy.link/index.html" target="_blank" rel="noopener">
+      <a class="quick-card" href="https://5f2a668b40d54420a98a63194ab6fa8e.app.workbuddy.link/" target="_blank" rel="noopener">
         <div class="card-icon purple">📈</div>
         <div class="card-info">
           <h3>简道云仪表盘</h3>
@@ -2078,6 +2080,7 @@ function mergeEmployeeData() {
         <option value="在职">在职</option>
         <option value="离职">离职</option>
       </select>
+      <input type="date" id="dashFilterDate" class="dash-filter-date" onchange="applyDashboardFilter()" title="选择日期后配合在职状态：在职=当天入职，离职=当天离职；不选状态=当天入职+离职全部">
       <select id="dashFilterCity" class="dash-filter-select" onchange="applyDashboardFilter()">
         <option value="">工作城市（所有）</option>
       </select>
@@ -4281,6 +4284,13 @@ function getDashboardFilteredData() {
       var k = keys[i], v = dashboardFilters[k];
       if (!v) continue;
       if (k === 'status') { if ((e.status||'') !== v) return false; }
+      else if (k === 'date') {
+        // 日期筛选：配合在职状态 = 当天入职(在职) / 当天离职(离职)；未选状态 = 当天入职或离职
+        var st = dashboardFilters.status || '';
+        if (st === '在职') { if ((e.join_date||'') !== v) return false; }
+        else if (st === '离职') { if ((e.leave_date||'') !== v) return false; }
+        else { if ((e.join_date||'') !== v && (e.leave_date||'') !== v) return false; }
+      }
       else if (k === 'group') { if (getNormGroup(e) !== v) return false; }
       else if (k === 'sub_region') { if ((e.sub_region||'') !== v) return false; }
       else if (k === 'job_series') { if (getNormJobSeries(e) !== v) return false; }
@@ -4389,6 +4399,8 @@ function applyDashboardFilter() {
   dashboardFilters.sub_region = selR ? selR.value : '';
   dashboardFilters.job_series = selJ ? selJ.value : '';
   dashboardFilters.status = selS ? selS.value : '';
+  var selDate = document.getElementById('dashFilterDate');
+  dashboardFilters.date = selDate ? selDate.value : '';
   dashboardFilters.city = selC ? selC.value : '';
   dashboardFilters.is_supervisor = selSup ? selSup.value : '';
   dashboardFilters.work_region = selWR ? selWR.value : '';
@@ -4427,7 +4439,7 @@ function applyDashboardFilter() {
 
 function clearDashboardFilters() {
   dashboardFilters = {};
-  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus','dashFilterCity','dashFilterSupervisor','dashFilterWorkRegion','dashFilterJobFunction'];
+  var ids = ['dashFilterGroup','dashFilterSubRegion','dashFilterJobSeries','dashFilterStatus','dashFilterDate','dashFilterCity','dashFilterSupervisor','dashFilterWorkRegion','dashFilterJobFunction'];
   ids.forEach(function(id){ var el=document.getElementById(id); if(el) el.selectedIndex=0; });
   buildDashboard();
 }
