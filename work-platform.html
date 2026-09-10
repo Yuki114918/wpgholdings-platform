@@ -3975,7 +3975,7 @@ function renderEmployeeCard(e) {
       /* ---- 地址 ---- */
       buildDetail('家庭地址', e.address) +
       buildDetail('派驻地址', e.dispatch_addr) +
-      /* ---- 教育背景（数据源：员工花名册-Java-20260811-EC学历；匹配不到回退平台原值）---- */
+      /* ---- 教育背景（数据源：员工花名册-Java-20260910-EC学历；匹配不到回退平台原值）---- */
       (function(){
         var ec = (typeof EMPLOYEE_EDU_MAP !== 'undefined' && e && e.id)
           ? (EMPLOYEE_EDU_MAP[String(Number(e.id))] || EMPLOYEE_EDU_MAP[String(e.id)] || null)
