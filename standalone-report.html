@@ -6,20 +6,43 @@
 <title>HR 数据洞察报告 · 独立参考版</title>
 <meta name="description" content="数据洞察报告 - 电子元器件分销行业 HR 决策支持">
 <script>
-/* Chart.js 加载：cdnjs → bootcdn → 本地 chart.umd.min.js 兜底，避免图表空白 */
+/* Chart.js 加载：多源轮询 + 加载后校验 window.Chart。
+   注意：被截断/损坏的脚本同样会触发 onload（Surge 免费 CDN 对 >100KB 文件会截断），
+   因此必须校验 window.Chart 是否真的存在，否则自动切换下一源，避免「内容能看、图表全空」。 */
 (function(){
-  function tryLoad(src){
+  var SRC = [
+    'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js',
+    'https://cdn.bootcdn.net/ajax/libs/Chart.js/4.5.0/chart.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js',
+    'https://lib.baomitu.com/Chart.js/4.5.0/chart.umd.min.js',
+    'https://unpkg.com/chart.js@4.5.0/dist/chart.umd.min.js',
+    'https://yuki114918.github.io/wpgholdings-platform/chart.umd.min.js',
+    'chart.umd.min.js'
+  ];
+  var i = 0;
+  function next(){
+    if(i >= SRC.length){
+      window._chartLoadError = true;
+      console.warn('[Chart] 全部 Chart.js 源均不可用，图表无法显示');
+      try{ document.dispatchEvent(new Event('wpg-chart-failed')); }catch(e){}
+      return;
+    }
+    var src = SRC[i++];
     var s = document.createElement('script');
     s.src = src;
-    s.onerror = function(){
-      if(src.indexOf('cdnjs.cloudflare') !== -1){ tryLoad('https://cdn.bootcdn.net/ajax/libs/Chart.js/4.5.0/chart.umd.min.js'); }
-      else if(src.indexOf('bootcdn') !== -1){ tryLoad('chart.umd.min.js'); }
-      else { window._chartLoadError = true; console.warn('[Chart] All Chart.js sources failed'); }
+    s.onload = function(){
+      if(window.Chart){
+        window._chartLoaded = true; window._chartSrc = src;
+        try{ document.dispatchEvent(new Event('wpg-chart-ready')); }catch(e){}
+      } else {
+        console.warn('[Chart] 源无效（未定义 Chart），切换下一源：' + src);
+        next();
+      }
     };
-    s.onload = function(){ window._chartLoaded = true; };
+    s.onerror = function(){ console.warn('[Chart] 加载失败，切换下一源：' + src); next(); };
     document.head.appendChild(s);
   }
-  tryLoad('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js');
+  next();
 })();
 </script>
 <style>
@@ -487,7 +510,7 @@ async function wpgAfterUnlock(){
   var ic=document.getElementById('internalReportBody');
   var tc=document.getElementById('trendsReportBody');
   function renderExternal(html){ if(!ec) return; ec.innerHTML=html; executeScripts(html, ec); initReportCharts(); initReportScrollSpy(); }
-  function renderInternal(html){ if(!ic) return; ic.innerHTML=html; if(typeof initComparisonCharts==='function') initComparisonCharts(); }
+  function renderInternal(html){ if(!ic) return; ic.innerHTML=html; executeScripts(html, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); wpgBootstrapCharts(); }
   function renderTrends(html){ if(tc) tc.innerHTML=html; }
 
   // 先尝试从缓存立即渲染，减少重复进入时的等待
@@ -649,6 +672,57 @@ function executeScripts(html, container) {
 
 // 顶部页签切换：外部数据快讯 / 内部资料对比 / HR最新趋势
 // 内容已内联，无需 fetch，直接 show/hide
+// ===== 图表引导器：Chart.js 可能晚于内容就绪；持续补初始化 + 修正画布尺寸 =====
+// 背景：内部报告 tab 初始 display:none，图表若在 0 尺寸容器中创建则不会重绘；
+// 且 Chart.js 若加载较慢，一次性 init 会因 window.Chart 未就绪而整体失败。
+function wpgBootstrapCharts(){
+  if(window._cmpBootTimer) return;
+  var tries = 0;
+  function pass(){
+    tries++;
+    try{ if(typeof window.initComparisonCharts === 'function') window.initComparisonCharts(); }catch(e){}
+    var root = document.getElementById('internalReportBody');
+    var int = document.getElementById('tab-internal');
+    var visible = int && getComputedStyle(int).display !== 'none';
+    if(root && visible){
+      try{
+        root.querySelectorAll('canvas').forEach(function(cv){
+          if(!cv._chart) return;
+          var p = cv.parentElement;
+          if(p && p.offsetParent === null) return;   // 所属子页签隐藏时不 resize，避免再次压成 0
+          if(!cv.width || !cv.height || (p && (cv.width !== p.clientWidth || cv.height !== p.clientHeight))){
+            cv._chart.resize();
+          }
+        });
+      }catch(e){}
+    }
+    var all = 0, ready = 0;
+    if(root) root.querySelectorAll('canvas').forEach(function(cv){ all++; if(cv._chart) ready++; });
+    var done = all > 0 && ready >= all && !!window.Chart;
+    if(done || tries > 150 || (window._chartLoadError && tries > 25)){
+      clearInterval(window._cmpBootTimer); window._cmpBootTimer = null;
+      if(done) console.info('[Chart] 全部 ' + all + ' 张图表已就绪（来源：' + (window._chartSrc || '未知') + '）');
+    }
+  }
+  window._cmpBootTimer = setInterval(pass, 400);
+  pass();
+}
+// Chart.js 迟到时（多源切换成功）立即重启引导器
+document.addEventListener('wpg-chart-ready', function(){
+  try{ if(window._cmpBootTimer){ clearInterval(window._cmpBootTimer); window._cmpBootTimer = null; } wpgBootstrapCharts(); }catch(e){}
+});
+document.addEventListener('wpg-chart-failed', function(){
+  try{
+    var root = document.getElementById('internalReportBody');
+    if(root && !root.querySelector('canvas._chart')){
+      var tip = document.createElement('div');
+      tip.style.cssText = 'margin:12px 0;padding:10px 12px;background:#fffbeb;border-left:3px solid #d97706;border-radius:4px;font-size:12px;color:#92400e;';
+      tip.textContent = '图表脚本（Chart.js）未能加载，图形暂不可用；表格与文字数据不受影响，请刷新重试。';
+      root.insertBefore(tip, root.firstChild);
+    }
+  }catch(e){}
+});
+
 function switchTopTab(which, btn) {
   var bar = document.getElementById('topTabBar');
   if (bar) bar.querySelectorAll('.top-tab-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -669,6 +743,7 @@ function switchTopTab(which, btn) {
       requestAnimationFrame(function(){
         try { int.querySelectorAll('canvas').forEach(function(cv){ if (cv._chart) cv._chart.resize(); }); } catch(e){}
       });
+      wpgBootstrapCharts();
     }
   } else if (which === 'trends') {
     if (trd) trd.style.display = 'block';
