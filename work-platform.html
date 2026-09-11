@@ -1156,6 +1156,7 @@ function mergeEmployeeData() {
     flex-shrink: 0;
   }
   .emp-card .emp-name { font-size: 16px; font-weight: 600; }
+  .kw-hit { background:#FEE2E2; color:#E31937; font-weight:800; border-radius:3px; padding:0 2px; }
   .emp-card .emp-id { font-size: 12px; color: var(--text-secondary); }
   .emp-card .emp-badge {
     font-size: 11px;
@@ -3301,6 +3302,64 @@ function toSimplified(str) {
   return result;
 }
 
+// ---- 关键字命中高亮（同时命中简体/繁体/大小写变体）----
+var ROSTER_HL_TERMS = [];
+function _simp2tradTable() {
+  if (window._SIMP2TRAD) return window._SIMP2TRAD;
+  var m = {};
+  for (var k in trad2simp) { var v = trad2simp[k]; if (v && !m[v]) m[v] = k; }
+  window._SIMP2TRAD = m;
+  return m;
+}
+function toTraditional(str) {
+  if (!str) return '';
+  var m = _simp2tradTable(), r = '';
+  for (var i = 0; i < str.length; i++) { r += m[str[i]] || str[i]; }
+  return r;
+}
+function setRosterHighlightTerms(q) {
+  ROSTER_HL_TERMS = [];
+  var raw = String(q == null ? '' : q).trim();
+  if (!raw) return;
+  var variants = [raw];
+  raw.split(/\s+/).forEach(function(w){ if (w) variants.push(w); });
+  var all = [];
+  variants.forEach(function(v){
+    all.push(v, toSimplified(v), toTraditional(v));
+  });
+  all.forEach(function(v){
+    v = String(v).trim().toLowerCase();
+    if (v && ROSTER_HL_TERMS.indexOf(v) === -1) ROSTER_HL_TERMS.push(v);
+  });
+  ROSTER_HL_TERMS.sort(function(a, b){ return b.length - a.length; }); // 长词优先，避免短词切断长词
+}
+// 返回转义后的 HTML，命中关键字用 <mark class="kw-hit"> 标红
+function hlMark(val) {
+  var s = (val == null) ? '' : String(val);
+  if (!s) return '';
+  if (!ROSTER_HL_TERMS.length) return escHtml(s);
+  var lower = s.toLowerCase();
+  var ranges = [];
+  for (var t = 0; t < ROSTER_HL_TERMS.length; t++) {
+    var term = ROSTER_HL_TERMS[t], from = 0, idx;
+    while ((idx = lower.indexOf(term, from)) !== -1) {
+      ranges.push([idx, idx + term.length]);
+      from = idx + term.length;
+    }
+  }
+  if (!ranges.length) return escHtml(s);
+  ranges.sort(function(a, b){ return a[0] - b[0] || b[1] - a[1]; });
+  var out = '', pos = 0;
+  for (var r = 0; r < ranges.length; r++) {
+    var st = ranges[r][0], en = ranges[r][1];
+    if (st < pos) continue; // 与已标注区间重叠则跳过
+    out += escHtml(s.slice(pos, st)) + '<mark class="kw-hit">' + escHtml(s.slice(st, en)) + '</mark>';
+    pos = en;
+  }
+  out += escHtml(s.slice(pos));
+  return out;
+}
+
 // ==================== 985 / 211 院校识别 ====================
 // 规范校名（含常用简称），匹配时统一转简体并去除括号/空格后再双向包含判断
 var SCHOOL_985 = [
@@ -3744,6 +3803,7 @@ function getFieldValue(e, field) {
 
 function runRosterSearch() {
   var q = (document.getElementById('employeeSearchInput').value || '').trim();
+  setRosterHighlightTerms(q);
   var cards = document.getElementById('employeeCards');
   var filteredInfo = document.getElementById('employeeFilteredInfo');
 
@@ -3863,13 +3923,14 @@ function escHtml(str) {
 function buildDetail(label, val, linkType) {
   if (!val) return '';
   var safe = String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  var shown = hlMark(val); // 命中搜索关键字 -> 标红
   if (linkType === 'tel') {
-    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="tel:' + safe + '">' + safe + '</a></div>';
+    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="tel:' + safe + '">' + shown + '</a></div>';
   }
   if (linkType === 'mail') {
-    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="mailto:' + safe + '">' + safe + '</a></div>';
+    return '<div class="emp-detail"><span class="detail-label">' + label + '</span><a class="clickable-link" href="mailto:' + safe + '">' + shown + '</a></div>';
   }
-  return '<div class="emp-detail"><span class="detail-label">' + label + '</span>' + safe + '</div>';
+  return '<div class="emp-detail"><span class="detail-label">' + label + '</span>' + shown + '</div>';
 }
 
 // EC 学历数据已直接并入下方「教育背景」区块（按工号从 EMPLOYEE_EDU_MAP 注入，匹配不到回退平台原值）
@@ -3897,7 +3958,7 @@ function renderEmployeeCard(e) {
     });
     perfHtml = '<details class="work-details"><summary>📊 绩效考核记录（' + sortedPerf.length + ' 条）</summary>'
       + sortedPerf.map(function(p){
-          return '<div class="we-item"><strong>' + (p.score_name||'-') + '</strong>'
+          return '<div class="we-item"><strong>' + (hlMark(p.score_name)||'-') + '</strong>'
             + '<br/><small>' + (p.score_label||p.score||'-')
             + ' | ' + (p.start_date||'') + ' ~ ' + (p.end_date||'') + '</small></div>';
         }).join('')
@@ -3909,7 +3970,7 @@ function renderEmployeeCard(e) {
   if (e.work_experience && e.work_experience.length) {
     workHtml = '<details class="work-details"><summary>💼 工作经历（' + e.work_experience.length + ' 段）</summary>'
       + e.work_experience.map(function(w){ return '<div class="we-item">'
-        + '<strong>' + (w.company||'-') + '</strong> · ' + (w.title||'-')
+        + '<strong>' + (hlMark(w.company)||'-') + '</strong> · ' + (w.title||'-')
         + '<br/><small>' + (w.city||'') + ' | ' + (w.start||'') + ' ~ ' + (w.end||'进行中') + '</small></div>'; }).join('')
       + '</details>';
   }
@@ -3925,11 +3986,11 @@ function renderEmployeeCard(e) {
             ? '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:#e2e8f0;color:#475569;margin-left:6px;">主职</span>'
             : '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:#f1f5f9;color:#64748b;margin-left:6px;">兼任</span>';
           return '<div class="we-item">'
-            + '<div><strong>' + escHtml(r.dept_99 || r.dept_100 || '-') + '</strong>' + badge + primaryTag + '</div>'
-            + '<small>' + escHtml(r.position || '-') + (r.sub_region ? ' · ' + escHtml(r.sub_region) : '') + '</small>'
-            + (r.perf_mgr ? '<br/><small>绩效主管：' + escHtml(r.perf_mgr) + '</small>' : '')
+            + '<div><strong>' + hlMark(r.dept_99 || r.dept_100 || '-') + '</strong>' + badge + primaryTag + '</div>'
+            + '<small>' + hlMark(r.position || '-') + (r.sub_region ? ' · ' + hlMark(r.sub_region) : '') + '</small>'
+            + (r.perf_mgr ? '<br/><small>绩效主管：' + hlMark(r.perf_mgr) + '</small>' : '')
             + (r.join_date || r.leave_date ? '<br/><small>' + (r.join_date || '') + ' ~ ' + (r.leave_date || '至今') + '</small>' : '')
-            + (r.event_reason ? '<br/><small>事件：' + escHtml(r.event_reason) + '</small>' : '')
+            + (r.event_reason ? '<br/><small>事件：' + hlMark(r.event_reason) + '</small>' : '')
             + '</div>';
         }).join('')
       + '</details>';
@@ -3939,8 +4000,8 @@ function renderEmployeeCard(e) {
     '<div class="emp-header">' +
       '<div class="emp-avatar">' + name.charAt(0) + '</div>' +
       '<div>' +
-        '<div class="emp-name">' + name + headTags + '</div>' +
-        '<div class="emp-id">工号：' + empId + (e.en_name ? ' / ' + e.en_name : '') + '</div>' +
+        '<div class="emp-name">' + hlMark(name) + headTags + '</div>' +
+        '<div class="emp-id">工号：' + hlMark(empId) + (e.en_name ? ' / ' + hlMark(e.en_name) : '') + '</div>' +
       '</div>' +
       (badgeText ? '<span class="emp-badge' + badgeClass + '" style="margin-left:auto;">' + badgeText + '</span>' : '') +
     '</div>' +
