@@ -2106,6 +2106,15 @@ function mergeEmployeeData() {
               </div>
               <div class="msf-panel" id="msfPanelDept"></div>
             </div>
+            <div class="msf" id="msfWrapSub">
+              <div class="msf-field" id="msfFieldSub">
+                <span class="msf-name">子区域</span>
+                <span class="msf-chips" id="msfChipsSub"></span>
+                <input type="text" class="msf-input" id="msfInputSub" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelSub"></div>
+            </div>
             <button class="retire-roster-btn ghost" onclick="clearRetireFilter()">↺ 清除筛选</button>
             <span class="retire-filter-note" id="retireFilterNote"></span>
           </div>
@@ -2171,6 +2180,15 @@ function mergeEmployeeData() {
                 <span class="msf-caret">▾</span>
               </div>
               <div class="msf-panel" id="msfPanelBdDept"></div>
+            </div>
+            <div class="msf" id="msfWrapBdSub">
+              <div class="msf-field" id="msfFieldBdSub">
+                <span class="msf-name">子区域</span>
+                <span class="msf-chips" id="msfChipsBdSub"></span>
+                <input type="text" class="msf-input" id="msfInputBdSub" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelBdSub"></div>
             </div>
             <button class="retire-roster-btn ghost" onclick="clearBdFilter()">↺ 清除筛选</button>
             <span class="retire-filter-note" id="bdFilterNote"></span>
@@ -3680,10 +3698,10 @@ function getRetireRosterList() {
 // 供「退休人员名册」「生日人员名册」等共用。
 // 命名空间 ns：元素 id = msfWrap|msfField|msfChips|msfInput|msfPanel + 前置词 + Group|Dept
 //   ns='retire'   → 前置词 ''   → msfPanelGroup / msfPanelDept（沿用原有 id）
-//   ns='birthday' → 前置词 'Bd' → msfPanelBdGroup / msfPanelBdDept
-var _MSF_CAP = { group: 'Group', dept: 'Dept' };
-var _MSF_LABEL = { group: '集团', dept: '部门' };
-var _MSF_FIELDS = ['group', 'dept'];
+//   ns='birthday' → 前置词 'Bd' → msfPanelBdGroup / msfPanelBdDept / msfPanelBdSub
+var _MSF_CAP = { group: 'Group', dept: 'Dept', sub: 'Sub' };
+var _MSF_LABEL = { group: '集团', dept: '部门', sub: '子区域' };
+var _MSF_FIELDS = ['group', 'dept', 'sub'];
 var _MSF_NS = [];
 var _MSF_FACTORY = {};
 var _MSF_SCOPES = {};
@@ -3706,9 +3724,14 @@ function _msfWrapEl(ns, field) { return document.getElementById(_msfId('msfWrap'
 function _msfRowFieldValue(r, field) {
   var e = (r && r.e) ? r.e : {};
   if (field === 'group') return String(e.group || '').trim() || '(未填写)';
+  if (field === 'sub') return String(e.sub_region || '').trim() || '(未填写)';
   return String(e.dept_99 || e.dept_100 || '').trim() || '(未填写)';
 }
 function _msfActive(ns, field) { var s = _msfS(ns); return s.sel[field].length + s.kw[field].length; }
+function _msfAnyActive(ns) {
+  for (var i = 0; i < _MSF_FIELDS.length; i++) { if (_msfActive(ns, _MSF_FIELDS[i])) return true; }
+  return false;
+}
 function _msfMatchBy(sel, kw, r) {
   for (var i = 0; i < _MSF_FIELDS.length; i++) {
     var f = _MSF_FIELDS[i], s = sel[f], k = kw[f];
@@ -3931,8 +3954,8 @@ function clearMsfFilter(ns) {
 }
 
 // ---- 注册：退休人员名册（ns='retire'，沿用原有元素 id 与全局变量名）----
-var RETIRE_FILTER = { group: [], dept: [] };     // 勾选项（精确匹配）
-var RETIRE_FILTER_KW = { group: [], dept: [] };  // 手填项（包含匹配）
+var RETIRE_FILTER = { group: [], dept: [], sub: [] };     // 勾选项（精确匹配）
+var RETIRE_FILTER_KW = { group: [], dept: [], sub: [] };  // 手填项（包含匹配）
 function _retireMatchFilter(r) { return _msfMatchBy(RETIRE_FILTER, RETIRE_FILTER_KW, r); }
 function _retireFilterActive(field) { return _msfActive('retire', field); }
 function _retireFilterSummaryHtml(shown) { return _msfSummaryHtml('retire', shown); }
@@ -4022,7 +4045,7 @@ function renderRetireRoster() {
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  if (document.getElementById('msfPanelGroup')) { msfRender('group'); msfRender('dept'); }
+  if (document.getElementById('msfPanelGroup')) { msfRender('group'); msfRender('dept'); msfRender('sub'); }
 }
 function initRetireRoster() {
   var inp = document.getElementById('retireStartDate');
@@ -4055,7 +4078,7 @@ function exportRetireRoster() {
   var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '退休人员名册_' + v.replace(/-/g, '') + ((_retireFilterActive('group') || _retireFilterActive('dept')) ? '_已筛选' : '') + '.csv';
+  a.download = '退休人员名册_' + v.replace(/-/g, '') + (_msfAnyActive('retire') ? '_已筛选' : '') + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
@@ -4069,8 +4092,8 @@ function toggleRetireRosterBlock() {
 }
 
 // ==================== 生日人员名册（在职人员 · 近期生日 / 全年总表）====================
-var BD_FILTER = { group: [], dept: [] };
-var BD_FILTER_KW = { group: [], dept: [] };
+var BD_FILTER = { group: [], dept: [], sub: [] };
+var BD_FILTER_KW = { group: [], dept: [], sub: [] };
 var BD_MODE = 'recent';        // 'recent' = 起始日期起未来 N 天；'all' = 全年总表
 var BD_ROSTER_CACHE = null;
 
@@ -4225,7 +4248,7 @@ function renderBirthdayRoster() {
   if (!rows.length) {
     wrap.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);font-size:13px;">'
       + (BD_MODE === 'recent' ? '该区间内暂无过生日的在职人员' : '暂无在职人员生日数据') + '</div>';
-    if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); }
+    if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); msfRender('sub', 'birthday'); }
     return;
   }
   var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>部门</th><th>工号</th><th>姓名</th><th>地区</th><th>工作子区域</th><th>邮箱</th><th>绩效主管</th><th>生日</th><th>年龄</th><th>距生日</th></tr></thead><tbody>';
@@ -4257,7 +4280,7 @@ function renderBirthdayRoster() {
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); }
+  if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); msfRender('sub', 'birthday'); }
 }
 
 function initBirthdayRoster() {
@@ -4300,7 +4323,7 @@ function exportBirthdayRoster() {
   var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '生日人员名册_' + tag + ((_bdFilterActive('group') || _bdFilterActive('dept')) ? '_已筛选' : '') + '.csv';
+  a.download = '生日人员名册_' + tag + (_msfAnyActive('birthday') ? '_已筛选' : '') + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
