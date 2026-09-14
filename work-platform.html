@@ -222,7 +222,10 @@ function mergeEmployeeData() {
   if (el) el.textContent = EMPLOYEES_DATA.length.toLocaleString();
   buildEmployeeSearchIndex();
   runRosterSearch();  // 初始加载即展示分页列表
+  RETIRE_ROSTER_CACHE = null;     // 数据刷新后重建名册缓存
+  BD_ROSTER_CACHE = null;
   initRetireRoster(); // 退休人员名册初始化（默认当天，前推6个月）
+  initBirthdayRoster(); // 生日人员名册初始化（默认今天起未来 30 天）
   buildDashboard();
   // 安全兜底：确保看板在 DOM 完全就绪后渲染
   setTimeout(function(){ if(EMPLOYEES_DATA) buildDashboard(); }, 500);
@@ -2110,6 +2113,72 @@ function mergeEmployeeData() {
           <div class="retire-roster-table-wrap" id="retireRosterTableWrap"></div>
         </div>
       </div>
+      <!-- 生日人员名册 -->
+      <div class="retire-roster-block collapsed" id="birthdayRosterBlock">
+        <style>
+          .bd-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+          .bd-seg-btn{padding:6px 14px;border:none;background:#f1f5f9;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;}
+          .bd-seg-btn.active{background:var(--primary);color:#fff;}
+          .bd-select{padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;}
+          .bd-today{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#FDF2E9;color:#b45309;}
+          .bd-soon{color:#E31937;font-weight:700;font-size:11px;}
+          .bd-hint{margin:0 0 10px;font-size:12px;color:var(--text-secondary);}
+          .bd-hint strong{color:var(--primary);}
+          .bd-age{color:var(--text);font-weight:600;}
+        </style>
+        <div class="retire-roster-head" onclick="toggleBirthdayRosterBlock()">
+          <h3>🎂 生日人员名册</h3>
+          <span class="sub">在职人员 · 支持「近期生日」与「全年总表」两种视图</span>
+          <span class="collapse-arrow" id="birthdayRosterArrow">▼</span>
+        </div>
+        <div class="retire-roster-body" id="birthdayRosterBody">
+          <div class="retire-roster-bar">
+            <label>视图</label>
+            <span class="bd-seg">
+              <button class="bd-seg-btn active" id="bdSegRecent" onclick="setBdMode('recent')">近期生日</button>
+              <button class="bd-seg-btn" id="bdSegAll" onclick="setBdMode('all')">全年总表</button>
+            </span>
+            <span id="bdRecentCtl" style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <label>起始日期</label>
+              <input type="date" id="bdStartDate" onchange="renderBirthdayRoster()">
+              <label>窗口</label>
+              <select class="bd-select" id="bdWindow" onchange="renderBirthdayRoster()">
+                <option value="7">未来 7 天</option>
+                <option value="15">未来 15 天</option>
+                <option value="30" selected>未来 30 天</option>
+                <option value="60">未来 60 天</option>
+                <option value="90">未来 90 天</option>
+              </select>
+            </span>
+            <button class="retire-roster-btn" onclick="exportBirthdayRoster()" style="margin-left:auto;">⬇ 导出 CSV</button>
+          </div>
+          <div class="bd-hint" id="bdHint"></div>
+          <div class="retire-filter-bar">
+            <div class="msf" id="msfWrapBdGroup">
+              <div class="msf-field" id="msfFieldBdGroup">
+                <span class="msf-name">集团</span>
+                <span class="msf-chips" id="msfChipsBdGroup"></span>
+                <input type="text" class="msf-input" id="msfInputBdGroup" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelBdGroup"></div>
+            </div>
+            <div class="msf" id="msfWrapBdDept">
+              <div class="msf-field" id="msfFieldBdDept">
+                <span class="msf-name">部门</span>
+                <span class="msf-chips" id="msfChipsBdDept"></span>
+                <input type="text" class="msf-input" id="msfInputBdDept" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelBdDept"></div>
+            </div>
+            <button class="retire-roster-btn ghost" onclick="clearBdFilter()">↺ 清除筛选</button>
+            <span class="retire-filter-note" id="bdFilterNote"></span>
+          </div>
+          <div class="retire-roster-summary" id="birthdayRosterSummary"></div>
+          <div class="retire-roster-table-wrap" id="birthdayRosterTableWrap"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -3607,72 +3676,93 @@ function getRetireRosterList() {
   });
   return RETIRE_ROSTER_CACHE;
 }
-// ==================== 退休名册：集团 / 部门 多选筛选（复选 + 手写填值） ====================
-var RETIRE_FILTER = { group: [], dept: [] };     // 勾选项（精确匹配）
-var RETIRE_FILTER_KW = { group: [], dept: [] };  // 手填项（包含匹配）
+// ==================== 可复用多选筛选组件（复选 + 手写填值） ====================
+// 供「退休人员名册」「生日人员名册」等共用。
+// 命名空间 ns：元素 id = msfWrap|msfField|msfChips|msfInput|msfPanel + 前置词 + Group|Dept
+//   ns='retire'   → 前置词 ''   → msfPanelGroup / msfPanelDept（沿用原有 id）
+//   ns='birthday' → 前置词 'Bd' → msfPanelBdGroup / msfPanelBdDept
 var _MSF_CAP = { group: 'Group', dept: 'Dept' };
 var _MSF_LABEL = { group: '集团', dept: '部门' };
+var _MSF_FIELDS = ['group', 'dept'];
+var _MSF_NS = [];
+var _MSF_FACTORY = {};
+var _MSF_SCOPES = {};
 
-function _retireFieldValue(r, field) {
+function _msfReg(ns, factory) {
+  _MSF_FACTORY[ns] = factory;
+  if (_MSF_NS.indexOf(ns) < 0) _MSF_NS.push(ns);
+}
+function _msfS(ns) {
+  ns = ns || 'retire';
+  if (!_MSF_SCOPES[ns]) {
+    var f = _MSF_FACTORY[ns];
+    _MSF_SCOPES[ns] = f ? f() : null;
+  }
+  return _MSF_SCOPES[ns];
+}
+function _msfId(prefix, ns, field) { return prefix + _msfS(ns).pre + _MSF_CAP[field]; }
+function _msfWrapEl(ns, field) { return document.getElementById(_msfId('msfWrap', ns, field)); }
+
+function _msfRowFieldValue(r, field) {
   var e = (r && r.e) ? r.e : {};
   if (field === 'group') return String(e.group || '').trim() || '(未填写)';
   return String(e.dept_99 || e.dept_100 || '').trim() || '(未填写)';
 }
-function _retireFieldOptions(field) {
-  // 选项与计数都取自「当前统计区间」，保证面板里的数字和表格行数对得上
+function _msfActive(ns, field) { var s = _msfS(ns); return s.sel[field].length + s.kw[field].length; }
+function _msfMatchBy(sel, kw, r) {
+  for (var i = 0; i < _MSF_FIELDS.length; i++) {
+    var f = _MSF_FIELDS[i], s = sel[f], k = kw[f];
+    if (!s.length && !k.length) continue;
+    var v = _msfRowFieldValue(r, f), vl = v.toLowerCase();
+    if (s.indexOf(v) < 0 && !k.some(function(x){ return vl.indexOf(String(x).toLowerCase()) >= 0; })) return false;
+  }
+  return true;
+}
+function _msfOptions(ns, field) {
+  // 选项与计数都取自「当前区间」，保证面板里的数字和表格行数对得上
   var map = {};
-  _retireWindowRows(true).forEach(function(r){
-    var v = _retireFieldValue(r, field);
+  _msfS(ns).rows(true).forEach(function(r){
+    var v = _msfRowFieldValue(r, field);
     map[v] = (map[v] || 0) + 1;
   });
   return Object.keys(map).map(function(k){ return { v: k, n: map[k] }; })
     .sort(function(a, b){ return (b.n - a.n) || String(a.v).localeCompare(String(b.v), 'zh-Hans-CN'); });
 }
-function _retireFilterActive(field) { return RETIRE_FILTER[field].length + RETIRE_FILTER_KW[field].length; }
-function _retireFilterSummaryHtml(shown) {
-  var g = _retireFilterActive('group'), d = _retireFilterActive('dept');
-  if (!g && !d) return '';
+function _msfSummaryHtml(ns, shown) {
   var parts = [];
-  if (g) parts.push('集团 ' + g + ' 项');
-  if (d) parts.push('部门 ' + d + ' 项');
+  _MSF_FIELDS.forEach(function(f){ var n = _msfActive(ns, f); if (n) parts.push(_MSF_LABEL[f] + ' ' + n + ' 项'); });
+  if (!parts.length) return '';
   return ' &nbsp;·&nbsp; <span class="retire-filter-note">已筛选：' + parts.join(' / ')
-       + '（区间共 ' + _retireWindowRows(true).length + ' 人 → 显示 ' + shown + ' 人）</span>';
+       + '（区间共 ' + _msfS(ns).rows(true).length + ' 人 → 显示 ' + shown + ' 人）</span>';
 }
-function _retireMatchFilter(r) {
-  var g = RETIRE_FILTER.group, gk = RETIRE_FILTER_KW.group;
-  if (g.length || gk.length) {
-    var gv = _retireFieldValue(r, 'group'), gl = gv.toLowerCase();
-    if (g.indexOf(gv) < 0 && !gk.some(function(k){ return gl.indexOf(String(k).toLowerCase()) >= 0; })) return false;
-  }
-  var d = RETIRE_FILTER.dept, dk = RETIRE_FILTER_KW.dept;
-  if (d.length || dk.length) {
-    var dv = _retireFieldValue(r, 'dept'), dl = dv.toLowerCase();
-    if (d.indexOf(dv) < 0 && !dk.some(function(k){ return dl.indexOf(String(k).toLowerCase()) >= 0; })) return false;
-  }
-  return true;
-}
-function _msfEl(prefix, field) { return document.getElementById(prefix + _MSF_CAP[field]); }
 
-function msfOpen(field) {
-  ['group', 'dept'].forEach(function(f){
-    var w = _msfEl('msfWrap', f);
+function msfOpen(field, ns) {
+  ns = ns || 'retire';
+  _MSF_FIELDS.forEach(function(f){
+    var w = _msfWrapEl(ns, f);
     if (w) w.classList.toggle('open', f === field);
   });
-  msfRender(field);
+  msfRender(field, ns);
 }
-function msfClose(field) { var w = _msfEl('msfWrap', field); if (w) w.classList.remove('open'); }
-function msfCloseAll() { ['group', 'dept'].forEach(function(f){ msfClose(f); }); }
+function msfClose(field, ns) {
+  ns = ns || 'retire';
+  var w = _msfWrapEl(ns, field); if (w) w.classList.remove('open');
+}
+function msfCloseAll() {
+  _MSF_NS.forEach(function(ns){ _MSF_FIELDS.forEach(function(f){ msfClose(f, ns); }); });
+}
 
-function msfRender(field) {
-  var cap = _MSF_CAP[field];
-  var panel = document.getElementById('msfPanel' + cap);
-  var chips = document.getElementById('msfChips' + cap);
-  var input = document.getElementById('msfInput' + cap);
-  if (!panel) return;
+function msfRender(field, ns) {
+  ns = ns || 'retire';
+  var s = _msfS(ns);
+  var panel = document.getElementById(_msfId('msfPanel', ns, field));
+  var chips = document.getElementById(_msfId('msfChips', ns, field));
+  var input = document.getElementById(_msfId('msfInput', ns, field));
+  if (!panel || !s) return;
   var q = input ? String(input.value || '').trim() : '';
   var ql = q.toLowerCase();
-  var opts = _retireFieldOptions(field);
-  var sel = RETIRE_FILTER[field], kw = RETIRE_FILTER_KW[field];
+  var opts = _msfOptions(ns, field);
+  var sel = s.sel[field], kw = s.kw[field];
   if (chips) {
     var ch = '';
     sel.forEach(function(v){
@@ -3704,93 +3794,84 @@ function msfRender(field) {
   panel.innerHTML = h;
 }
 
-function msfToggleValue(field, val, checked) {
-  var sel = RETIRE_FILTER[field], i = sel.indexOf(val);
+function msfToggleValue(field, val, checked, ns) {
+  ns = ns || 'retire';
+  var sel = _msfS(ns).sel[field], i = sel.indexOf(val);
   if (checked === undefined) checked = (i < 0);
   if (checked && i < 0) sel.push(val);
   if (!checked && i >= 0) sel.splice(i, 1);
-  msfAfterChange(field);
+  msfAfterChange(field, ns);
 }
-function msfAddKwValue(field, val) {
+function msfAddKwValue(field, val, ns) {
+  ns = ns || 'retire';
   val = String(val || '').trim();
   if (!val) return;
-  var kw = RETIRE_FILTER_KW[field];
+  var kw = _msfS(ns).kw[field];
   if (kw.indexOf(val) < 0) kw.push(val);
-  msfAfterChange(field);
+  msfAfterChange(field, ns);
 }
-function msfRemove(field, token) {
+function msfRemove(field, token, ns) {
+  ns = ns || 'retire';
   var p = String(token || '').split(':'), kind = p[0], val = p.slice(1).join(':');
-  var arr = (kind === 'k') ? RETIRE_FILTER_KW[field] : RETIRE_FILTER[field];
+  var s = _msfS(ns);
+  var arr = (kind === 'k') ? s.kw[field] : s.sel[field];
   var i = arr.indexOf(val);
   if (i >= 0) arr.splice(i, 1);
-  msfAfterChange(field);
+  msfAfterChange(field, ns);
 }
-function msfSelectAll(field) {
-  var input = document.getElementById('msfInput' + _MSF_CAP[field]);
+function msfSelectAll(field, ns) {
+  ns = ns || 'retire';
+  var input = document.getElementById(_msfId('msfInput', ns, field));
   var q = input ? String(input.value || '').trim().toLowerCase() : '';
-  var sel = RETIRE_FILTER[field];
-  _retireFieldOptions(field).forEach(function(o){
+  var sel = _msfS(ns).sel[field];
+  _msfOptions(ns, field).forEach(function(o){
     if ((!q || o.v.toLowerCase().indexOf(q) >= 0) && sel.indexOf(o.v) < 0) sel.push(o.v);
   });
-  msfAfterChange(field);
+  msfAfterChange(field, ns);
 }
-function msfClearSel(field) {
-  RETIRE_FILTER[field].length = 0;
-  RETIRE_FILTER_KW[field].length = 0;
-  msfAfterChange(field);
+function msfClearSel(field, ns) {
+  ns = ns || 'retire';
+  _msfS(ns).sel[field].length = 0;
+  _msfS(ns).kw[field].length = 0;
+  msfAfterChange(field, ns);
 }
-function msfAfterChange(field) {
-  var input = document.getElementById('msfInput' + _MSF_CAP[field]);
+function msfAfterChange(field, ns) {
+  ns = ns || 'retire';
+  var s = _msfS(ns);
+  var input = document.getElementById(_msfId('msfInput', ns, field));
   if (input) input.value = '';
-  msfRender(field);
-  updateRetireFilterNote();
-  renderRetireRoster();
+  msfRender(field, ns);
+  s.note();
+  s.onChange();
 }
-function msfOnKey(ev, field) {
+function msfOnKey(ev, field, ns) {
+  ns = ns || 'retire';
   if (ev.key === 'Enter') {
     ev.preventDefault();
     var input = ev.target, q = String(input.value || '').trim();
     if (!q) return;
-    var opts = _retireFieldOptions(field);
+    var opts = _msfOptions(ns, field);
     var exact = opts.filter(function(o){ return o.v === q; })[0];
     var fuzzy = opts.filter(function(o){ return o.v.toLowerCase().indexOf(q.toLowerCase()) >= 0; });
     input.value = '';
-    if (exact) { msfToggleValue(field, exact.v); return; }
-    if (fuzzy.length === 1) { msfToggleValue(field, fuzzy[0].v); return; }
-    msfAddKwValue(field, q);
+    if (exact) { msfToggleValue(field, exact.v, undefined, ns); return; }
+    if (fuzzy.length === 1) { msfToggleValue(field, fuzzy[0].v, undefined, ns); return; }
+    msfAddKwValue(field, q, ns);
     return;
   }
-  if (ev.key === 'Escape') { msfClose(field); return; }
+  if (ev.key === 'Escape') { msfClose(field, ns); return; }
   if (ev.key === 'Backspace' && !String(ev.target.value || '')) {
-    var sel = RETIRE_FILTER[field], kw = RETIRE_FILTER_KW[field];
-    if (kw.length) { kw.pop(); msfAfterChange(field); }
-    else if (sel.length) { sel.pop(); msfAfterChange(field); }
+    var s = _msfS(ns), sel = s.sel[field], kw = s.kw[field];
+    if (kw.length) { kw.pop(); msfAfterChange(field, ns); }
+    else if (sel.length) { sel.pop(); msfAfterChange(field, ns); }
   }
 }
-function updateRetireFilterNote() {
-  var note = document.getElementById('retireFilterNote');
-  if (!note) return;
-  var parts = [];
-  ['group', 'dept'].forEach(function(f){
-    var n = _retireFilterActive(f);
-    if (n) parts.push(_MSF_LABEL[f] + ' ' + n + ' 项');
-  });
-  note.textContent = parts.length ? '筛选生效中：' + parts.join(' · ') : '';
-}
-function clearRetireFilter() {
-  RETIRE_FILTER.group.length = 0; RETIRE_FILTER_KW.group.length = 0;
-  RETIRE_FILTER.dept.length = 0;  RETIRE_FILTER_KW.dept.length = 0;
-  ['group', 'dept'].forEach(function(f){
-    var input = document.getElementById('msfInput' + _MSF_CAP[f]);
-    if (input) input.value = '';
-    msfRender(f);
-  });
-  updateRetireFilterNote();
-  renderRetireRoster();
-}
-function initRetireFilters() {
-  ['group', 'dept'].forEach(function(f){
-    var cap = _MSF_CAP[f];
+function initMsfScope(ns) {
+  ns = ns || 'retire';
+  var s = _msfS(ns);
+  if (!s) return;
+  _MSF_FIELDS.forEach(function(f){
+    var cap = s.pre + _MSF_CAP[f];
     var panel = document.getElementById('msfPanel' + cap);
     var chips = document.getElementById('msfChips' + cap);
     var input = document.getElementById('msfInput' + cap);
@@ -3800,30 +3881,30 @@ function initRetireFilters() {
       panel.setAttribute('data-bound', '1');
       panel.addEventListener('change', function(ev){
         var t = ev.target;
-        if (t && t.type === 'checkbox') msfToggleValue(f, t.getAttribute('data-v'), t.checked);
+        if (t && t.type === 'checkbox') msfToggleValue(f, t.getAttribute('data-v'), t.checked, ns);
       });
       panel.addEventListener('click', function(ev){
         var t = ev.target, a = (t && t.getAttribute) ? t.getAttribute('data-act') : null;
-        if (a === 'all') msfSelectAll(f);
-        else if (a === 'clear') msfClearSel(f);
-        else if (a === 'add') { var i2 = document.getElementById('msfInput' + cap); msfAddKwValue(f, i2 ? i2.value : ''); }
+        if (a === 'all') msfSelectAll(f, ns);
+        else if (a === 'clear') msfClearSel(f, ns);
+        else if (a === 'add') { var i2 = document.getElementById('msfInput' + cap); msfAddKwValue(f, i2 ? i2.value : '', ns); }
       });
       if (chips) chips.addEventListener('click', function(ev){
         var t = ev.target, rm = (t && t.getAttribute) ? t.getAttribute('data-rm') : null;
-        if (rm) msfRemove(f, rm);
+        if (rm) msfRemove(f, rm, ns);
       });
       if (input) {
-        input.addEventListener('input', function(){ msfOpen(f); });
-        input.addEventListener('keydown', function(ev){ msfOnKey(ev, f); });
+        input.addEventListener('input', function(){ msfOpen(f, ns); });
+        input.addEventListener('keydown', function(ev){ msfOnKey(ev, f, ns); });
       }
       if (field) field.addEventListener('click', function(ev){
         var t = ev.target;
         if (t && t.classList && t.classList.contains('msf-x')) return;
-        msfOpen(f);
+        msfOpen(f, ns);
         if (input) input.focus();
       });
     }
-    msfRender(f);
+    msfRender(f, ns);
   });
   if (!window._msfDocBound) {
     window._msfDocBound = true;
@@ -3833,8 +3914,50 @@ function initRetireFilters() {
       msfCloseAll();
     }, true);
   }
-  updateRetireFilterNote();
+  s.note();
 }
+function clearMsfFilter(ns) {
+  ns = ns || 'retire';
+  var s = _msfS(ns);
+  if (!s) return;
+  _MSF_FIELDS.forEach(function(f){
+    s.sel[f].length = 0; s.kw[f].length = 0;
+    var input = document.getElementById(_msfId('msfInput', ns, f));
+    if (input) input.value = '';
+    msfRender(f, ns);
+  });
+  s.note();
+  s.onChange();
+}
+
+// ---- 注册：退休人员名册（ns='retire'，沿用原有元素 id 与全局变量名）----
+var RETIRE_FILTER = { group: [], dept: [] };     // 勾选项（精确匹配）
+var RETIRE_FILTER_KW = { group: [], dept: [] };  // 手填项（包含匹配）
+function _retireMatchFilter(r) { return _msfMatchBy(RETIRE_FILTER, RETIRE_FILTER_KW, r); }
+function _retireFilterActive(field) { return _msfActive('retire', field); }
+function _retireFilterSummaryHtml(shown) { return _msfSummaryHtml('retire', shown); }
+function updateRetireFilterNote() {
+  var note = document.getElementById('retireFilterNote');
+  if (!note) return;
+  var parts = [];
+  _MSF_FIELDS.forEach(function(f){
+    var n = _retireFilterActive(f);
+    if (n) parts.push(_MSF_LABEL[f] + ' ' + n + ' 项');
+  });
+  note.textContent = parts.length ? '筛选生效中：' + parts.join(' · ') : '';
+}
+function clearRetireFilter() { clearMsfFilter('retire'); }
+function initRetireFilters() { initMsfScope('retire'); }
+_msfReg('retire', function(){
+  return {
+    pre: '',
+    sel: RETIRE_FILTER,
+    kw: RETIRE_FILTER_KW,
+    rows: _retireWindowRows,
+    note: updateRetireFilterNote,
+    onChange: function(){ renderRetireRoster(); }
+  };
+});
 
 function _retireStartDate() {
   var inp = document.getElementById('retireStartDate');
@@ -3944,6 +4067,254 @@ function toggleRetireRosterBlock() {
   try { localStorage.setItem('wpgholdings_retire_collapsed', collapsed ? '1' : '0'); } catch(e) {}
   if (!collapsed) { initRetireFilters(); renderRetireRoster(); }
 }
+
+// ==================== 生日人员名册（在职人员 · 近期生日 / 全年总表）====================
+var BD_FILTER = { group: [], dept: [] };
+var BD_FILTER_KW = { group: [], dept: [] };
+var BD_MODE = 'recent';        // 'recent' = 起始日期起未来 N 天；'all' = 全年总表
+var BD_ROSTER_CACHE = null;
+
+function _bdToday() {
+  var d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function _bdStartDate() {
+  var inp = document.getElementById('bdStartDate');
+  var v = inp ? (inp.value || '').trim() : '';
+  if (v) return v;
+  var d = _bdToday();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _bdBase() {
+  // 近期生日：以「起始日期」为基准（默认今天）；全年总表：固定以今天为基准
+  if (BD_MODE === 'all') return _bdToday();
+  var v = _bdStartDate(), m = v.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return _bdToday();
+  return new Date(+m[1], +m[2] - 1, +m[3]);
+}
+function _bdWindowDays() {
+  var s = document.getElementById('bdWindow');
+  var n = s ? parseInt(s.value, 10) : 30;
+  return (isNaN(n) || n <= 0) ? 30 : n;
+}
+function _bdParse(d) {
+  var m = String(d || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  return { y: +m[1], m: +m[2], d: +m[3] };
+}
+function _bdDaysInMonth(y, m) { return new Date(y, m, 0).getDate(); }   // m: 1-12
+// 以 base（当天 0 点）为基准：next=下一次生日、days=距下次生日天数、age=当前周岁
+function _bdCalc(p, base) {
+  var b = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  var mk = function(yy){
+    var dd = p.d;
+    if (p.m === 2 && p.d === 29) dd = (_bdDaysInMonth(yy, 2) === 29) ? 29 : 28;  // 2/29 在平年按 2/28
+    return new Date(yy, p.m - 1, dd);
+  };
+  var ty = b.getFullYear();
+  var next = mk(ty);
+  if (next < b) next = mk(ty + 1);
+  var days = Math.round((next - b) / 86400000);
+  var age = ty - p.y;
+  if (mk(ty) > b) age -= 1;
+  return { next: next, days: days, age: age };
+}
+function getBirthdayRosterList() {
+  if (BD_ROSTER_CACHE) return BD_ROSTER_CACHE;
+  BD_ROSTER_CACHE = [];
+  (EMPLOYEES_DATA || []).forEach(function(e){
+    if ((e.status || '') !== '在职') return;      // 仅在职
+    var p = _bdParse(e.birthday);
+    if (!p) return;
+    BD_ROSTER_CACHE.push({ e: e, p: p });
+  });
+  return BD_ROSTER_CACHE;
+}
+function _bdMatchFilter(r) { return _msfMatchBy(BD_FILTER, BD_FILTER_KW, r); }
+function _bdRows(noFilter) {
+  var base = _bdBase();
+  var rows = getBirthdayRosterList().map(function(r){
+    var c = _bdCalc(r.p, base);
+    return { e: r.e, p: r.p, days: c.days, age: c.age, next: c.next,
+             birthday: r.e.birthday || '-',
+             monthDay: String(r.p.m).padStart(2, '0') + '-' + String(r.p.d).padStart(2, '0') };
+  });
+  if (BD_MODE === 'recent') {
+    var lim = _bdWindowDays();
+    rows = rows.filter(function(r){ return r.days <= lim; });
+  }
+  if (!noFilter) rows = rows.filter(_bdMatchFilter);
+  if (BD_MODE === 'recent') {
+    rows.sort(function(a, b){
+      return (a.days - b.days) || (a.p.m - b.p.m) || (a.p.d - b.p.d)
+          || String(a.e.id).localeCompare(String(b.e.id));
+    });
+  } else {
+    rows.sort(function(a, b){
+      return (a.p.m - b.p.m) || (a.p.d - b.p.d) || String(a.e.id).localeCompare(String(b.e.id));
+    });
+  }
+  return rows;
+}
+function _bdFilterActive(field) { return _msfActive('birthday', field); }
+function updateBdFilterNote() {
+  var note = document.getElementById('bdFilterNote');
+  if (!note) return;
+  var parts = [];
+  _MSF_FIELDS.forEach(function(f){
+    var n = _bdFilterActive(f);
+    if (n) parts.push(_MSF_LABEL[f] + ' ' + n + ' 项');
+  });
+  note.textContent = parts.length ? '筛选生效中：' + parts.join(' · ') : '';
+}
+function clearBdFilter() { clearMsfFilter('birthday'); }
+function initBdFilters() { initMsfScope('birthday'); }
+function _bdFmt(d) { return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0'); }
+
+function setBdMode(mode) {
+  BD_MODE = (mode === 'all') ? 'all' : 'recent';
+  var br = document.getElementById('bdSegRecent'), ba = document.getElementById('bdSegAll');
+  if (br) br.classList.toggle('active', BD_MODE === 'recent');
+  if (ba) ba.classList.toggle('active', BD_MODE === 'all');
+  var ctl = document.getElementById('bdRecentCtl');
+  if (ctl) ctl.style.display = (BD_MODE === 'recent') ? 'inline-flex' : 'none';
+  initBdFilters();
+  renderBirthdayRoster();
+}
+
+function renderBirthdayRoster() {
+  var wrap = document.getElementById('birthdayRosterTableWrap');
+  var sum = document.getElementById('birthdayRosterSummary');
+  var hint = document.getElementById('bdHint');
+  if (!wrap || !EMPLOYEES_DATA) return;
+  var base = _bdBase();
+  var rows = _bdRows();
+  var all = _bdRows(true);
+  var win = _bdWindowDays();
+  var winEnd = new Date(base.getFullYear(), base.getMonth(), base.getDate() + win);
+
+  var todayKey = (function(){ var t = _bdToday(); return String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); })();
+  var todayN = 0, in7 = 0, in30 = 0, restMonth = 0;
+  var tm = _bdToday().getMonth() + 1;
+  all.forEach(function(r){
+    if (r.days === 0) todayN++;
+    if (r.days <= 7) in7++;
+    if (r.days <= 30) in30++;
+    if (r.p.m === tm && r.days > 0) restMonth++;
+  });
+
+  if (hint) {
+    hint.innerHTML = (BD_MODE === 'recent')
+      ? '统计区间：以 <strong>' + _bdFmt(base) + '</strong> 为起点，未来 <strong>' + win + ' 天</strong>（含）内过生日的在职人员 → '
+        + '<strong>' + _bdFmt(base) + ' ~ ' + _bdFmt(winEnd) + '</strong>；「距生日」以起点为基准，可直接用于生日关怀与当月活动安排。'
+      : '全年总表：列出<strong>全部在职人员</strong>，按生日「月-日」升序排列（不按年份），「距生日」以<strong>今天</strong>为基准，适合年度生日预算与活动规划。';
+  }
+  if (sum) {
+    sum.innerHTML = (BD_MODE === 'recent')
+      ? '共 <strong>' + rows.length + '</strong> 人（' + _bdFmt(base) + ' 起未来 ' + win + ' 天）'
+        + '&nbsp;·&nbsp; 当天过生日 <strong>' + todayN + '</strong> 人'
+        + '&nbsp;·&nbsp; 7 天内 <strong>' + in7 + '</strong> 人'
+        + '&nbsp;·&nbsp; 本月剩余 <strong>' + restMonth + '</strong> 人'
+        + _msfSummaryHtml('birthday', rows.length)
+      : '共 <strong>' + rows.length + '</strong> 人（全部在职 · 按生日月-日排序）'
+        + '&nbsp;·&nbsp; 今天生日 <strong>' + todayN + '</strong> 人'
+        + '&nbsp;·&nbsp; 7 天内 <strong>' + in7 + '</strong> 人'
+        + '&nbsp;·&nbsp; 30 天内 <strong>' + in30 + '</strong> 人'
+        + _msfSummaryHtml('birthday', rows.length);
+  }
+  if (!rows.length) {
+    wrap.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);font-size:13px;">'
+      + (BD_MODE === 'recent' ? '该区间内暂无过生日的在职人员' : '暂无在职人员生日数据') + '</div>';
+    if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); }
+    return;
+  }
+  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>部门</th><th>工号</th><th>姓名</th><th>地区</th><th>工作子区域</th><th>邮箱</th><th>绩效主管</th><th>生日</th><th>年龄</th><th>距生日</th></tr></thead><tbody>';
+  rows.forEach(function(r, i){
+    var e = r.e;
+    var name = e.ec_name || e.name || '-';
+    var email = e.email || '-';
+    var mgr = e.perf_mgr || e.mgr99 || '-';
+    var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
+    var dept = e.dept_99 || e.dept_100 || '-';
+    var soon = r.days <= 7;
+    var daysCell = (r.days === 0)
+      ? '<span class="bd-today">🎉 今天</span>'
+      : (r.days + ' 天' + (soon ? ' <span class="bd-soon">●</span>' : ''));
+    html += '<tr class="' + (soon ? 'hot' : '') + '">'
+      + '<td>' + (i + 1) + '</td>'
+      + '<td>' + escHtml(e.group || '-') + '</td>'
+      + '<td>' + escHtml(dept) + '</td>'
+      + '<td>' + escHtml(e.id || '-') + '</td>'
+      + '<td>' + escHtml(name) + '</td>'
+      + '<td>' + escHtml(region) + '</td>'
+      + '<td>' + escHtml(e.sub_region || '-') + '</td>'
+      + '<td>' + (email === '-' ? '-' : '<a class="clickable-link" href="mailto:' + escHtml(email) + '">' + escHtml(email) + '</a>') + '</td>'
+      + '<td>' + escHtml(mgr) + '</td>'
+      + '<td>' + escHtml(r.birthday) + '</td>'
+      + '<td><span class="bd-age">' + r.age + ' 岁</span></td>'
+      + '<td>' + daysCell + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  if (document.getElementById('msfPanelBdGroup')) { msfRender('group', 'birthday'); msfRender('dept', 'birthday'); }
+}
+
+function initBirthdayRoster() {
+  var inp = document.getElementById('bdStartDate');
+  if (inp && !inp.value) {
+    var d = _bdToday();
+    inp.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  initBdFilters();
+  var block = document.getElementById('birthdayRosterBlock');
+  try {
+    var saved = localStorage.getItem('wpgholdings_birthday_collapsed');
+    if (saved === '0') block.classList.remove('collapsed');
+    else block.classList.add('collapsed');
+  } catch(e) {}
+  setBdMode(BD_MODE);
+}
+
+function toggleBirthdayRosterBlock() {
+  var block = document.getElementById('birthdayRosterBlock');
+  if (!block) return;
+  block.classList.toggle('collapsed');
+  var collapsed = block.classList.contains('collapsed');
+  try { localStorage.setItem('wpgholdings_birthday_collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  if (!collapsed) { initBdFilters(); renderBirthdayRoster(); }
+}
+
+function exportBirthdayRoster() {
+  var rows = _bdRows();
+  var lines = ['集团,部门,工号,姓名,生日,年龄,距生日天数,地区,工作子区域,邮箱,绩效主管'];
+  var f = function(x){ return '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"'; };
+  rows.forEach(function(r){
+    var e = r.e;
+    var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
+    lines.push([f(e.group || '-'), f(e.dept_99 || e.dept_100 || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'),
+                f(r.birthday), f(r.age), f(r.days), f(region), f(e.sub_region || '-'),
+                f(e.email || '-'), f(e.perf_mgr || e.mgr99 || '-')].join(','));
+  });
+  var tag = (BD_MODE === 'recent') ? ('近' + _bdWindowDays() + '天_' + _bdStartDate().replace(/-/g, '')) : '全年总表';
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '生日人员名册_' + tag + ((_bdFilterActive('group') || _bdFilterActive('dept')) ? '_已筛选' : '') + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+_msfReg('birthday', function(){
+  return {
+    pre: 'Bd',
+    sel: BD_FILTER,
+    kw: BD_FILTER_KW,
+    rows: _bdRows,
+    note: updateBdFilterNote,
+    onChange: function(){ renderBirthdayRoster(); }
+  };
+});
 
 function _eduFullTimeGradAge(edu) {
   // 返回「6岁入学（9月前出生）算起的全日制毕业年龄」，未知返回 null
