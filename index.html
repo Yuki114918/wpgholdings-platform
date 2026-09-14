@@ -2032,7 +2032,7 @@ function mergeEmployeeData() {
           .retire-roster-btn:hover{opacity:.88;}
           .retire-roster-summary{margin:8px 0 10px;font-size:13px;color:var(--text);}
           .retire-roster-table-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;}
-          table.retire-table{width:100%;border-collapse:collapse;font-size:13px;min-width:980px;}
+          table.retire-table{width:100%;border-collapse:collapse;font-size:13px;min-width:1180px;}
           table.retire-table th{position:sticky;top:0;background:var(--primary);color:#fff;padding:9px 10px;text-align:left;white-space:nowrap;z-index:2;}
           table.retire-table td{padding:8px 10px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
           table.retire-table tr:nth-child(even) td{background:#f8fbfd;}
@@ -2040,6 +2040,37 @@ function mergeEmployeeData() {
           .retire-tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:700;}
           .retire-tag.cn{background:#e8f1fa;color:#004E8C;}
           .retire-tag.other{background:#fef3e2;color:#b45309;}
+          /* ---- 集团 / 部门 多选筛选（支持复选 + 手写填值） ---- */
+          .retire-filter-bar{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin:0 0 12px;}
+          .msf{position:relative;}
+          .msf-field{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:250px;max-width:460px;min-height:34px;padding:4px 24px 4px 9px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:text;}
+          .msf.open .msf-field{border-color:var(--primary);box-shadow:0 0 0 3px rgba(0,78,140,.08);}
+          .msf-name{font-size:12px;font-weight:700;color:var(--text-secondary);white-space:nowrap;}
+          .msf-chips{display:inline-flex;flex-wrap:wrap;gap:4px;}
+          .msf-input{flex:1;min-width:64px;border:none;outline:none;font-size:13px;color:var(--text);background:transparent;padding:3px 0;}
+          .msf-caret{position:absolute;right:8px;top:17px;transform:translateY(-50%);font-size:11px;color:var(--text-secondary);pointer-events:none;}
+          .msf-chip{display:inline-flex;align-items:center;gap:3px;max-width:200px;padding:1px 5px 1px 8px;border-radius:10px;background:#E8F4FC;color:#004E8C;font-size:11.5px;font-weight:600;}
+          .msf-chip.kw{background:#FDF2E9;color:#b45309;}
+          .msf-chip .msf-x{margin-left:2px;opacity:.65;cursor:pointer;font-size:10px;}
+          .msf-chip .msf-x:hover{opacity:1;}
+          .msf-chip-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+          .msf-panel{display:none;position:absolute;z-index:60;top:calc(100% + 4px);left:0;width:350px;max-width:88vw;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 26px rgba(0,32,64,.14);padding:8px;}
+          .msf.open .msf-panel{display:block;}
+          .msf-acts{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);padding:0 2px 6px;border-bottom:1px solid #eef2f6;margin-bottom:4px;}
+          .msf-acts a{color:var(--primary);cursor:pointer;font-weight:600;}
+          .msf-acts .msf-n{margin-left:auto;}
+          .msf-list{max-height:252px;overflow-y:auto;}
+          .msf-opt{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
+          .msf-opt:hover{background:#f2f7fb;}
+          .msf-opt.on{background:#E8F4FC;color:#004E8C;font-weight:600;}
+          .msf-opt input{margin:0;cursor:pointer;}
+          .msf-opt-t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+          .msf-opt-n{color:var(--text-secondary);font-size:11px;}
+          .msf-add{padding:6px 8px;margin-bottom:4px;border-radius:6px;background:#FDF2E9;color:#b45309;font-size:12px;cursor:pointer;font-weight:600;}
+          .msf-add:hover{background:#fbe6d3;}
+          .msf-empty{padding:14px;text-align:center;color:var(--text-secondary);font-size:12px;}
+          .retire-roster-btn.ghost{background:#f1f5f9;color:var(--text);border:1px solid var(--border);}
+          .retire-filter-note{font-size:12px;color:var(--primary);font-weight:600;}
         </style>
         <div class="retire-roster-head" onclick="toggleRetireRosterBlock()">
           <h3>🎂 退休人员名册</h3>
@@ -2052,6 +2083,28 @@ function mergeEmployeeData() {
             <input type="date" id="retireStartDate" onchange="renderRetireRoster()">
             <span class="retire-roster-hint">统计区间：<strong>起始日期前推 6 个月</strong> ～ <strong>起始日期</strong>（含）内到龄退休人员</span>
             <button class="retire-roster-btn" onclick="exportRetireRoster()" style="margin-left:auto;">⬇ 导出 CSV</button>
+          </div>
+          <div class="retire-filter-bar">
+            <div class="msf" id="msfWrapGroup">
+              <div class="msf-field" id="msfFieldGroup">
+                <span class="msf-name">集团</span>
+                <span class="msf-chips" id="msfChipsGroup"></span>
+                <input type="text" class="msf-input" id="msfInputGroup" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelGroup"></div>
+            </div>
+            <div class="msf" id="msfWrapDept">
+              <div class="msf-field" id="msfFieldDept">
+                <span class="msf-name">部门</span>
+                <span class="msf-chips" id="msfChipsDept"></span>
+                <input type="text" class="msf-input" id="msfInputDept" autocomplete="off" placeholder="全部（可勾选，也可直接输入）">
+                <span class="msf-caret">▾</span>
+              </div>
+              <div class="msf-panel" id="msfPanelDept"></div>
+            </div>
+            <button class="retire-roster-btn ghost" onclick="clearRetireFilter()">↺ 清除筛选</button>
+            <span class="retire-filter-note" id="retireFilterNote"></span>
           </div>
           <div class="retire-roster-summary" id="retireRosterSummary"></div>
           <div class="retire-roster-table-wrap" id="retireRosterTableWrap"></div>
@@ -3554,12 +3607,241 @@ function getRetireRosterList() {
   });
   return RETIRE_ROSTER_CACHE;
 }
+// ==================== 退休名册：集团 / 部门 多选筛选（复选 + 手写填值） ====================
+var RETIRE_FILTER = { group: [], dept: [] };     // 勾选项（精确匹配）
+var RETIRE_FILTER_KW = { group: [], dept: [] };  // 手填项（包含匹配）
+var _MSF_CAP = { group: 'Group', dept: 'Dept' };
+var _MSF_LABEL = { group: '集团', dept: '部门' };
+
+function _retireFieldValue(r, field) {
+  var e = (r && r.e) ? r.e : {};
+  if (field === 'group') return String(e.group || '').trim() || '(未填写)';
+  return String(e.dept_99 || e.dept_100 || '').trim() || '(未填写)';
+}
+function _retireFieldOptions(field) {
+  // 选项与计数都取自「当前统计区间」，保证面板里的数字和表格行数对得上
+  var map = {};
+  _retireWindowRows(true).forEach(function(r){
+    var v = _retireFieldValue(r, field);
+    map[v] = (map[v] || 0) + 1;
+  });
+  return Object.keys(map).map(function(k){ return { v: k, n: map[k] }; })
+    .sort(function(a, b){ return (b.n - a.n) || String(a.v).localeCompare(String(b.v), 'zh-Hans-CN'); });
+}
+function _retireFilterActive(field) { return RETIRE_FILTER[field].length + RETIRE_FILTER_KW[field].length; }
+function _retireFilterSummaryHtml(shown) {
+  var g = _retireFilterActive('group'), d = _retireFilterActive('dept');
+  if (!g && !d) return '';
+  var parts = [];
+  if (g) parts.push('集团 ' + g + ' 项');
+  if (d) parts.push('部门 ' + d + ' 项');
+  return ' &nbsp;·&nbsp; <span class="retire-filter-note">已筛选：' + parts.join(' / ')
+       + '（区间共 ' + _retireWindowRows(true).length + ' 人 → 显示 ' + shown + ' 人）</span>';
+}
+function _retireMatchFilter(r) {
+  var g = RETIRE_FILTER.group, gk = RETIRE_FILTER_KW.group;
+  if (g.length || gk.length) {
+    var gv = _retireFieldValue(r, 'group'), gl = gv.toLowerCase();
+    if (g.indexOf(gv) < 0 && !gk.some(function(k){ return gl.indexOf(String(k).toLowerCase()) >= 0; })) return false;
+  }
+  var d = RETIRE_FILTER.dept, dk = RETIRE_FILTER_KW.dept;
+  if (d.length || dk.length) {
+    var dv = _retireFieldValue(r, 'dept'), dl = dv.toLowerCase();
+    if (d.indexOf(dv) < 0 && !dk.some(function(k){ return dl.indexOf(String(k).toLowerCase()) >= 0; })) return false;
+  }
+  return true;
+}
+function _msfEl(prefix, field) { return document.getElementById(prefix + _MSF_CAP[field]); }
+
+function msfOpen(field) {
+  ['group', 'dept'].forEach(function(f){
+    var w = _msfEl('msfWrap', f);
+    if (w) w.classList.toggle('open', f === field);
+  });
+  msfRender(field);
+}
+function msfClose(field) { var w = _msfEl('msfWrap', field); if (w) w.classList.remove('open'); }
+function msfCloseAll() { ['group', 'dept'].forEach(function(f){ msfClose(f); }); }
+
+function msfRender(field) {
+  var cap = _MSF_CAP[field];
+  var panel = document.getElementById('msfPanel' + cap);
+  var chips = document.getElementById('msfChips' + cap);
+  var input = document.getElementById('msfInput' + cap);
+  if (!panel) return;
+  var q = input ? String(input.value || '').trim() : '';
+  var ql = q.toLowerCase();
+  var opts = _retireFieldOptions(field);
+  var sel = RETIRE_FILTER[field], kw = RETIRE_FILTER_KW[field];
+  if (chips) {
+    var ch = '';
+    sel.forEach(function(v){
+      ch += '<span class="msf-chip" title="' + escHtml(v) + '"><span class="msf-chip-t">' + escHtml(v)
+          + '</span><span class="msf-x" data-rm="v:' + escHtml(v) + '">✕</span></span>';
+    });
+    kw.forEach(function(v){
+      ch += '<span class="msf-chip kw" title="关键字：' + escHtml(v) + '"><span class="msf-chip-t">🔍' + escHtml(v)
+          + '</span><span class="msf-x" data-rm="k:' + escHtml(v) + '">✕</span></span>';
+    });
+    chips.innerHTML = ch;
+  }
+  if (input) input.placeholder = (sel.length + kw.length) ? '继续勾选或输入' : '全部（可勾选，也可直接输入）';
+  var list = opts.filter(function(o){ return !ql || o.v.toLowerCase().indexOf(ql) >= 0; });
+  var exact = opts.some(function(o){ return o.v === q; });
+  var h = '<div class="msf-acts"><a data-act="all">全选</a><a data-act="clear">清空</a>'
+        + '<span class="msf-n">区间内人数 · 已选 ' + (sel.length + kw.length) + ' 项</span></div>';
+  if (q && !exact) h += '<div class="msf-add" data-act="add">＋ 添加「' + escHtml(q) + '」作为关键字（按包含匹配）</div>';
+  h += '<div class="msf-list">';
+  h += list.length
+    ? list.map(function(o){
+        var on = sel.indexOf(o.v) >= 0;
+        return '<label class="msf-opt' + (on ? ' on' : '') + '">'
+             + '<input type="checkbox" data-v="' + escHtml(o.v) + '"' + (on ? ' checked' : '') + '>'
+             + '<span class="msf-opt-t">' + escHtml(o.v) + '</span><span class="msf-opt-n">' + o.n + '</span></label>';
+      }).join('')
+    : '<div class="msf-empty">' + (ql ? '无匹配项，回车可添加为关键字' : '暂无可选项') + '</div>';
+  h += '</div>';
+  panel.innerHTML = h;
+}
+
+function msfToggleValue(field, val, checked) {
+  var sel = RETIRE_FILTER[field], i = sel.indexOf(val);
+  if (checked === undefined) checked = (i < 0);
+  if (checked && i < 0) sel.push(val);
+  if (!checked && i >= 0) sel.splice(i, 1);
+  msfAfterChange(field);
+}
+function msfAddKwValue(field, val) {
+  val = String(val || '').trim();
+  if (!val) return;
+  var kw = RETIRE_FILTER_KW[field];
+  if (kw.indexOf(val) < 0) kw.push(val);
+  msfAfterChange(field);
+}
+function msfRemove(field, token) {
+  var p = String(token || '').split(':'), kind = p[0], val = p.slice(1).join(':');
+  var arr = (kind === 'k') ? RETIRE_FILTER_KW[field] : RETIRE_FILTER[field];
+  var i = arr.indexOf(val);
+  if (i >= 0) arr.splice(i, 1);
+  msfAfterChange(field);
+}
+function msfSelectAll(field) {
+  var input = document.getElementById('msfInput' + _MSF_CAP[field]);
+  var q = input ? String(input.value || '').trim().toLowerCase() : '';
+  var sel = RETIRE_FILTER[field];
+  _retireFieldOptions(field).forEach(function(o){
+    if ((!q || o.v.toLowerCase().indexOf(q) >= 0) && sel.indexOf(o.v) < 0) sel.push(o.v);
+  });
+  msfAfterChange(field);
+}
+function msfClearSel(field) {
+  RETIRE_FILTER[field].length = 0;
+  RETIRE_FILTER_KW[field].length = 0;
+  msfAfterChange(field);
+}
+function msfAfterChange(field) {
+  var input = document.getElementById('msfInput' + _MSF_CAP[field]);
+  if (input) input.value = '';
+  msfRender(field);
+  updateRetireFilterNote();
+  renderRetireRoster();
+}
+function msfOnKey(ev, field) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    var input = ev.target, q = String(input.value || '').trim();
+    if (!q) return;
+    var opts = _retireFieldOptions(field);
+    var exact = opts.filter(function(o){ return o.v === q; })[0];
+    var fuzzy = opts.filter(function(o){ return o.v.toLowerCase().indexOf(q.toLowerCase()) >= 0; });
+    input.value = '';
+    if (exact) { msfToggleValue(field, exact.v); return; }
+    if (fuzzy.length === 1) { msfToggleValue(field, fuzzy[0].v); return; }
+    msfAddKwValue(field, q);
+    return;
+  }
+  if (ev.key === 'Escape') { msfClose(field); return; }
+  if (ev.key === 'Backspace' && !String(ev.target.value || '')) {
+    var sel = RETIRE_FILTER[field], kw = RETIRE_FILTER_KW[field];
+    if (kw.length) { kw.pop(); msfAfterChange(field); }
+    else if (sel.length) { sel.pop(); msfAfterChange(field); }
+  }
+}
+function updateRetireFilterNote() {
+  var note = document.getElementById('retireFilterNote');
+  if (!note) return;
+  var parts = [];
+  ['group', 'dept'].forEach(function(f){
+    var n = _retireFilterActive(f);
+    if (n) parts.push(_MSF_LABEL[f] + ' ' + n + ' 项');
+  });
+  note.textContent = parts.length ? '筛选生效中：' + parts.join(' · ') : '';
+}
+function clearRetireFilter() {
+  RETIRE_FILTER.group.length = 0; RETIRE_FILTER_KW.group.length = 0;
+  RETIRE_FILTER.dept.length = 0;  RETIRE_FILTER_KW.dept.length = 0;
+  ['group', 'dept'].forEach(function(f){
+    var input = document.getElementById('msfInput' + _MSF_CAP[f]);
+    if (input) input.value = '';
+    msfRender(f);
+  });
+  updateRetireFilterNote();
+  renderRetireRoster();
+}
+function initRetireFilters() {
+  ['group', 'dept'].forEach(function(f){
+    var cap = _MSF_CAP[f];
+    var panel = document.getElementById('msfPanel' + cap);
+    var chips = document.getElementById('msfChips' + cap);
+    var input = document.getElementById('msfInput' + cap);
+    var field = document.getElementById('msfField' + cap);
+    if (!panel) return;
+    if (!panel.getAttribute('data-bound')) {
+      panel.setAttribute('data-bound', '1');
+      panel.addEventListener('change', function(ev){
+        var t = ev.target;
+        if (t && t.type === 'checkbox') msfToggleValue(f, t.getAttribute('data-v'), t.checked);
+      });
+      panel.addEventListener('click', function(ev){
+        var t = ev.target, a = (t && t.getAttribute) ? t.getAttribute('data-act') : null;
+        if (a === 'all') msfSelectAll(f);
+        else if (a === 'clear') msfClearSel(f);
+        else if (a === 'add') { var i2 = document.getElementById('msfInput' + cap); msfAddKwValue(f, i2 ? i2.value : ''); }
+      });
+      if (chips) chips.addEventListener('click', function(ev){
+        var t = ev.target, rm = (t && t.getAttribute) ? t.getAttribute('data-rm') : null;
+        if (rm) msfRemove(f, rm);
+      });
+      if (input) {
+        input.addEventListener('input', function(){ msfOpen(f); });
+        input.addEventListener('keydown', function(ev){ msfOnKey(ev, f); });
+      }
+      if (field) field.addEventListener('click', function(ev){
+        var t = ev.target;
+        if (t && t.classList && t.classList.contains('msf-x')) return;
+        msfOpen(f);
+        if (input) input.focus();
+      });
+    }
+    msfRender(f);
+  });
+  if (!window._msfDocBound) {
+    window._msfDocBound = true;
+    document.addEventListener('click', function(ev){
+      var n = ev.target;
+      while (n && n !== document) { if (n.classList && n.classList.contains('msf')) return; n = n.parentNode; }
+      msfCloseAll();
+    }, true);
+  }
+  updateRetireFilterNote();
+}
+
 function _retireStartDate() {
   var inp = document.getElementById('retireStartDate');
   var v = inp ? (inp.value || '').trim() : '';
   return v || '2026-08-20';
 }
-function _retireWindowRows() {
+function _retireWindowRows(noFilter) {
   var v = _retireStartDate();
   var pm = v.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (!pm) return [];
@@ -3570,6 +3852,7 @@ function _retireWindowRows() {
     var rm0 = r.retireYear * 12 + (r.retireMonth - 1);
     if (rm0 >= startM && rm0 <= endM) rows.push(r);
   });
+  if (!noFilter) rows = rows.filter(_retireMatchFilter);
   rows.sort(function(a,b){
     return (a.retireYear - b.retireYear) || (a.retireMonth - b.retireMonth) || String(a.e.id).localeCompare(String(b.e.id));
   });
@@ -3583,9 +3866,9 @@ function renderRetireRoster() {
   var rows = _retireWindowRows();
   var cnCount = 0, hotCount = 0;
   rows.forEach(function(r){ if (r.isCN) cnCount++; if (r.monthsToRetire < 60) hotCount++; });
-  if (sum) sum.innerHTML = '共 <strong>' + rows.length + '</strong> 人（' + v.replace(/-/g, '/') + ' 前推 6 个月区间）&nbsp;·&nbsp; 大陆 ' + cnCount + ' 人 &nbsp;·&nbsp; 台湾/其他65岁 ' + (rows.length - cnCount) + ' 人 &nbsp;·&nbsp; <span style="color:#E31937;font-weight:700;">距退休&lt;5年 ' + hotCount + ' 人</span>';
+  if (sum) sum.innerHTML = '共 <strong>' + rows.length + '</strong> 人（' + v.replace(/-/g, '/') + ' 前推 6 个月区间）&nbsp;·&nbsp; 大陆 ' + cnCount + ' 人 &nbsp;·&nbsp; 台湾/其他65岁 ' + (rows.length - cnCount) + ' 人 &nbsp;·&nbsp; <span style="color:#E31937;font-weight:700;">距退休&lt;5年 ' + hotCount + ' 人</span>' + _retireFilterSummaryHtml(rows.length);
   if (!rows.length) { wrap.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text-secondary);font-size:13px;">该区间内暂无到龄退休人员</div>'; return; }
-  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>工号</th><th>姓名</th><th>地区</th><th>工作子区域</th><th>邮箱</th><th>绩效主管</th><th>退休年龄</th><th>退休日期</th><th>类别</th><th>状态</th></tr></thead><tbody>';
+  var html = '<table class="retire-table"><thead><tr><th>#</th><th>集团</th><th>部门</th><th>工号</th><th>姓名</th><th>地区</th><th>工作子区域</th><th>邮箱</th><th>绩效主管</th><th>生日</th><th>退休年龄</th><th>退休日期</th><th>类别</th><th>状态</th></tr></thead><tbody>';
   rows.forEach(function(r, i){
     var e = r.e;
     var name = e.ec_name || e.name || '-';
@@ -3595,15 +3878,19 @@ function renderRetireRoster() {
     var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
     var subRegion = e.sub_region || '-';
     var status = (e.status || '') === '在职' ? '在职' : '离职';
+    var dept = e.dept_99 || e.dept_100 || '-';
+    var birthday = e.birthday || '-';
     html += '<tr class="' + (hot ? 'hot' : '') + '">'
       + '<td>' + (i + 1) + '</td>'
       + '<td>' + escHtml(e.group || '-') + '</td>'
+      + '<td>' + escHtml(dept) + '</td>'
       + '<td>' + escHtml(e.id || '-') + '</td>'
       + '<td>' + escHtml(name) + '</td>'
       + '<td>' + escHtml(region) + '</td>'
       + '<td>' + escHtml(subRegion) + '</td>'
       + '<td>' + (email === '-' ? '-' : '<a class="clickable-link" href="mailto:' + escHtml(email) + '">' + escHtml(email) + '</a>') + '</td>'
       + '<td>' + escHtml(mgr) + '</td>'
+      + '<td>' + escHtml(birthday) + '</td>'
       + '<td>' + escHtml(r.ageLabel) + '</td>'
       + '<td><strong>' + escHtml(r.retireLabel) + '</strong></td>'
       + '<td><span class="retire-tag ' + (r.isCN ? 'cn' : 'other') + '">' + escHtml(r.isCN ? '大陆·延迟退休' : '65岁') + '</span></td>'
@@ -3612,6 +3899,7 @@ function renderRetireRoster() {
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
+  if (document.getElementById('msfPanelGroup')) { msfRender('group'); msfRender('dept'); }
 }
 function initRetireRoster() {
   var inp = document.getElementById('retireStartDate');
@@ -3619,6 +3907,7 @@ function initRetireRoster() {
     var d = new Date();
     inp.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
+  initRetireFilters();   // 起始日期就位后再建筛选面板，计数才与区间一致
   var block = document.getElementById('retireRosterBlock');
   try {
     var saved = localStorage.getItem('wpgholdings_retire_collapsed');
@@ -3630,20 +3919,20 @@ function initRetireRoster() {
 function exportRetireRoster() {
   var v = _retireStartDate();
   var rows = _retireWindowRows();
-  var lines = ['集团,工号,姓名,地区,工作子区域,邮箱,绩效主管,退休年龄,退休日期,类别,状态'];
+  var lines = ['集团,部门,工号,姓名,生日,地区,工作子区域,邮箱,绩效主管,退休年龄,退休日期,类别,状态'];
   rows.forEach(function(r){
     var e = r.e;
     var region = ((e.nationality || '') === '中国') ? '中国大陆' : (e.nationality || '-');
     var subRegion = e.sub_region || '-';
     var f = function(x){ return '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"'; };
-    lines.push([f(e.group || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'), f(region), f(subRegion),
+    lines.push([f(e.group || '-'), f(e.dept_99 || e.dept_100 || '-'), f(e.id || '-'), f(e.ec_name || e.name || '-'), f(e.birthday || '-'), f(region), f(subRegion),
                 f(e.email || '-'), f(e.perf_mgr || e.mgr99 || '-'), f(r.ageLabel), f(r.retireLabel),
                 f(r.isCN ? '大陆·延迟退休' : '65岁'), f((e.status || '') === '在职' ? '在职' : '离职')].join(','));
   });
   var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '退休人员名册_' + v.replace(/-/g, '') + '.csv';
+  a.download = '退休人员名册_' + v.replace(/-/g, '') + ((_retireFilterActive('group') || _retireFilterActive('dept')) ? '_已筛选' : '') + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
@@ -3653,7 +3942,7 @@ function toggleRetireRosterBlock() {
   block.classList.toggle('collapsed');
   var collapsed = block.classList.contains('collapsed');
   try { localStorage.setItem('wpgholdings_retire_collapsed', collapsed ? '1' : '0'); } catch(e) {}
-  if (!collapsed) renderRetireRoster();
+  if (!collapsed) { initRetireFilters(); renderRetireRoster(); }
 }
 
 function _eduFullTimeGradAge(edu) {
