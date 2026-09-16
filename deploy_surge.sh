@@ -44,11 +44,11 @@ for url in \
   "https://wpgholdings-todo.surge.sh/" \
   "https://wpgholdings-todo.surge.sh/report.html" \
   "https://wpgholdings-todo.surge.sh/report-comparison-v12.html.enc" \
-  "https://wpgholdings-todo.surge.sh/report-content-v5.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-content-v6.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-hr-trends-v3.html.enc" \
   "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
   "https://hr-insight-report.surge.sh/" \
-  "https://hr-insight-report.surge.sh/report-content-v5.html.enc" \
+  "https://hr-insight-report.surge.sh/report-content-v6.html.enc" \
   "https://hr-insight-report.surge.sh/report-comparison-v12.html.enc" \
   "https://hr-insight-report.surge.sh/chart.umd.min.js" \
   "https://yuki114918.github.io/wpgholdings-platform/report.html" ; do
