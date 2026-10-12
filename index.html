@@ -36,6 +36,8 @@ var DATA_BASE = DATA_BASES[0];
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
+// 重试时给 URL 加时间戳，穿透浏览器/边缘已缓存的 404 或旧分块
+function wpgCacheBust(url){ return url + (url.indexOf('?') < 0 ? '?' : '&') + 'cb=' + Date.now(); }
 function wpgUpdateLoadProgress(loaded, total, failed, extra){
   var txt = '⏳ 数据加载中（'+loaded+'/'+total+'）';
   if(failed && failed.length) txt += ' · 失败 '+failed.length+' 块';
@@ -72,8 +74,11 @@ async function wpgLoadOneChunk(idx){
       try{
         window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+ (attempt?'重试 ':'') + wpgBaseName(DATA_BASES[b]);
         wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
-        var timeout = attempt===0 ? 16000 : 45000;
-        var js = await wpgFetchData(DATA_BASES[b]+'employees-data-v20-part'+idx+'.js.enc', timeout);
+        // 首次 25s（2MB 分块留足余量）；重试放宽到 45s 并加 cb 穿透缓存
+        var timeout = attempt===0 ? 25000 : 45000;
+        var chunkUrl = DATA_BASES[b]+'employees-data-v20-part'+idx+'.js.enc';
+        if(attempt>0) chunkUrl = wpgCacheBust(chunkUrl);
+        var js = await wpgFetchData(chunkUrl, timeout);
         window.WPG_LOAD_EXTRA = '';
         var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
         return {ok:true, idx:idx, source:DATA_BASES[b]};
@@ -123,8 +128,10 @@ async function wpgStartRosterLoad(){
     for(var attempt2=0; attempt2<2; attempt2++){
       try{
         wpgUpdateLoadProgress(window._wpgDone+window._wpgFailed.length, TOTAL_CHUNKS, window._wpgFailed, '，正在加载学历数据…');
-        var timeout2 = attempt2===0 ? 16000 : 45000;
-        var ejs = await wpgFetchData(DATA_BASES[b2]+'employees-education-v20.js.enc', timeout2);
+        var timeout2 = attempt2===0 ? 25000 : 45000;
+        var eduUrl = DATA_BASES[b2]+'employees-education-v20.js.enc';
+        if(attempt2>0) eduUrl = wpgCacheBust(eduUrl);
+        var ejs = await wpgFetchData(eduUrl, timeout2);
         var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
         eduOk=true; break;
       }catch(e){ console.warn('EC学历从 '+DATA_BASES[b2]+' 尝试'+(attempt2+1)+'失败:', e.message||e); }
@@ -4563,13 +4570,17 @@ function monthlyNiceCeil(v) {
 async function wpgLoadMonthly() {
   async function fetchOne(name) {
     for (var b = 0; b < DATA_BASES.length; b++) {
-      try {
-        var js = await wpgFetchData(DATA_BASES[b] + name, 16000);
-        var sc = document.createElement('script');
-        sc.textContent = js;
-        document.head.appendChild(sc);
-        return true;
-      } catch (e) { /* 尝试下一个源 */ }
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          var u = DATA_BASES[b] + name;
+          if (attempt > 0) u = wpgCacheBust(u);
+          var js = await wpgFetchData(u, attempt === 0 ? 20000 : 45000);
+          var sc = document.createElement('script');
+          sc.textContent = js;
+          document.head.appendChild(sc);
+          return true;
+        } catch (e) { /* 重试或换下一个源 */ }
+      }
     }
     return false;
   }
