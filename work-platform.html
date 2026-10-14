@@ -27,9 +27,9 @@ var EMPLOYEES_DATA=null;
 var MGR99_NAME_SET={};
 var TOTAL_CHUNKS=10;
 var DATA_BASES = [
-  // jsDelivr 主节点 + GCore 镜像 + GitHub Pages 回退；GCore 在国内部分网络更快
-  'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
+  // GCore 镜像优先（国内更快、且缓存刷新更及时）；cdn.jsdelivr 主节点与 GitHub Pages 兜底
   'https://gcore.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
+  'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
   'https://yuki114918.github.io/wpgholdings-platform/data/'
 ];
 var DATA_BASE = DATA_BASES[0];
