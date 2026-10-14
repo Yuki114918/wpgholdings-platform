@@ -4822,6 +4822,7 @@ function renderEmployeeCard(e) {
       retireDetailHtml(e) +
       buildDetail('用工类型', e.hire_type) +
       buildDetail('到职日期', e.join_date) +
+      buildDetail('身份证号', e.id_card) +
       (e.tenure ? buildDetail('司龄', e.tenure) : '') +
       /* ---- 联系方式 ---- */
       buildDetail('手机', e.phone, 'tel') +
