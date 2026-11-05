@@ -1934,49 +1934,49 @@ function mergeEmployeeData() {
     <div id="dashboardGrid" class="dash-grid" style="display:none;"></div>
   </section>
 
-  <!-- ===== 月度人力月报 ===== -->
+  <!-- ===== 月度人力月报（重建 v2 · BI 风格三屏 + 主管职转换） ===== -->
   <section class="section module-visible" data-module="monthly" id="mod-monthly">
     <style>
-      .monthly-asof{font-size:13px;color:var(--text-secondary);margin-bottom:10px;}
-      .monthly-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+      .m-asof{font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;}
+      .m-kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:6px 0 18px;}
+      .m-kpi{border:1px solid var(--border);border-radius:14px;padding:14px 16px;background:#fff;position:relative;overflow:hidden;}
+      .m-kpi .m-kpi-label{font-size:12.5px;color:var(--text-secondary);font-weight:600;}
+      .m-kpi .m-kpi-val{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px;color:#E31937;}
+      .m-kpi .m-kpi-sub{font-size:11.5px;margin-top:4px;color:var(--text-secondary);}
+      .m-kpi .m-kpi-sub .up{color:#E31937;font-weight:700;}
+      .m-kpi .m-kpi-sub .down{color:#1a9c5b;font-weight:700;}
+      .m-kpi .m-kpi-sub .flat{color:#94a3b8;}
+      .m-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+      .m-tab{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);}
+      .m-tab.active{background:#E31937;color:#fff;border-color:#E31937;}
+      .m-pane{display:none;}
+      .m-pane.active{display:block;}
+      .m-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+      @media(max-width:860px){.m-grid{grid-template-columns:1fr;}}
+      .m-card{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;}
+      .m-card h3{margin:0 0 6px;font-size:14.5px;color:#E31937;}
+      .m-card .m-card-note{font-size:11.5px;color:var(--text-secondary);margin-bottom:6px;}
+      .m-svg svg{width:100%;height:auto;display:block;}
+      .m-legend{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 2px;font-size:12px;color:var(--text-secondary);}
+      .m-legend .lg{display:inline-flex;align-items:center;gap:4px;}
+      .m-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+      .m-legend .sw.line{height:3px;width:16px;border-radius:2px;}
+      .m-foot{font-size:12px;color:var(--text-secondary);margin-top:14px;line-height:1.7;background:#fff5f6;border:1px solid #f3d6da;border-radius:8px;padding:10px 14px;}
+      .m-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-top:8px;}
+      table.m-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+      table.m-tbl th{background:#E31937;color:#fff;padding:8px 10px;text-align:right;white-space:nowrap;position:sticky;top:0;}
+      table.m-tbl th:first-child{text-align:left;}
+      table.m-tbl td{padding:7px 10px;border-bottom:1px solid #eef2f6;text-align:right;white-space:nowrap;}
+      table.m-tbl td:first-child{text-align:left;font-weight:600;}
+      table.m-tbl tr:nth-child(even) td{background:#f8fbfd;}
+      .m-sup-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 14px;}
+      @media(max-width:620px){.m-sup-cards{grid-template-columns:1fr;}}
+      .m-sup-cards .m-kpi .m-kpi-val{font-size:26px;}
       .monthly-filter-label{font-size:13px;font-weight:600;color:var(--text);}
       .monthly-note{font-size:12px;color:var(--primary);font-weight:600;}
-      .monthly-charts{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
-      @media(max-width:860px){.monthly-charts{grid-template-columns:1fr;}}
-      .monthly-chart-card{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;}
-      .monthly-chart-card h3{margin:0 0 8px;font-size:14.5px;color:var(--primary);}
-      .monthly-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;font-size:12px;color:var(--text-secondary);}
-      .monthly-legend .lg{display:inline-flex;align-items:center;gap:4px;}
-      .monthly-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
-      .monthly-legend .sw.line{height:3px;border-radius:2px;width:16px;}
-      .monthly-svg-wrap svg{width:100%;height:auto;display:block;}
-      .monthly-table-block,.monthly-drill-block{margin-top:18px;}
-      .monthly-table-block h3,.monthly-drill-block h3{font-size:15px;color:var(--text);margin:0 0 10px;}
-      .monthly-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
-      table.monthly-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px;}
-      table.monthly-table th{position:sticky;top:0;background:var(--primary);color:#fff;padding:8px 10px;text-align:right;white-space:nowrap;}
-      table.monthly-table th:first-child{text-align:left;}
-      table.monthly-table td{padding:7px 10px;border-bottom:1px solid #eef2f6;text-align:right;white-space:nowrap;}
-      table.monthly-table td:first-child{text-align:left;font-weight:600;}
-      table.monthly-table tr:nth-child(even) td{background:#f8fbfd;}
-      .mm-bad{color:#E31937;font-weight:700;}
-      .mm-good{color:#1a9c5b;font-weight:700;}
-      .mm-neutral{color:#64748b;}
-      .mm-flat{color:#94a3b8;}
-      .mm-delta{font-size:11px;margin-left:3px;}
-      .monthly-drill{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
-      .monthly-drill-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:#fff;}
-      .monthly-drill-card h4{margin:0 0 8px;font-size:13.5px;color:var(--primary);}
-      .monthly-drill-sub{font-size:12px;color:var(--text-secondary);margin:6px 0 4px;font-weight:600;}
-      .monthly-drill-scroll{max-height:240px;overflow-y:auto;border:1px solid #eef2f6;border-radius:8px;}
-      table.monthly-drill-table{width:100%;border-collapse:collapse;font-size:12px;}
-      table.monthly-drill-table th{background:#f1f5f9;color:var(--text);padding:5px 8px;text-align:left;position:sticky;top:0;}
-      table.monthly-drill-table td{padding:4px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
-      .monthly-foot{font-size:12px;color:var(--text-secondary);margin-top:14px;line-height:1.6;background:#f8fbfd;border:1px solid var(--border);border-radius:8px;padding:8px 12px;}
     </style>
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">📅 月度人力月报<span class="collapse-arrow">▼</span></h2>
-    <div class="monthly-asof" id="monthlyAsOf">📅 数据来源：各月归档花名册快照（含离职人员）· 月度口径以源文件归档月为准。图③「留任率」= 期末在职 ÷（期末在职 + 当月离职），为当前月度可量化代理指标。</div>
-    <div class="monthly-foot" id="monthlyFoot">ℹ️ 后续若要换成「招聘完成率」，需每月补充：① 招聘接单/需求数（按集团·职系）；② 实际到岗数。提供后接入即可，无需改版式。</div>
+    <div class="m-asof" id="monthlyAsOf"></div>
     <div class="monthly-toolbar">
       <div class="monthly-filter-label">选择月份（可复选）</div>
       <div class="msf" id="monthlyMsfWrap">
@@ -1994,36 +1994,44 @@ function mergeEmployeeData() {
     </div>
     <div id="monthlyLoading" style="padding:18px;text-align:center;color:var(--text-secondary);">⏳ 月度数据加载中…</div>
     <div id="monthlyBody" style="display:none;">
-      <div class="monthly-charts">
-        <div class="monthly-chart-card">
-          <h3>① 逐月在職人數 + 入/離職事件</h3>
-          <div class="monthly-legend" id="monthlyLegend1"></div>
-          <div class="monthly-svg-wrap" id="monthlyChart1"></div>
-        </div>
-        <div class="monthly-chart-card">
-          <h3>② 逐月各集团在职人数（堆叠）</h3>
-          <div class="monthly-legend" id="monthlyLegend2"></div>
-          <div class="monthly-svg-wrap" id="monthlyChart2"></div>
-        </div>
-        <div class="monthly-chart-card">
-          <h3>③ 逐月离职率 + 留任率</h3>
-          <div class="monthly-legend" id="monthlyLegend3"></div>
-          <div class="monthly-svg-wrap" id="monthlyChart3"></div>
-        </div>
-        <div class="monthly-chart-card">
-          <h3>④ 逐月平均年龄 / 平均年资</h3>
-          <div class="monthly-legend" id="monthlyLegend4"></div>
-          <div class="monthly-svg-wrap" id="monthlyChart4"></div>
+      <div class="m-kpi-strip" id="mKpis"></div>
+      <div class="m-tabs">
+        <button class="m-tab active" data-tab="trend" onclick="monthlySwitchTab('trend')">📈 人力趋势</button>
+        <button class="m-tab" data-tab="struct" onclick="monthlySwitchTab('struct')">🧩 人力结构</button>
+        <button class="m-tab" data-tab="move" onclick="monthlySwitchTab('move')">🔁 人员异动</button>
+      </div>
+      <div class="m-pane active" id="mTabTrend">
+        <div class="m-grid">
+          <div class="m-card"><h3>逐月在職人數（月末在职快照）</h3><div class="m-svg" id="mTrendHeadcount"></div></div>
+          <div class="m-card"><h3>逐月各集团在职人数（堆叠）</h3><div class="m-legend" id="mTrendLegend"></div><div class="m-svg" id="mTrendGroups"></div></div>
         </div>
       </div>
-      <div class="monthly-table-block">
-        <h3>月度汇总（含环比 ▲▼）</h3>
-        <div class="monthly-table-wrap" id="monthlyTableWrap"></div>
+      <div class="m-pane" id="mTabStruct">
+        <div class="m-grid">
+          <div class="m-card"><h3>主管职占比</h3><div class="m-svg" id="mStructSup"></div></div>
+          <div class="m-card"><h3>性别分布</h3><div class="m-svg" id="mStructGender"></div></div>
+          <div class="m-card"><h3>前 / 后端分布</h3><div class="m-svg" id="mStructFB"></div></div>
+          <div class="m-card"><h3>职系分布</h3><div class="m-svg" id="mStructZhiXi"></div></div>
+          <div class="m-card"><h3>职等分布</h3><div class="m-svg" id="mStructZhiDeng"></div></div>
+          <div class="m-card"><h3>年龄区间</h3><div class="m-svg" id="mStructAge"></div></div>
+          <div class="m-card"><h3>年资区间</h3><div class="m-svg" id="mStructTenure"></div></div>
+          <div class="m-card"><h3>区域分布</h3><div class="m-svg" id="mStructRegion"></div></div>
+        </div>
       </div>
-      <div class="monthly-drill-block" id="monthlyDrillBlock">
-        <h3>近月明细下钻（入职 / 离职名单）</h3>
-        <div class="monthly-drill" id="monthlyDrill"></div>
+      <div class="m-pane" id="mTabMove">
+        <div class="m-sup-cards" id="mMoveSupCards"></div>
+        <div class="m-grid">
+          <div class="m-card"><h3>逐月入职 / 离职人数</h3><div class="m-svg" id="mMoveTrend"></div></div>
+          <div class="m-card"><h3>逐月主管职转换（新升 / 卸任 / 净）</h3><div class="m-svg" id="mMoveSup"></div></div>
+          <div class="m-card"><h3>所选月份离职原因（合计 TOP）</h3><div class="m-svg" id="mMoveReasons"></div></div>
+          <div class="m-card"><h3>雇用分布（所选月份合计）</h3><div class="m-svg" id="mMoveHire"></div></div>
+        </div>
+        <div class="monthly-table-block">
+          <h3>入离明细（近 24 个月 · 所选月份）</h3>
+          <div class="m-table-wrap" id="mMoveTable"></div>
+        </div>
       </div>
+      <div class="m-foot" id="monthlyFoot"></div>
     </div>
   </section>
 
@@ -4092,32 +4100,23 @@ _msfReg('birthday', function(){
   };
 });
 
-// ==================== 月度人力月报模块 ====================
+// ==================== 月度人力月报模块（重建 v2 · BI 风格三屏 + 主管职转换） ====================
 var MONTHLY_MONTHS = [];
 var MONTHLY_SEL = [];
 var MONTHLY_READY = false;
 var MONTHLY_GROUP_COLORS = {
-  'WPIg': '#004E8C', 'AITg': '#E31937', 'SACg': '#f59e0b', 'YSNg': '#10b981',
-  'BSC': '#8b5cf6', 'LOG': '#06b6d4', 'HOLDINGS': '#64748b', 'GBG': '#ec4899'
+  '世平集团': '#004E8C', '诠鼎集团': '#E31937', '后勤支援中心': '#8b5cf6', '运筹': '#06b6d4',
+  '控股公司': '#64748b', '海外事业群': '#ec4899', '鑫联大控股': '#f59e0b', '其他': '#94a3b8', 'RWPG': '#10b981'
 };
-var MONTHLY_GROUP_ORDER = ['WPIg', 'AITg', 'SACg', 'YSNg', 'BSC', 'LOG', 'HOLDINGS', 'GBG'];
+var MONTHLY_GROUP_ORDER = ['世平集团', '诠鼎集团', '运筹', '控股公司', '后勤支援中心', '海外事业群', '鑫联大控股', '其他', 'RWPG'];
 
 function monthlyMetric(m) {
   if (!window.MONTHLY_METRICS) return null;
-  for (var i = 0; i < MONTHLY_METRICS.length; i++) {
-    if (MONTHLY_METRICS[i].month === m) return MONTHLY_METRICS[i];
-  }
+  for (var i = 0; i < MONTHLY_METRICS.length; i++) if (MONTHLY_METRICS[i].month === m) return MONTHLY_METRICS[i];
   return null;
 }
-function monthlyGroupLabel(g) {
-  if (window.MONTHLY_GROUP_DISPLAY && MONTHLY_GROUP_DISPLAY[g]) return MONTHLY_GROUP_DISPLAY[g];
-  return g;
-}
 function monthlyGroupColor(g) { return MONTHLY_GROUP_COLORS[g] || '#94a3b8'; }
-function monthlyFmt(v, d) {
-  if (v == null || isNaN(v)) return '-';
-  return (+v).toFixed(d == null ? 0 : d);
-}
+function monthlyFmt(v, d) { if (v == null || isNaN(v)) return '-'; return (+v).toFixed(d == null ? 0 : d); }
 function monthlyNiceCeil(v) {
   if (v == null || isNaN(v) || v <= 0) return 1;
   if (v < 10) return Math.ceil(v * 2) / 2;
@@ -4126,6 +4125,8 @@ function monthlyNiceCeil(v) {
   if (n <= 1) step = 0.2; else if (n <= 2) step = 0.4; else if (n <= 5) step = 1; else step = 2;
   return Math.ceil(v / (step * mag)) * (step * mag);
 }
+function monthlyPrevMonth(m) { var i = MONTHLY_MONTHS.indexOf(m); if (i > 0) return MONTHLY_MONTHS[i - 1]; return null; }
+function monthlySameMonthLastYear(m) { if (!m || m.length < 7) return null; var y = parseInt(m.slice(0, 4), 10) - 1; return y + '-' + m.slice(5); }
 
 async function wpgLoadMonthly() {
   async function fetchOne(name) {
@@ -4135,331 +4136,201 @@ async function wpgLoadMonthly() {
           var u = DATA_BASES[b] + name;
           if (attempt > 0) u = wpgCacheBust(u);
           var js = await wpgFetchData(u, attempt === 0 ? 20000 : 45000);
-          var sc = document.createElement('script');
-          sc.textContent = js;
-          document.head.appendChild(sc);
+          var sc = document.createElement('script'); sc.textContent = js; document.head.appendChild(sc);
           return true;
-        } catch (e) { /* 重试或换下一个源 */ }
+        } catch (e) { /* retry / next base */ }
       }
     }
     return false;
   }
   var ok = await fetchOne('monthly-metrics.js.enc');
   if (!ok || !window.MONTHLY_METRICS) return false;
-  var months = (window.MONTHLY_METRICS || []).map(function (m) { return m.month; }).sort();
-  var recent = months.slice(-3);
-  for (var i = 0; i < recent.length; i++) {
-    await fetchOne('monthly-detail-' + recent[i].replace('-', '') + '.js.enc');
-  }
+  await fetchOne('monthly-move.js.enc');
   return true;
 }
 
-function monthlyShowError(msg) {
-  var l = document.getElementById('monthlyLoading');
-  if (l) l.innerHTML = '⚠️ ' + msg;
-}
-
+function monthlyShowError(msg) { var l = document.getElementById('monthlyLoading'); if (l) l.innerHTML = '⚠️ ' + msg; }
 function monthlyInit() {
   if (!window.MONTHLY_METRICS) { monthlyShowError('月度汇总数据未加载'); return; }
   MONTHLY_MONTHS = (window.MONTHLY_METRICS || []).map(function (m) { return m.month; }).sort();
   MONTHLY_SEL = MONTHLY_MONTHS.slice();
   MONTHLY_READY = true;
-  var loading = document.getElementById('monthlyLoading');
-  var body = document.getElementById('monthlyBody');
-  if (loading) loading.style.display = 'none';
-  if (body) body.style.display = 'block';
+  var loading = document.getElementById('monthlyLoading'); if (loading) loading.style.display = 'none';
+  var body = document.getElementById('monthlyBody'); if (body) body.style.display = 'block';
+  var asof = document.getElementById('monthlyAsOf');
+  if (asof) asof.innerHTML = '📅 数据来源：数据源 · 人力资源「在职名册」月末快照（各月归档）。口径＝月末在职人数；集团按品佳 / 友尚 / 诠鼎合并为「诠鼎集团」。人员异动来自「WPG TW&CN 人员异动清册」。';
+  var foot = document.getElementById('monthlyFoot');
+  if (foot) foot.innerHTML = 'ℹ️ 主管职转换 = 跨月按工号比对「主管标记」：新升（非主管→主管）、卸任（主管→非主管）、净＝新升 − 卸任。人员异动事件来自「WPG TW&CN 人员异动清册」。';
   var input = document.getElementById('monthlyMsfInput');
+  if (input && !window._mMsfBound) { window._mMsfBound = true; input.addEventListener('input', function () { monthlyRenderPanel(); }); input.addEventListener('keydown', function (ev) { monthlyOnKey(ev); }); }
   var field = document.getElementById('monthlyMsfField');
+  if (field && !window._mFieldBound) { window._mFieldBound = true; field.addEventListener('click', function (ev) { if (ev.target.classList && ev.target.classList.contains('msf-x')) return; monthlyOpenPanel(); if (input) input.focus(); }); }
   var chips = document.getElementById('monthlyMsfChips');
+  if (chips && !window._mChipsBound) { window._mChipsBound = true; chips.addEventListener('click', function (ev) { var t = ev.target; if (t && t.getAttribute && t.getAttribute('data-rm')) monthlyToggleMonth(t.getAttribute('data-rm')); }); }
   var panel = document.getElementById('monthlyMsfPanel');
-  if (input) {
-    input.addEventListener('input', function () { monthlyRenderPanel(); });
-    input.addEventListener('keydown', function (ev) { monthlyOnKey(ev); });
-  }
-  if (field) field.addEventListener('click', function (ev) {
-    if (ev.target.classList && ev.target.classList.contains('msf-x')) return;
-    monthlyOpenPanel();
-    if (input) input.focus();
-  });
-  if (chips) chips.addEventListener('click', function (ev) {
-    var t = ev.target;
-    if (t && t.getAttribute && t.getAttribute('data-rm')) monthlyToggleMonth(t.getAttribute('data-rm'));
-  });
-  if (panel) panel.addEventListener('click', function (ev) {
-    var t = ev.target;
-    var a = (t && t.getAttribute) ? t.getAttribute('data-act') : null;
-    if (a === 'all') { monthlySelectAllMonths(); return; }
-    if (a === 'clear') { monthlyClearMonths(); return; }
-    if (t && t.type === 'checkbox') monthlyToggleMonth(t.getAttribute('data-v'));
-  });
-  if (!window._monthlyDocBound) {
-    window._monthlyDocBound = true;
-    document.addEventListener('click', function (ev) {
-      var n = ev.target;
-      while (n && n !== document) { if (n.id === 'monthlyMsfWrap') return; n = n.parentNode; }
-      var w = document.getElementById('monthlyMsfWrap');
-      if (w) w.classList.remove('open');
-    }, true);
-  }
+  if (panel && !window._mPanelBound) { window._mPanelBound = true; panel.addEventListener('click', function (ev) { var t = ev.target; var a = t && t.getAttribute ? t.getAttribute('data-act') : null; if (a === 'all') { monthlySelectAllMonths(); return; } if (a === 'clear') { monthlyClearMonths(); return; } if (t && t.type === 'checkbox') monthlyToggleMonth(t.getAttribute('data-v')); }); }
+  if (!window._mDocBound) { window._mDocBound = true; document.addEventListener('click', function (ev) { var n = ev.target; while (n && n !== document) { if (n.id === 'monthlyMsfWrap') return; n = n.parentNode; } var w = document.getElementById('monthlyMsfWrap'); if (w) w.classList.remove('open'); }, true); }
   monthlyRenderPanel();
   monthlyRender();
 }
-
-function monthlyOpenPanel() {
-  var w = document.getElementById('monthlyMsfWrap');
-  if (w) w.classList.add('open');
-  monthlyRenderPanel();
-}
-function monthlyToggleMonth(m) {
-  var i = MONTHLY_SEL.indexOf(m);
-  if (i >= 0) MONTHLY_SEL.splice(i, 1); else MONTHLY_SEL.push(m);
-  monthlyRenderPanel();
-  monthlyRender();
-}
+function monthlyOpenPanel() { var w = document.getElementById('monthlyMsfWrap'); if (w) w.classList.add('open'); monthlyRenderPanel(); }
+function monthlyToggleMonth(m) { var i = MONTHLY_SEL.indexOf(m); if (i >= 0) MONTHLY_SEL.splice(i, 1); else MONTHLY_SEL.push(m); monthlyRenderPanel(); monthlyRender(); }
 function monthlySelectAllMonths() { MONTHLY_SEL = MONTHLY_MONTHS.slice(); monthlyRenderPanel(); monthlyRender(); }
 function monthlyClearMonths() { MONTHLY_SEL = []; monthlyRenderPanel(); monthlyRender(); }
 function monthlyOnKey(ev) {
   if (ev.key === 'Enter') {
-    ev.preventDefault();
-    var input = ev.target, q = String(input.value || '').trim();
+    ev.preventDefault(); var input = ev.target, q = String(input.value || '').trim();
     if (!q) return;
     if (MONTHLY_MONTHS.indexOf(q) >= 0) { monthlyToggleMonth(q); input.value = ''; }
-    else {
-      var f = MONTHLY_MONTHS.filter(function (m) { return m.indexOf(q) >= 0; });
-      if (f.length === 1) { monthlyToggleMonth(f[0]); input.value = ''; }
-    }
+    else { var f = MONTHLY_MONTHS.filter(function (m) { return m.indexOf(q) >= 0; }); if (f.length === 1) { monthlyToggleMonth(f[0]); input.value = ''; } }
     return;
   }
   if (ev.key === 'Escape') { var w = document.getElementById('monthlyMsfWrap'); if (w) w.classList.remove('open'); return; }
-  if (ev.key === 'Backspace' && !String(ev.target.value || '')) {
-    if (MONTHLY_SEL.length) { MONTHLY_SEL.pop(); monthlyRenderPanel(); monthlyRender(); }
-  }
+  if (ev.key === 'Backspace' && !String(ev.target.value || '')) { if (MONTHLY_SEL.length) { MONTHLY_SEL.pop(); monthlyRenderPanel(); monthlyRender(); } }
 }
 function monthlyRenderPanel() {
-  var chips = document.getElementById('monthlyMsfChips');
-  var panel = document.getElementById('monthlyMsfPanel');
-  var input = document.getElementById('monthlyMsfInput');
-  if (chips) {
-    var ch = '';
-    MONTHLY_SEL.forEach(function (m) {
-      ch += '<span class="msf-chip" title="' + m + '"><span class="msf-chip-t">' + m + '</span><span class="msf-x" data-rm="' + m + '">✕</span></span>';
-    });
-    chips.innerHTML = ch;
-  }
+  var chips = document.getElementById('monthlyMsfChips'); var panel = document.getElementById('monthlyMsfPanel'); var input = document.getElementById('monthlyMsfInput');
+  if (chips) { var ch = ''; MONTHLY_SEL.forEach(function (m) { ch += '<span class="msf-chip" title="' + m + '"><span class="msf-chip-t">' + m + '</span><span class="msf-x" data-rm="' + m + '">✕</span></span>'; }); chips.innerHTML = ch; }
   if (input) input.placeholder = MONTHLY_SEL.length ? '继续勾选' : '全部月份（可勾选）';
   if (panel) {
     var q = input ? String(input.value || '').trim().toLowerCase() : '';
     var h = '<div class="msf-acts"><a data-act="all">全选</a><a data-act="clear">清空</a><span class="msf-n">共 ' + MONTHLY_MONTHS.length + ' 个月 · 已选 ' + MONTHLY_SEL.length + ' 个</span></div>';
     var list = MONTHLY_MONTHS.filter(function (m) { return !q || m.toLowerCase().indexOf(q) >= 0; });
     h += '<div class="msf-list">';
-    if (list.length) {
-      h += list.map(function (m) {
-        var on = MONTHLY_SEL.indexOf(m) >= 0;
-        var mm = monthlyMetric(m);
-        var hc = mm ? mm.active : 0;
-        return '<label class="msf-opt' + (on ? ' on' : '') + '"><input type="checkbox" data-v="' + m + '"' + (on ? ' checked' : '') + '><span class="msf-opt-t">' + m + '</span><span class="msf-opt-n">在职 ' + hc + '</span></label>';
-      }).join('');
-    } else {
-      h += '<div class="msf-empty">无匹配月份</div>';
-    }
-    h += '</div>';
-    panel.innerHTML = h;
+    if (list.length) { h += list.map(function (m) { var on = MONTHLY_SEL.indexOf(m) >= 0; var mm = monthlyMetric(m); var hc = mm ? mm.headcount : 0; return '<label class="msf-opt' + (on ? ' on' : '') + '"><input type="checkbox" data-v="' + m + '"' + (on ? ' checked' : '') + '><span class="msf-opt-t">' + m + '</span><span class="msf-opt-n">在职 ' + hc + '</span></label>'; }).join(''); }
+    else h += '<div class="msf-empty">无匹配月份</div>';
+    h += '</div>'; panel.innerHTML = h;
   }
   var note = document.getElementById('monthlyFilterNote');
   if (note) note.textContent = MONTHLY_SEL.length ? ('已选 ' + MONTHLY_SEL.length + ' / ' + MONTHLY_MONTHS.length + ' 个月') : '未选月份，图表为空';
 }
-
-function monthlyRender() {
-  var sel = MONTHLY_SEL.slice().sort();
-  var metrics = sel.map(monthlyMetric).filter(Boolean);
-  monthlyRenderChart1(metrics);
-  monthlyRenderChart2(metrics);
-  monthlyRenderChart3(metrics);
-  monthlyRenderChart4(metrics);
-  monthlyRenderTable(metrics);
-  monthlyRenderDrill(sel);
+function monthlySwitchTab(t) {
+  var tabs = document.querySelectorAll('#mod-monthly .m-tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === t);
+  document.getElementById('mTabTrend').classList.toggle('active', t === 'trend');
+  document.getElementById('mTabStruct').classList.toggle('active', t === 'struct');
+  document.getElementById('mTabMove').classList.toggle('active', t === 'move');
 }
+function monthlyRender() { var sel = MONTHLY_SEL.slice().sort(); monthlyRenderKpis(sel); monthlyRenderTrend(sel); monthlyRenderStruct(sel); monthlyRenderMove(sel); }
 
-function monthlyBuildSVG(cfg) {
-  var W = 760, H = 340, m = { t: 18, r: (cfg.rightAxis ? 74 : 22), b: 54, l: 52 };
-  var iw = W - m.l - m.r, ih = H - m.t - m.b;
-  var n = cfg.xLabels.length;
-  if (n === 0) return '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:13px;">请至少选择一个月份</div>';
-  var leftSeries = cfg.series.filter(function (s) { return s.axis !== 'right'; });
-  var rightSeries = cfg.series.filter(function (s) { return s.axis === 'right'; });
+// ---------- 图表助手 ----------
+function mLegendHtml(series) { var h = '<div class="m-legend">'; series.forEach(function (s) { h += '<span class="lg"><span class="sw' + (s.dashed ? ' line' : '') + '" style="background:' + s.color + '"></span>' + s.name + '</span>'; }); return h + '</div>'; }
+function mLine(opts) {
+  var labels = opts.labels || [], series = opts.series || [], H = opts.height || 300;
+  var W = 720, L = opts.left || 46, R = opts.rightAxis ? 64 : 18, T = 16, B = 46, iw = W - L - R, ih = H - T - B, n = labels.length;
+  if (!n) return '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">请选择月份</div>';
+  var leftS = series.filter(function (s) { return !s.axis || s.axis !== 'right'; }), rightS = series.filter(function (s) { return s.axis === 'right'; });
   var lMax = 0, rMax = 0;
-  leftSeries.forEach(function (s) { s.data.forEach(function (v) { if (v != null && v > lMax) lMax = v; }); });
-  rightSeries.forEach(function (s) { s.data.forEach(function (v) { if (v != null && v > rMax) rMax = v; }); });
-  lMax = monthlyNiceCeil(lMax); rMax = monthlyNiceCeil(rMax);
-  function Y(v, max) { return m.t + ih * (1 - (v || 0) / max); }
-  function X(i) { return m.l + (iw / n) * (i + 0.5); }
-  var slot = iw / n;
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">';
-  var ticks = 5;
-  for (var t = 0; t <= ticks; t++) {
-    var val = lMax * t / ticks, y = Y(val, lMax);
-    svg += '<line x1="' + m.l + '" y1="' + y + '" x2="' + (W - m.r) + '" y2="' + y + '" stroke="#eef2f6" stroke-width="1"/>';
-    svg += '<text x="' + (m.l - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#94a3b8">' + monthlyFmt(val, cfg.decimals || 0) + '</text>';
+  leftS.forEach(function (s) { s.values.forEach(function (v) { if (v != null && v > lMax) lMax = v; }); });
+  rightS.forEach(function (s) { s.values.forEach(function (v) { if (v != null && v > rMax) rMax = v; }); });
+  lMax = monthlyNiceCeil(lMax || 1); rMax = monthlyNiceCeil(rMax || 1);
+  function Y(v, max) { return T + ih * (1 - (v || 0) / max); }
+  function X(i) { return L + (iw / n) * i + (iw / n) / 2; }
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
+  var gy = 4;
+  for (var g = 0; g <= gy; g++) { var yv = lMax * g / gy, yy = Y(yv, lMax); s += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '" stroke="#eef2f6" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#94a3b8">' + Math.round(yv) + '</text>'; }
+  if (rightS.length) for (var g2 = 0; g2 <= gy; g2++) { var yv2 = rMax * g2 / gy, yy2 = Y(yv2, rMax); s += '<text x="' + (W - R + 6) + '" y="' + (yy2 + 4) + '" text-anchor="start" font-size="11" fill="#94a3b8">' + Math.round(yv2) + '</text>'; }
+  for (var i = 0; i < n; i++) { if (n > 20 && i % Math.ceil(n / 12) !== 0 && i !== n - 1) continue; s += '<text x="' + X(i) + '" y="' + (H - 14) + '" text-anchor="middle" font-size="10" fill="#64748b">' + labels[i] + '</text>'; }
+  series.forEach(function (s2) { var max = s2.axis === 'right' ? rMax : lMax; var d = ''; for (var i = 0; i < n; i++) { var v = s2.values[i]; if (v == null) continue; var x = X(i), y = Y(v, max); d += (d === '' ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' '; } s += '<path d="' + d + '" fill="none" stroke="' + s2.color + '" stroke-width="2.2"' + (s2.dashed ? ' stroke-dasharray="5 4"' : '') + '/>'; });
+  return s + '</svg>';
+}
+function mStacked(opts) {
+  var labels = opts.labels || [], series = opts.series || [], H = opts.height || 300;
+  var W = 720, L = 46, R = 18, T = 16, B = 46, iw = W - L - R, ih = H - T - B, n = labels.length;
+  if (!n) return '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">请选择月份</div>';
+  var totals = []; for (var i = 0; i < n; i++) { var t = 0; series.forEach(function (se) { t += (se.values[i] || 0); }); totals.push(t); }
+  var max = monthlyNiceCeil(Math.max.apply(null, totals) || 1);
+  function Y(v) { return T + ih * (1 - (v || 0) / max); }
+  function Xc(i) { return L + (iw / n) * i + (iw / n) / 2; }
+  var bw = Math.min(26, (iw / n) * 0.66), s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
+  for (var g = 0; g <= 4; g++) { var yv = max * g / 4, yy = Y(yv); s += '<line x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '" stroke="#eef2f6" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#94a3b8">' + Math.round(yv) + '</text>'; }
+  for (var i = 0; i < n; i++) { var x = Xc(i) - bw / 2, acc = 0; for (var k = 0; k < series.length; k++) { var v = series[k].values[i] || 0; if (v <= 0) continue; var y1 = Y(acc + v), h = Y(acc) - Y(acc + v); s += '<rect x="' + x + '" y="' + y1 + '" width="' + bw + '" height="' + h + '" fill="' + series[k].color + '"/>'; acc += v; } }
+  for (var i2 = 0; i2 < n; i2++) { if (n > 20 && i2 % Math.ceil(n / 12) !== 0 && i2 !== n - 1) continue; s += '<text x="' + Xc(i2) + '" y="' + (H - 14) + '" text-anchor="middle" font-size="10" fill="#64748b">' + labels[i2] + '</text>'; }
+  return s + '</svg>';
+}
+function mPie(opts) {
+  var data = opts.data || [], H = opts.height || 240, total = 0;
+  data.forEach(function (d) { total += (d.value || 0); });
+  if (total <= 0) return '<div style="padding:20px;text-align:center;color:#94a3b8;">无数据</div>';
+  var W = H, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 10, IR = R * 0.58, s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
+  var ang = -Math.PI / 2;
+  data.forEach(function (d) { if (!d.value) return; var frac = d.value / total, a2 = ang + frac * 2 * Math.PI, large = frac > 0.5 ? 1 : 0; var x1 = cx + R * Math.cos(ang), y1 = cy + R * Math.sin(ang), x2 = cx + R * Math.cos(a2), y2 = cy + R * Math.sin(a2), xi1 = cx + IR * Math.cos(ang), yi1 = cy + IR * Math.sin(ang), xi2 = cx + IR * Math.cos(a2), yi2 = cy + IR * Math.sin(a2); s += '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' L' + xi2.toFixed(1) + ' ' + yi2.toFixed(1) + ' A' + IR + ' ' + IR + ' 0 ' + large + ' 0 ' + xi1.toFixed(1) + ' ' + yi1.toFixed(1) + ' Z" fill="' + d.color + '"/>'; ang = a2; });
+  s += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="' + (R * 0.42) + '" font-weight="800" fill="#E31937">' + total + '</text>';
+  s += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" font-size="11" fill="#64748b">' + (opts.centerLabel || '合计') + '</text></svg>';
+  var leg = '<div class="m-legend">'; data.forEach(function (d) { var pct = total ? Math.round(d.value / total * 100) : 0; leg += '<span class="lg"><span class="sw" style="background:' + d.color + '"></span>' + d.label + ' ' + (d.value || 0) + '（' + pct + '%）</span>'; }); return s + leg + '</div>';
+}
+function mHBar(opts) {
+  var data = opts.data || [], H = opts.height || (data.length * 26 + 40), W = 720, L = opts.labelW || 110, R = 46, T = 8, B = 8, iw = W - L - R, n = data.length;
+  if (!n) return '<div style="padding:20px;text-align:center;color:#94a3b8;">无数据</div>';
+  var max = monthlyNiceCeil(Math.max.apply(null, data.map(function (d) { return d.value; })) || 1), rowH = 22, gap = 8, ch = n * (rowH + gap), s = '<svg viewBox="0 0 ' + W + ' ' + Math.max(H, ch + T + B) + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
+  data.forEach(function (d, i) { var y = T + i * (rowH + gap), w = iw * (d.value || 0) / max; s += '<text x="' + (L - 6) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-size="11" fill="#334155">' + d.label + '</text><rect x="' + L + '" y="' + y + '" width="' + Math.max(0, w) + '" height="' + rowH + '" rx="3" fill="' + (d.color || '#E31937') + '"/><text x="' + (L + Math.max(0, w) + 6) + '" y="' + (y + rowH / 2 + 4) + '" font-size="11" fill="#64748b">' + d.value + '</text>'; });
+  return s + '</svg>';
+}
+function mKpiCard(label, val, color) { return '<div class="m-kpi"><div class="m-kpi-label">' + label + '</div><div class="m-kpi-val" style="color:' + (color || '#E31937') + '">' + val + '</div></div>'; }
+
+// ---------- 渲染 ----------
+function monthlyRenderKpis(sel) {
+  var latest = sel.slice().sort().pop(), cur = monthlyMetric(latest), el = document.getElementById('mKpis');
+  if (!cur) { el.innerHTML = '<div class="m-kpi"><div class="m-kpi-label">请选择月份</div></div>'; return; }
+  var prevM = monthlyPrevMonth(latest) ? monthlyMetric(monthlyPrevMonth(latest)) : null, yoyM = monthlySameMonthLastYear(latest) ? monthlyMetric(monthlySameMonthLastYear(latest)) : null;
+  function delta(c, p) { if (p == null || !p) return '<span class="flat">—</span>'; var pct = (c - p) / p * 100, cls = pct >= 0 ? 'up' : 'down', arr = pct >= 0 ? '▲' : '▼'; return '<span class="' + cls + '">' + arr + Math.abs(pct).toFixed(1) + '%</span>'; }
+  var sup = cur.sup || { main: 0, non: 0 }, supPct = cur.headcount ? Math.round(sup.main / cur.headcount * 100) : 0;
+  var cards = [];
+  cards.push('<div class="m-kpi"><div class="m-kpi-label">在职人数（' + latest + '）</div><div class="m-kpi-val">' + cur.headcount + '</div><div class="m-kpi-sub">环比 ' + delta(cur.headcount, prevM ? prevM.headcount : null) + ' · 同比 ' + delta(cur.headcount, yoyM ? yoyM.headcount : null) + '</div></div>');
+  cards.push('<div class="m-kpi"><div class="m-kpi-label">平均年资</div><div class="m-kpi-val">' + monthlyFmt(cur.avgTenure, 1) + '</div><div class="m-kpi-sub">年（' + latest + '）</div></div>');
+  cards.push('<div class="m-kpi"><div class="m-kpi-label">平均年龄</div><div class="m-kpi-val">' + monthlyFmt(cur.avgAge, 1) + '</div><div class="m-kpi-sub">岁（' + latest + '）</div></div>');
+  cards.push('<div class="m-kpi"><div class="m-kpi-label">主管占比</div><div class="m-kpi-val">' + supPct + '%</div><div class="m-kpi-sub">主管 ' + sup.main + ' 人</div></div>');
+  el.innerHTML = cards.join('');
+}
+function monthlyRenderTrend(sel) {
+  var metrics = sel.map(monthlyMetric).filter(Boolean);
+  document.getElementById('mTrendHeadcount').innerHTML = mLine({ labels: metrics.map(function (m) { return m.month; }), series: [{ name: '在职人数', color: '#E31937', values: metrics.map(function (m) { return m.headcount; }) }], height: 280 });
+  var order = MONTHLY_GROUP_ORDER.filter(function (g) { return metrics.some(function (m) { return (m.groups[g] || 0) > 0; }); });
+  var gs = order.map(function (g) { return { name: g, color: monthlyGroupColor(g), values: metrics.map(function (m) { return m.groups[g] || 0; }) }; });
+  document.getElementById('mTrendLegend').innerHTML = mLegendHtml(gs);
+  document.getElementById('mTrendGroups').innerHTML = mStacked({ labels: metrics.map(function (m) { return m.month; }), series: gs, height: 300 });
+}
+function monthlyRenderStruct(sel) {
+  var latest = sel.slice().sort().pop(), m = monthlyMetric(latest);
+  var ids = ['mStructSup', 'mStructGender', 'mStructFB', 'mStructZhiXi', 'mStructZhiDeng', 'mStructAge', 'mStructTenure', 'mStructRegion'];
+  if (!m) { ids.forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = '<div style="padding:16px;color:#94a3b8;">请选择月份</div>'; }); return; }
+  var sup = m.sup || { main: 0, non: 0 };
+  document.getElementById('mStructSup').innerHTML = mPie({ data: [{ label: '主管', value: sup.main, color: '#E31937' }, { label: '非主管', value: sup.non, color: '#cbd5e1' }], centerLabel: '在职' });
+  var gd = m.gender || {}; document.getElementById('mStructGender').innerHTML = mPie({ data: Object.keys(gd).map(function (k, i) { return { label: k, value: gd[k], color: ['#004E8C', '#ec4899', '#94a3b8'][i % 3] }; }), centerLabel: '在职' });
+  var fb = m.frontBack || {}; document.getElementById('mStructFB').innerHTML = mPie({ data: Object.keys(fb).map(function (k, i) { return { label: k, value: fb[k], color: ['#06b6d4', '#f59e0b', '#94a3b8'][i % 3] }; }), centerLabel: '在职' });
+  var zx = Object.keys(m.zhiXi || {}).map(function (k) { return { label: k, value: m.zhiXi[k] }; }).sort(function (a, b) { return b.value - a.value; });
+  document.getElementById('mStructZhiXi').innerHTML = mHBar({ data: zx, height: zx.length * 26 + 20 });
+  var GORDER = ['A2', 'B0', 'B1', 'B2', 'B3', 'B4', 'B5', 'C1', 'C2', 'C3', 'C4', 'D1', 'D2', 'D3', 'D4', 'E1', 'E2', 'E3', 'E4', 'G0', 'G1', 'G2', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7'];
+  var zd = Object.keys(m.zhiDeng || {}).map(function (k) { return { label: k, value: m.zhiDeng[k] }; }).sort(function (a, b) { return (GORDER.indexOf(a.label) + 1 || 99) - (GORDER.indexOf(b.label) + 1 || 99); });
+  document.getElementById('mStructZhiDeng').innerHTML = mHBar({ data: zd, height: zd.length * 24 + 20 });
+  var AGO = ['20-24', '25-29', '30-34', '35-39', '40-44', '45-49', '50-54', '55-59', '60+'];
+  document.getElementById('mStructAge').innerHTML = mHBar({ data: AGO.map(function (k) { return { label: k, value: (m.ageBand || {})[k] || 0 }; }), height: 260 });
+  var TEO = ['<1', '1-2', '3-5', '6-10', '11-15', '16-20', '21+'];
+  document.getElementById('mStructTenure').innerHTML = mHBar({ data: TEO.map(function (k) { return { label: k, value: (m.tenureBand || {})[k] || 0 }; }), height: 220 });
+  var rg = Object.keys(m.region || {}).map(function (k) { return { label: k, value: m.region[k] }; }).sort(function (a, b) { return b.value - a.value; });
+  document.getElementById('mStructRegion').innerHTML = mHBar({ data: rg, height: rg.length * 26 + 20 });
+}
+function monthlyRenderMove(sel) {
+  var metrics = sel.map(monthlyMetric).filter(Boolean), move = window.MONTHLY_MOVE || {}, byMonth = move.byMonth || {};
+  var latest = sel.slice().sort().pop(), m = monthlyMetric(latest), sc = document.getElementById('mMoveSupCards');
+  if (m && m.supConv) sc.innerHTML = mKpiCard('新升（非→主）', m.supConv.promote, '#1a9c5b') + mKpiCard('卸任（主→非）', m.supConv.demote, '#E31937') + mKpiCard('净转换', m.supConv.net, m.supConv.net >= 0 ? '#004E8C' : '#E31937');
+  else sc.innerHTML = '';
+  document.getElementById('mMoveTrend').innerHTML = mLine({ labels: metrics.map(function (x) { return x.month; }), series: [{ name: '入职', color: '#1a9c5b', values: metrics.map(function (x) { return (byMonth[x.month] || {}).hire || 0; }) }, { name: '离职', color: '#E31937', values: metrics.map(function (x) { return (byMonth[x.month] || {}).leave || 0; }) }], height: 280 });
+  document.getElementById('mMoveSup').innerHTML = mLine({ labels: metrics.map(function (x) { return x.month; }), series: [{ name: '新升', color: '#1a9c5b', values: metrics.map(function (x) { return (x.supConv || {}).promote || 0; }) }, { name: '卸任', color: '#E31937', values: metrics.map(function (x) { return (x.supConv || {}).demote || 0; }) }, { name: '净', color: '#004E8C', dashed: true, values: metrics.map(function (x) { return (x.supConv || {}).net || 0; }) }], height: 280 });
+  var reas = {}; metrics.forEach(function (x) { (x.leaveReasonsTop || []).forEach(function (p) { reas[p[0]] = (reas[p[0]] || 0) + p[1]; }); });
+  var rk = Object.keys(reas).map(function (k) { return { label: k, value: reas[k] }; }).sort(function (a, b) { return b.value - a.value; }).slice(0, 10);
+  document.getElementById('mMoveReasons').innerHTML = mHBar({ data: rk, height: rk.length * 24 + 20 });
+  var ht = {}; metrics.forEach(function (x) { var h = x.hireTypes || {}; Object.keys(h).forEach(function (k) { ht[k] = (ht[k] || 0) + h[k]; }); });
+  var hk = Object.keys(ht).map(function (k) { return { label: k, value: ht[k] }; }).sort(function (a, b) { return b.value - a.value; }).slice(0, 10);
+  document.getElementById('mMoveHire').innerHTML = mHBar({ data: hk, height: hk.length * 24 + 20 });
+  var selFlat = sel.map(function (s) { return s.replace('-', ''); });
+  var evs = (move.recentEvents || []).filter(function (e) { return selFlat.indexOf(e.ym) >= 0; }).slice().sort(function (a, b) { return a.ym < b.ym ? 1 : (a.ym > b.ym ? -1 : 0); });
+  var t = document.getElementById('mMoveTable');
+  if (!evs.length) t.innerHTML = '<div style="padding:14px;color:#94a3b8;">所选月份暂无近 24 月入离明细。</div>';
+  else {
+    var rows = evs.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
+    t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (evs.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
   }
-  if (cfg.rightAxis) {
-    for (var t2 = 0; t2 <= ticks; t2++) {
-      var rval = rMax * t2 / ticks, ry = Y(rval, rMax);
-      svg += '<text x="' + (W - m.r + 6) + '" y="' + (ry + 4) + '" text-anchor="start" font-size="10" fill="#94a3b8">' + monthlyFmt(rval, cfg.decimals || 0) + '</text>';
-    }
-  }
-  for (var i = 0; i < n; i++) {
-    var x = X(i);
-    svg += '<text x="' + x + '" y="' + (H - m.b + 16) + '" text-anchor="middle" font-size="10.5" fill="#475569">' + escHtml(String(cfg.xLabels[i])) + '</text>';
-    svg += '<line x1="' + x + '" y1="' + (m.t + ih) + '" x2="' + x + '" y2="' + (m.t + ih + 4) + '" stroke="#cbd5e1"/>';
-  }
-  var barSeries = leftSeries.filter(function (s) { return s.kind === 'bar'; });
-  if (barSeries.length) {
-    var bw = Math.min(slot * 0.56, 60);
-    if (cfg.stacked) {
-      for (var i2 = 0; i2 < n; i2++) {
-        var cum = 0;
-        barSeries.forEach(function (s) {
-          var v = s.data[i2] || 0; if (v <= 0) return;
-          var y0 = Y(cum, lMax), y1 = Y(cum + v, lMax);
-          svg += '<rect x="' + (X(i2) - bw / 2) + '" y="' + y1 + '" width="' + bw + '" height="' + (y0 - y1) + '" fill="' + s.color + '"><title>' + escHtml(cfg.xLabels[i2] + ' · ' + s.label + '：' + monthlyFmt(v, 0)) + '</title></rect>';
-          cum += v;
-        });
-      }
-    } else {
-      var ibw = bw / barSeries.length;
-      for (var i3 = 0; i3 < n; i3++) {
-        barSeries.forEach(function (s, k) {
-          var v = s.data[i3] || 0; if (v <= 0) return;
-          var y1 = Y(v, lMax), h = (Y(0, lMax) - y1);
-          svg += '<rect x="' + (X(i3) - bw / 2 + ibw * k) + '" y="' + y1 + '" width="' + (ibw * 0.86) + '" height="' + h + '" fill="' + s.color + '"><title>' + escHtml(cfg.xLabels[i3] + ' · ' + s.label + '：' + monthlyFmt(v, 0)) + '</title></rect>';
-          if (n <= 6) svg += '<text x="' + (X(i3) - bw / 2 + ibw * k + ibw * 0.43) + '" y="' + (y1 - 3) + '" text-anchor="middle" font-size="9.5" fill="#475569">' + monthlyFmt(v, 0) + '</text>';
-        });
-      }
-    }
-  }
-  cfg.series.filter(function (s) { return s.kind === 'line'; }).forEach(function (s) {
-    var max = s.axis === 'right' ? rMax : lMax;
-    var pts = [];
-    for (var i4 = 0; i4 < n; i4++) {
-      var x = X(i4), y = Y(s.data[i4] || 0, max);
-      pts.push(x + ',' + y);
-      svg += '<circle cx="' + x + '" cy="' + y + '" r="3.2" fill="' + s.color + '"><title>' + escHtml(cfg.xLabels[i4] + ' · ' + s.label + '：' + monthlyFmt(s.data[i4], cfg.decimals || 1)) + '</title></circle>';
-    }
-    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.color + '" stroke-width="2.4"' + (s.dashed ? ' stroke-dasharray="6 4"' : '') + '/>';
-  });
-  svg += '</svg>';
-  return svg;
-}
-function monthlyLegendHtml(series) {
-  return series.map(function (s) {
-    var cls = s.kind === 'line' ? 'sw line' : 'sw';
-    return '<span class="lg"><span class="' + cls + '" style="background:' + s.color + '"></span>' + escHtml(s.label) + '</span>';
-  }).join('');
-}
-function monthlyRenderChart1(metrics) {
-  var labels = metrics.map(function (m) { return m.month; });
-  var series = [
-    { label: '在职', kind: 'bar', color: '#004E8C', data: metrics.map(function (m) { return m.active; }) },
-    { label: '入职', kind: 'line', color: '#1a9c5b', data: metrics.map(function (m) { return m.join; }) },
-    { label: '离职', kind: 'line', color: '#E31937', data: metrics.map(function (m) { return m.leave; }) }
-  ];
-  document.getElementById('monthlyLegend1').innerHTML = monthlyLegendHtml(series);
-  document.getElementById('monthlyChart1').innerHTML = monthlyBuildSVG({ xLabels: labels, series: series, decimals: 0 });
-}
-function monthlyRenderChart2(metrics) {
-  var labels = metrics.map(function (m) { return m.month; });
-  var present = {};
-  metrics.forEach(function (m) { Object.keys(m.groups || {}).forEach(function (g) { present[g] = 1; }); });
-  var order = MONTHLY_GROUP_ORDER.filter(function (g) { return present[g]; });
-  Object.keys(present).forEach(function (g) { if (order.indexOf(g) < 0) order.push(g); });
-  var series = order.map(function (g) {
-    return { label: monthlyGroupLabel(g), kind: 'bar', color: monthlyGroupColor(g), data: metrics.map(function (m) { return (m.groups && m.groups[g]) || 0; }) };
-  });
-  document.getElementById('monthlyLegend2').innerHTML = monthlyLegendHtml(series);
-  document.getElementById('monthlyChart2').innerHTML = monthlyBuildSVG({ xLabels: labels, series: series, stacked: true, decimals: 0 });
-}
-function monthlyRenderChart3(metrics) {
-  var labels = metrics.map(function (m) { return m.month; });
-  var leaveRate = metrics.map(function (m) { return m.active ? +(m.leave / m.active * 100).toFixed(1) : 0; });
-  var retainRate = metrics.map(function (m) { var d = m.active + (m.leave || 0); return d ? +(m.active / d * 100).toFixed(1) : 0; });
-  var series = [
-    { label: '离职率(%)', kind: 'line', color: '#E31937', data: leaveRate },
-    { label: '留任率(%)', kind: 'line', color: '#1a9c5b', data: retainRate }
-  ];
-  document.getElementById('monthlyLegend3').innerHTML = monthlyLegendHtml(series);
-  document.getElementById('monthlyChart3').innerHTML = monthlyBuildSVG({ xLabels: labels, series: series, decimals: 1 });
-}
-function monthlyRenderChart4(metrics) {
-  var labels = metrics.map(function (m) { return m.month; });
-  var series = [
-    { label: '平均年龄', kind: 'line', color: '#004E8C', data: metrics.map(function (m) { return m.avgAge; }) },
-    { label: '平均年资', kind: 'line', color: '#8b5cf6', data: metrics.map(function (m) { return m.avgTenure; }), axis: 'right' }
-  ];
-  document.getElementById('monthlyLegend4').innerHTML = monthlyLegendHtml(series);
-  document.getElementById('monthlyChart4').innerHTML = monthlyBuildSVG({ xLabels: labels, series: series, rightAxis: true, decimals: 1 });
-}
-function monthlyCell(val, prev, isDec, kind) {
-  var txt = isDec ? (val == null ? '-' : val.toFixed(1)) : (val == null ? '-' : String(val));
-  if (prev == null || prev === undefined || val == null) return '<td>' + txt + (isDec && kind ? '%' : '') + '</td>';
-  var d = val - prev;
-  if (Math.abs(d) < (isDec ? 0.05 : 0.5)) return '<td>' + txt + (isDec && kind ? '%' : '') + ' <span class="mm-delta mm-flat">—</span></td>';
-  var up = d > 0, cls;
-  if (kind === 'rate') cls = up ? 'mm-bad' : 'mm-good';
-  else if (kind === 'retain') cls = up ? 'mm-good' : 'mm-bad';
-  else cls = 'mm-neutral';
-  return '<td>' + txt + (isDec && kind ? '%' : '') + ' <span class="mm-delta ' + cls + '">' + (up ? '▲' : '▼') + '</span></td>';
-}
-function monthlyRenderTable(metrics) {
-  var wrap = document.getElementById('monthlyTableWrap');
-  if (!wrap) return;
-  if (!metrics.length) { wrap.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;">请选择月份</div>'; return; }
-  var html = '<table class="monthly-table"><thead><tr><th>月份</th><th>在职</th><th>入职</th><th>离职</th><th>离职率</th><th>留任率</th><th>平均年龄</th><th>平均年资</th></tr></thead><tbody>';
-  metrics.forEach(function (m, idx) {
-    var prev = idx > 0 ? metrics[idx - 1] : null;
-    var leaveRate = m.active ? (m.leave / m.active * 100) : 0;
-    var retainRate = (m.active + (m.leave || 0)) ? (m.active / (m.active + m.leave) * 100) : 0;
-    var prevLeaveRate = (prev && prev.active) ? (prev.leave / prev.active * 100) : null;
-    var prevRetainRate = (prev && prev.active) ? (prev.active / (prev.active + prev.leave) * 100) : null;
-    html += '<tr><td>' + m.month + '</td>';
-    html += monthlyCell(m.active, prev ? prev.active : null, false);
-    html += monthlyCell(m.join, prev ? prev.join : null, false);
-    html += monthlyCell(m.leave, prev ? prev.leave : null, false);
-    html += monthlyCell(leaveRate, prevLeaveRate, true, 'rate');
-    html += monthlyCell(retainRate, prevRetainRate, true, 'retain');
-    html += monthlyCell(m.avgAge, prev ? prev.avgAge : null, true);
-    html += monthlyCell(m.avgTenure, prev ? prev.avgTenure : null, true);
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
-}
-function monthlyDrillTable(rows) {
-  if (!rows.length) return '<div style="font-size:12px;color:#94a3b8;padding:2px 0;">（无）</div>';
-  var html = '<div class="monthly-drill-scroll"><table class="monthly-drill-table"><thead><tr><th>工号</th><th>姓名</th><th>集团</th><th>部门</th><th>城市</th></tr></thead><tbody>';
-  rows.forEach(function (r) {
-    html += '<tr><td>' + escHtml(r.id || '') + '</td><td>' + escHtml(r.name || '') + '</td><td>' + escHtml(monthlyGroupLabel(r.group)) + '</td><td>' + escHtml(r.dept || '') + '</td><td>' + escHtml(r.city || '') + '</td></tr>';
-  });
-  html += '</tbody></table></div>';
-  return html;
-}
-function monthlyRenderDrill(selMonths) {
-  var block = document.getElementById('monthlyDrill');
-  if (!block) return;
-  var recent = MONTHLY_MONTHS.slice(-3).filter(function (m) { return selMonths.indexOf(m) >= 0; });
-  if (!recent.length) { block.innerHTML = '<div style="color:#94a3b8;font-size:13px;">所选月份暂无下钻明细（仅保留近 3 月）。</div>'; return; }
-  var html = '';
-  recent.forEach(function (mm) {
-    var ym = mm.replace('-', '');
-    var det = window['MONTHLY_DETAIL_' + ym];
-    if (!det) { html += '<div class="monthly-drill-card"><h4>' + mm + '</h4><div style="color:#94a3b8;font-size:12px;">明细未加载</div></div>'; return; }
-    var joinList = det.filter(function (r) { return r.join === mm; });
-    var leaveList = det.filter(function (r) { return r.status === '离职' && r.leave === mm; });
-    html += '<div class="monthly-drill-card"><h4>' + mm + '</h4>';
-    html += '<div class="monthly-drill-sub">🟢 入职 ' + joinList.length + ' 人</div>' + monthlyDrillTable(joinList);
-    html += '<div class="monthly-drill-sub">🔴 离职 ' + leaveList.length + ' 人</div>' + monthlyDrillTable(leaveList);
-    html += '</div>';
-  });
-  block.innerHTML = html;
 }
 
 function _eduFullTimeGradAge(edu) {
