@@ -4131,7 +4131,7 @@ function monthlyPrevMonth(m) { var i = MONTHLY_MONTHS.indexOf(m); if (i > 0) ret
 function monthlySameMonthLastYear(m) { if (!m || m.length < 7) return null; var y = parseInt(m.slice(0, 4), 10) - 1; return y + '-' + m.slice(5); }
 
 async function wpgLoadMonthly() {
-  async function fetchOne(name) {
+  async function tryLoad(name, validate) {
     for (var b = 0; b < DATA_BASES.length; b++) {
       for (var attempt = 0; attempt < 2; attempt++) {
         try {
@@ -4139,15 +4139,24 @@ async function wpgLoadMonthly() {
           if (attempt > 0) u = wpgCacheBust(u);
           var js = await wpgFetchData(u, attempt === 0 ? 20000 : 45000);
           var sc = document.createElement('script'); sc.textContent = js; document.head.appendChild(sc);
+          if (validate && !validate()) { continue; }  // 解密成功但内容过期/旧格式 → 试下一源
           return true;
-        } catch (e) { /* retry / next base */ }
+        } catch (e) { /* 解密/网络失败 → 试下一源 */ }
       }
     }
     return false;
   }
-  var ok = await fetchOne('monthly-metrics.js.enc');
-  if (!ok || !window.MONTHLY_METRICS) return false;
-  await fetchOne('monthly-move.js.enc');
+  var ok = await tryLoad('monthly-metrics.js.enc', function () {
+    var m = window.MONTHLY_METRICS;
+    if (!Array.isArray(m) || m.length < 50) return false;
+    var last = m[m.length - 1];
+    return !!(last && last.headcount != null && last.supConv && last.groups);
+  });
+  if (!ok) return false;
+  await tryLoad('monthly-move.js.enc', function () {
+    var mv = window.MONTHLY_MOVE;
+    return !!(mv && mv.byMonth && Object.keys(mv.byMonth).length >= 50);
+  });
   return true;
 }
 
