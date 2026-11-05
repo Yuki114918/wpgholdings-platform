@@ -1433,6 +1433,9 @@ function mergeEmployeeData() {
       <div class="nav-item" data-target="monthly" onclick="switchModule('monthly')">
         <span class="nav-icon">📅</span><span class="nav-label">月度人力月报</span>
       </div>
+      <div class="nav-item" data-target="attendance" onclick="switchModule('attendance')">
+        <span class="nav-icon">🕒</span><span class="nav-label">考勤分析</span>
+      </div>
 
       <div class="nav-group-label">HR 工具</div>
       <div class="nav-item" data-target="hr-law" onclick="switchModule('hr-law')">
@@ -2146,8 +2149,15 @@ function mergeEmployeeData() {
     <div class="lv-body">
       <iframe id="lvIframe" class="lv-iframe" src="about:blank" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
     </div>
+  </div><!-- /link-viewer-modal -->
+
+  <!-- 考勤分析：iframe 嵌入独立页，隔离样式避免与主平台冲突；懒加载避免首发拉取大 JSON -->
+  <section data-module="attendance" id="mod-attendance">
+    <iframe id="attendanceFrame" data-src="attendance.html" title="考勤分析"
+      style="width:100%;height:calc(100vh - 64px);border:none;display:block;background:#f4f6fa;"></iframe>
   </section>
-    </main><!-- /app-main -->
+
+  </main><!-- /app-main -->
   </div><!-- /app-layout -->
 </div><!-- /container -->
 
@@ -5709,7 +5719,14 @@ function switchModule(target) {
   if ((target === 'monthly' || target === 'all') && MONTHLY_READY) {
     monthlyRender();
   }
-  
+  // 切换到考勤分析：懒加载 iframe（避免首发拉取大 JSON）
+  if (target === 'attendance') {
+    var att = document.getElementById('attendanceFrame');
+    if (att && !att.getAttribute('src')) {
+      att.setAttribute('src', att.getAttribute('data-src'));
+    }
+  }
+
   // 滚动到顶部
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -5729,6 +5746,14 @@ function initAppSidebar() {
     }
   } catch(e){}
   buildMobileNav();
+  // 考勤模块兜底：确保 mod-attendance 归属 #appMain（防止标签失衡导致被解析到 main 之外）
+  try {
+    var attMod = document.getElementById('mod-attendance');
+    var appMain = document.getElementById('appMain');
+    if (attMod && appMain && attMod.parentNode !== appMain) {
+      appMain.appendChild(attMod);
+    }
+  } catch (e) {}
 }
 
 function buildMobileNav() {
@@ -5736,7 +5761,7 @@ function buildMobileNav() {
   if (!bar) return;
   var items = [
     ['report','📰 外部报告'],['all','🏠 总览'],['shortcuts','🚀 快捷入口'],['roster','👥 花名册'],
-    ['dashboard','📊 看板'],['hr-law','⚖️ HR法令'],
+    ['dashboard','📊 看板'],['attendance','🕒 考勤分析'],['hr-law','⚖️ HR法令'],
     ['labor','📋 劳动争议']
   ];
   var html = '';

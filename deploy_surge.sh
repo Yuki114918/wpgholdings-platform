@@ -26,6 +26,11 @@ cp "$REPO/chart.umd.min.js" "$SURGE_DIST/"
 cp "$REPO/manifest.json" "$REPO/sw.js" "$SURGE_DIST/"
 cp "$REPO/icon-192.png" "$REPO/icon-512.png" "$SURGE_DIST/icons/"
 cp -r "$REPO/images" "$SURGE_DIST/" 2>/dev/null || true
+# 考勤分析模块：独立页 attendance.html + 三个数据 JSON（不复制整个 data/ 目录，仅取 buka 增量）
+cp "$REPO/attendance.html" "$SURGE_DIST/"
+cp "$REPO/attendance-summary.json" "$REPO/attendance-daily.json" "$SURGE_DIST/"
+mkdir -p "$SURGE_DIST/data"
+cp "$REPO/data/attendance-buka.json" "$SURGE_DIST/data/"
 
 echo "==> [3/5] 同步独立报告到 hr-report-dist (hr-insight-report)"
 cp "$REPO/standalone-report.html" "$HR_DIST/index.html"
@@ -47,6 +52,10 @@ for url in \
   "https://wpgholdings-todo.surge.sh/report-content-v12.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-hr-trends-v4.html.enc" \
   "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
+  "https://wpgholdings-todo.surge.sh/attendance.html" \
+  "https://wpgholdings-todo.surge.sh/attendance-summary.json" \
+  "https://wpgholdings-todo.surge.sh/attendance-daily.json" \
+  "https://wpgholdings-todo.surge.sh/data/attendance-buka.json" \
   "https://hr-insight-report.surge.sh/" \
   "https://hr-insight-report.surge.sh/report-content-v12.html.enc" \
   "https://hr-insight-report.surge.sh/report-comparison-v18.html.enc" \

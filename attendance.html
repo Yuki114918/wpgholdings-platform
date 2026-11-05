@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤分析 · WPG Holdings</title>
+<script src="./chart.umd.min.js"></script>
+<style>
+  :root{
+    --wpg-blue:#004E8C; --wpg-blue-d:#003366; --wpg-blue-l:#e8f0f8;
+    --wpg-orange:#F39200; --wpg-orange-d:#d97e00;
+    --purple-h:#b4b8e0; --line:#e3e8f0; --bg:#f4f6fa; --txt:#23303f;
+    --green:#1f9d55; --red:#d23b3b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;}
+  /* 顶部标题条 */
+  .topbar{background:linear-gradient(90deg,var(--wpg-blue-d),var(--wpg-blue));color:#fff;padding:14px 26px;display:flex;align-items:center;gap:16px;}
+  .wpg-badge{background:var(--wpg-orange);color:#fff;font-weight:800;font-style:italic;border-radius:22px;padding:6px 16px;font-size:20px;letter-spacing:1px;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+  .topbar h1{margin:0;font-size:22px;font-weight:700;letter-spacing:2px;}
+  .topbar .settle{margin-left:auto;font-size:13px;opacity:.92;}
+  /* 标签导航 */
+  .tabs{display:flex;gap:4px;background:#fff;border-bottom:2px solid var(--line);padding:0 18px;}
+  .tab{padding:12px 22px;cursor:pointer;font-size:15px;color:#5a6b7e;border-bottom:3px solid transparent;font-weight:600;}
+  .tab.active{color:var(--wpg-blue);border-bottom-color:var(--wpg-orange);}
+  .tab:hover{color:var(--wpg-blue);}
+  .screen{display:none;padding:20px 26px;}
+  .screen.active{display:block;}
+  /* 通用卡片 */
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(20,40,80,.05);}
+  .sec-title{font-size:16px;font-weight:700;color:var(--wpg-blue);margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .sec-title::before{content:"";width:5px;height:18px;background:var(--wpg-orange);border-radius:3px;display:inline-block;}
+  /* 名词解释表 */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  .gloss thead th{background:var(--purple-h);color:#2a2a4a;padding:9px 12px;text-align:left;font-weight:700;}
+  .gloss tbody td{padding:8px 12px;border-bottom:1px solid #eef;vertical-align:top;}
+  .gloss tbody tr:nth-child(even){background:#f7f8fc;}
+  .gloss .no{width:48px;text-align:center;color:var(--wpg-blue);font-weight:700;}
+  .gloss .term{width:170px;font-weight:700;color:var(--wpg-blue-d);}
+  /* 筛选栏 */
+  .filterbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px;overflow-x:auto;}
+  .fld{display:flex;flex-direction:column;gap:4px;flex:0 0 auto;width:150px;}
+  .fld label{font-size:12px;color:#6a7a8c;}
+  .fld select,.fld input{appearance:none;border:2px solid var(--wpg-orange);border-radius:7px;padding:7px 8px;font-size:13px;background:#fff;color:var(--txt);width:100%;max-width:170px;}
+  .fld select:focus,.fld input:focus{outline:none;border-color:var(--wpg-orange-d);box-shadow:0 0 0 2px rgba(243,146,0,.18);}
+  .btn{background:var(--wpg-blue);color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:600;}
+  .btn:hover{background:var(--wpg-blue-d);}
+  .btn.ghost{background:#fff;color:var(--wpg-blue);border:1px solid var(--wpg-blue);}
+  /* 子标签(迟到&早退/休假/补卡&出差) */
+  .subtabs{display:flex;gap:6px;margin-bottom:14px;}
+  .subtab{padding:7px 18px;border:1px solid var(--line);border-radius:20px;cursor:pointer;font-size:13px;background:#fff;color:#5a6b7e;font-weight:600;}
+  .subtab.active{background:var(--wpg-blue);color:#fff;border-color:var(--wpg-blue);}
+  /* KPI 卡 */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px;}
+  .kpi{background:#fff;border:1px solid var(--line);border-left:5px solid var(--wpg-orange);border-radius:10px;padding:14px 16px;}
+  .kpi .k-label{font-size:12px;color:#6a7a8c;margin-bottom:6px;}
+  .kpi .k-val{font-size:26px;font-weight:800;color:var(--wpg-blue-d);}
+  .kpi .k-val small{font-size:14px;font-weight:600;color:#7a8a9c;}
+  .kpi.blue{border-left-color:var(--wpg-blue);}
+  .kpi.green{border-left-color:var(--green);}
+  .kpi.purple{border-left-color:#8a6fc0;}
+  /* 排行卡片 */
+  .rank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px;}
+  .rank-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;}
+  .rank-card h4{margin:0 0 10px;font-size:14px;color:#fff;background:var(--wpg-blue-d);padding:8px 12px;border-radius:6px;}
+  .rank-card.orange h4{background:var(--wpg-orange-d);}
+  .rank-card.green h4{background:#1f7a47;}
+  .rank-row{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px dashed #eef;font-size:13px;}
+  .rank-row .rk{color:#9aa;font-weight:700;width:24px;}
+  .rank-row .nm{flex:1;color:#33445a;}
+  .rank-row .vv{font-weight:700;color:var(--wpg-blue-d);}
+  /* 两栏布局(筛选+表) */
+  .two-col{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start;}
+  .side-filter{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;position:sticky;top:14px;}
+  .side-filter .fld{margin-bottom:12px;}
+  .side-filter .fld select,.side-filter .fld input{width:100%;min-width:0;}
+  /* 流程导航(个人月度) */
+  .flownav{display:flex;align-items:center;gap:0;margin-bottom:18px;flex-wrap:wrap;}
+  .flow-step{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 18px;font-size:14px;color:#5a6b7e;font-weight:600;position:relative;}
+  .flow-step.active{background:var(--wpg-blue);color:#fff;border-color:var(--wpg-blue);}
+  .flow-arrow{color:var(--wpg-orange);font-size:22px;padding:0 10px;font-weight:700;}
+  /* 数据表 */
+  .tbl-wrap{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:62vh;}
+  .datatbl th{position:sticky;top:0;background:var(--wpg-blue);color:#fff;padding:9px 10px;text-align:left;font-size:12px;white-space:nowrap;z-index:1;}
+  .datatbl td{padding:7px 10px;border-bottom:1px solid #eef;font-size:12.5px;white-space:nowrap;}
+  .cell-dept{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;}
+  .datatbl tbody tr:nth-child(even){background:#f8fafc;}
+  .datatbl tfoot td{background:#fff7e8;font-weight:700;color:var(--wpg-orange-d);border-top:2px solid var(--wpg-orange);}
+  .tag-ok{color:var(--green);font-weight:700;}
+  .tag-bad{color:var(--red);font-weight:700;}
+  .pager{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:#6a7a8c;}
+  .pager button{background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer;}
+  .pager button:disabled{opacity:.4;cursor:not-allowed;}
+  .note{font-size:12px;color:#8a98a8;margin-top:8px;line-height:1.6;}
+  .chart-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;height:360px;}
+  .loading{padding:40px;text-align:center;color:#8a98a8;}
+  .pill{display:inline-block;background:var(--wpg-blue-l);color:var(--wpg-blue-d);border-radius:20px;padding:3px 12px;font-size:12px;margin-left:8px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="wpg-badge">wpg</span>
+  <h1>考勤分析</h1>
+  <span class="settle" id="settleDate">数据结算日：2026/09/30</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-screen="glossary">名词解释</div>
+  <div class="tab" data-screen="dashboard">考勤分析</div>
+  <div class="tab" data-screen="daily">每日出勤明细</div>
+  <div class="tab" data-screen="personal">个人月度出勤明细</div>
+</div>
+
+<!-- ============ 屏幕1：名词解释 ============ -->
+<section class="screen active" id="screen-glossary">
+  <div class="card">
+    <div class="sec-title">考勤名词解释 <span class="pill" id="glossCount"></span></div>
+    <table class="gloss">
+      <thead><tr><th class="no">序号</th><th class="term">名词</th><th>说明</th></tr></thead>
+      <tbody id="glossBody"></tbody>
+    </table>
+    <div class="note">口径来源：HR 团队资料库《data-名词解释1.0》。所有率值指标以「人员应出勤天数加总 = 应出勤_小时 ÷ 8」为分母。</div>
+  </div>
+</section>
+
+<!-- ============ 屏幕2：考勤分析仪表盘 ============ -->
+<section class="screen" id="screen-dashboard">
+  <div class="filterbar" id="dashFilter">
+    <div class="fld"><label>年</label><select id="f_year"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+    <div class="fld"><label>月</label><select id="f_month"></select></div>
+    <div class="fld"><label>归属事业部</label><select id="f_bu"></select></div>
+    <div class="fld"><label>工作区域</label><select id="f_area"></select></div>
+    <div class="fld"><label>职务</label><select id="f_title"></select></div>
+    <div class="fld"><label>部门</label><select id="f_dept"></select></div>
+    <div class="fld"><label>姓名</label><input id="f_name" placeholder="输入姓名"></div>
+    <div class="fld"><button class="btn" onclick="applyDashFilter()">查询</button></div>
+    <div class="fld"><button class="btn ghost" onclick="resetDashFilter()">重置</button></div>
+  </div>
+
+  <div class="subtabs">
+    <div class="subtab active" data-sub="late">迟到 & 早退</div>
+    <div class="subtab" data-sub="leave">休假</div>
+    <div class="subtab" data-sub="buka">补卡 & 出差</div>
+  </div>
+
+  <!-- 迟到&早退 -->
+  <div class="subpanel" id="sub-late">
+    <div class="kpis" id="lateKpis"></div>
+    <div class="rank-grid">
+      <div class="rank-card"><h4>迟到次数 TOP 10（2026-09）</h4><div id="lateRank"></div></div>
+      <div class="rank-card orange"><h4>早退次数 TOP 10（2026-09）</h4><div id="earlyRank"></div></div>
+    </div>
+  </div>
+
+  <!-- 休假 -->
+  <div class="subpanel" id="sub-leave" style="display:none">
+    <div class="card">
+      <div class="sec-title">休假概况（2026-09 当期）</div>
+      <div class="kpis" id="leaveKpis"></div>
+      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 出差假 / 调休假 等）。本屏为概括性指标，详细假别拆分可在后续版本扩展。</div>
+    </div>
+  </div>
+
+  <!-- 补卡&出差 -->
+  <div class="subpanel" id="sub-buka" style="display:none">
+    <div class="card">
+      <div class="sec-title">每月 出差 · 外出 · 在家办公 情况</div>
+      <div class="note">口径：出差 = 考勤日结「出差假-最新_天」；外出 / 在家办公 = 补卡记录「外出 / 在家上班」记录数。三者均以「应出勤人天」为分母折算为占比（%）。
+      <br><b style="color:var(--wpg-orange-d)">数据缺口提示：</b>补卡记录源文件仅覆盖至 2025-08，2025-09~2025-12 缺月，故图中外出 / 在家办公两线在 2025-10~2025-12 为断点（不影响 2026 年各月）。</div>
+      <div class="chart-box"><canvas id="bukaChart"></canvas></div>
+    </div>
+    <div class="rank-grid">
+      <div class="rank-card orange"><h4>外出天数 TOP（补卡记录）</h4><div id="outRank"></div></div>
+      <div class="rank-card"><h4>在家办公天数 TOP（补卡记录）</h4><div id="homeRank"></div></div>
+      <div class="rank-card green"><h4>各 BU 缺勤天数排行（2026-09）</h4><div id="absentRank"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 屏幕3：每日出勤明细 ============ -->
+<section class="screen" id="screen-daily">
+  <div class="two-col">
+    <div class="side-filter">
+      <div class="sec-title" style="font-size:14px">筛选条件</div>
+      <div class="fld"><label>归属事业体</label><select id="d_bu"></select></div>
+      <div class="fld"><label>年</label><select id="d_year"><option>2026</option><option>2025</option></select></div>
+      <div class="fld"><label>年月</label><select id="d_ym"></select></div>
+      <div class="fld"><label>日期</label><input id="d_date" type="date"></div>
+      <div class="fld"><label>工作区域</label><select id="d_area"></select></div>
+      <div class="fld"><label>部门</label><select id="d_dept"></select></div>
+      <div class="fld"><label>在职状态</label><select id="d_status"><option value="">全部</option><option>在职</option></select></div>
+      <div class="fld"><label>是否主管</label><select id="d_mgr"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>工号</label><input id="d_eid" placeholder="输入工号"></div>
+      <div class="fld"><label>姓名</label><input id="d_name" placeholder="输入姓名"></div>
+      <button class="btn" onclick="renderDaily()">查询</button>
+      <button class="btn ghost" onclick="resetDaily()" style="margin-top:8px">重置</button>
+    </div>
+    <div>
+      <div class="card" style="padding:12px 14px;margin-bottom:14px">
+        <span class="sec-title" style="margin:0">每日出勤明细 <span class="pill" id="dailyCount"></span></span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="datatbl" id="dailyTbl">
+          <thead><tr>
+            <th>工号</th><th>姓名</th><th>员工状态</th><th>职称</th><th>职系</th><th>考勤日期</th>
+            <th>考勤状态</th><th>上班卡</th><th>下班卡</th><th>迟到次数</th><th>早退次数</th><th>缺勤次数</th><th>实际出勤(h)</th>
+          </tr></thead>
+          <tbody id="dailyBody"></tbody>
+          <tfoot><tr><td colspan="9">总计</td><td id="dSumLate"></td><td id="dSumEarly"></td><td id="dSumAbs"></td><td id="dSumAct"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="pager">
+        <button id="dPrev" onclick="dailyPage(-1)">上一页</button>
+        <span id="dPageInfo"></span>
+        <button id="dNext" onclick="dailyPage(1)">下一页</button>
+        <span style="margin-left:auto">每页 <select id="dSize" onchange="renderDaily()"><option>50</option><option>100</option><option>200</option></select> 条</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 屏幕4：个人月度出勤明细 ============ -->
+<section class="screen" id="screen-personal">
+  <div class="flownav">
+    <div class="flow-step active">① 查询月度考勤异常</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">② 查询休假汇总</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">③ 查询外出 / 在家办</div>
+  </div>
+  <div class="two-col">
+    <div class="side-filter">
+      <div class="sec-title" style="font-size:14px">筛选条件</div>
+      <div class="fld"><label>归属事业体</label><select id="p_bu"></select></div>
+      <div class="fld"><label>年</label><select id="p_year"><option>2026</option><option>2025</option></select></div>
+      <div class="fld"><label>月</label><select id="p_month"></select></div>
+      <div class="fld"><label>工作区域</label><select id="p_area"></select></div>
+      <div class="fld"><label>部门</label><select id="p_dept"></select></div>
+      <div class="fld"><label>职务</label><select id="p_title"></select></div>
+      <div class="fld"><label>是否主管</label><select id="p_mgr"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>工号</label><input id="p_eid" placeholder="输入工号"></div>
+      <div class="fld"><label>姓名</label><input id="p_name" placeholder="输入姓名"></div>
+      <button class="btn" onclick="renderPersonal()">查询</button>
+      <button class="btn ghost" onclick="resetPersonal()" style="margin-top:8px">重置</button>
+    </div>
+    <div>
+      <div class="card" style="padding:12px 14px;margin-bottom:14px">
+        <span class="sec-title" style="margin:0">个人月度出勤明细 <span class="pill" id="persCount"></span></span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="datatbl" id="persTbl">
+          <thead><tr>
+            <th>工号</th><th>姓名</th><th>员工状态</th><th>部门</th><th>职称</th><th>职系</th>
+            <th>迟到次数</th><th>迟到(分)</th><th>早退次数</th><th>早退(分)</th><th>缺勤天数</th><th>出差天数</th>
+            <th>应出勤</th><th>实际出勤</th><th>出勤率</th><th>补卡次数</th>
+          </tr></thead>
+          <tbody id="persBody"></tbody>
+          <tfoot><tr><td colspan="6">总计</td><td id="pSumLate"></td><td id="pSumLateMin"></td><td id="pSumEarly"></td><td id="pSumEarlyMin"></td><td id="pSumAbs"></td><td id="pSumTrip"></td><td id="pSumShould"></td><td id="pSumActual"></td><td id="pSumRate"></td><td id="pSumBuka"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="pager">
+        <button id="pPrev" onclick="persPage(-1)">上一页</button>
+        <span id="pPageInfo"></span>
+        <button id="pNext" onclick="persPage(1)">下一页</button>
+        <span style="margin-left:auto">每页 <select id="pSize" onchange="renderPersonal()"><option>50</option><option>100</option><option>200</option></select> 条</span>
+      </div>
+      <div class="note">「职系」维度在考勤日结源数据中暂未提供独立字段，当前以「职称」近似呈现；如需严格职系拆分，需补充职系映射表。</div>
+    </div>
+  </div>
+</section>
+
+<div class="loading" id="loading">数据加载中…</div>
+
+<script>
+/* ===== 全局数据 ===== */
+var SUMMARY=null, DAILY=null, BUKA=null;
+var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
+// 压缩每日明细字段索引: 0工号 1考勤日期 2结果 3上班卡 4下班卡 5迟到 6早退 7缺勤 8实际出勤h
+var IDX={eid:0,date:1,res:2,in:3,out:4,late:5,early:6,abs:7,act:8};
+var dailyView=[], dailyPg=0, dailySz=50;
+var persView=[], persPg=0, persSz=50;
+
+function fmt(n,d){ d=(d==null?0:d); if(n==null||isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:d}); }
+
+/* ===== 标签切换 ===== */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.onclick=function(){ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active'); document.getElementById('screen-'+t.dataset.screen).classList.add('active');
+    if(t.dataset.screen==='dashboard' && window._bukaChart) window._bukaChart.resize();
+    if(t.dataset.screen==='daily' && DAILY) renderDaily();
+    if(t.dataset.screen==='personal' && SUMMARY) renderPersonal();
+  };
+});
+document.querySelectorAll('.subtab').forEach(function(t){
+  t.onclick=function(){ document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('sub-late').style.display = t.dataset.sub==='late'?'block':'none';
+    document.getElementById('sub-leave').style.display = t.dataset.sub==='leave'?'block':'none';
+    document.getElementById('sub-buka').style.display = t.dataset.sub==='buka'?'block':'none';
+    if(t.dataset.sub==='buka' && window._bukaChart) window._bukaChart.resize();
+  };
+});
+
+/* ===== 加载数据 ===== */
+Promise.all([
+  fetch('./attendance-summary.json').then(r=>r.json()),
+  fetch('./attendance-daily.json').then(r=>r.json()),
+  fetch('./data/attendance-buka.json').then(r=>r.json())
+]).then(function(res){
+  SUMMARY=res[0]; DAILY=res[1]; BUKA=res[2];
+  document.getElementById('loading').style.display='none';
+  initAll();
+}).catch(function(e){
+  document.getElementById('loading').innerHTML='数据加载失败：'+e.message+'<br>请确认 attendance-summary.json / attendance-daily.json / data/attendance-buka.json 已生成并通过本地服务器访问。';
+  console.error(e);
+});
+
+function initAll(){
+  // 工号 -> 属性 映射（用于每日明细关联姓名/职称/部门/工作地点/BU）
+  EMPMAP={};
+  SUMMARY.person_month.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu}; });
+  // 结算日
+  if(SUMMARY.meta && SUMMARY.meta.结算日) document.getElementById('settleDate').textContent='数据结算日：'+SUMMARY.meta.结算日;
+  buildGlossary();
+  fillSelect('f_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
+  fillSelect('p_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
+  fillSelect('d_ym', SUMMARY.meta.趋势月份.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), true);
+  // BU / 区域 / 城市 / 职务 / 部门 选项
+  var bus=Object.keys(SUMMARY.bu_agg).sort();
+  fillSelect('f_bu', opt(bus), true); fillSelect('d_bu', opt(bus), true); fillSelect('p_bu', opt(bus), true);
+  var areas=[...new Set(SUMMARY.person_month.map(d=>d.工作地点).filter(Boolean))].sort();
+  fillSelect('f_area', opt(areas), true); fillSelect('d_area', opt(areas), true); fillSelect('p_area', opt(areas), true);
+  var depts=[...new Set(SUMMARY.person_month.map(d=>d.所属部门).filter(Boolean))].sort();
+  fillSelect('f_dept', opt(depts), true); fillSelect('d_dept', opt(depts), true); fillSelect('p_dept', opt(depts), true);
+  var titles=[...new Set(SUMMARY.person_month.map(d=>d.职称).filter(Boolean))].sort();
+  fillSelect('f_title', opt(titles), true); fillSelect('p_title', opt(titles), true);
+  buildDashboard();
+  buildBukaChart();
+  renderDaily(); renderPersonal();
+}
+
+function opt(arr){ return arr.map(function(v){return {v:v,t:v};}); }
+function fillSelect(id, items, withAll){
+  var s=document.getElementById(id); if(!s) return;
+  var html = withAll?'<option value="">全部</option>':'';
+  items.forEach(function(it){ html+='<option value="'+it.v+'">'+it.t+'</option>'; });
+  s.innerHTML=html;
+}
+
+/* ===== 名词解释 ===== */
+function buildGlossary(){
+  var b=document.getElementById('glossBody'); b.innerHTML='';
+  (SUMMARY.glossary||[]).forEach(function(g){
+    b.innerHTML+='<tr><td class="no">'+g.no+'</td><td class="term">'+g.term+'</td><td>'+g.desc+'</td></tr>';
+  });
+  document.getElementById('glossCount').textContent=(SUMMARY.glossary||[]).length+' 条';
+}
+
+/* ===== 仪表盘 KPI + 排行 ===== */
+function buildDashboard(){
+  var k=SUMMARY.sep_kpi;
+  var kpis=[
+    {l:'出勤率（人头）',v:k.出勤率,u:'%',c:''},
+    {l:'缺勤率',v:k.缺勤率,u:'%',c:'blue'},
+    {l:'迟到率',v:k.迟到率,u:'%',c:'orange'},
+    {l:'早退率',v:k.早退率,u:'%',c:'purple'},
+    {l:'迟到人数',v:k.迟到人数,u:'人',c:''},
+    {l:'早退人数',v:k.早退人数,u:'人',c:'blue'},
+    {l:'缺勤人数',v:k.缺勤人数,u:'人',c:'orange'},
+    {l:'出差天数',v:k.出差天数,u:'天',c:'green'},
+  ];
+  document.getElementById('lateKpis').innerHTML = kpis.map(function(x){
+    return '<div class="kpi '+x.c+'"><div class="k-label">'+x.l+'</div><div class="k-val">'+fmt(x.v,2)+'<small> '+x.u+'</small></div></div>';
+  }).join('');
+  // 休假 KPI（概要）
+  document.getElementById('leaveKpis').innerHTML =
+    '<div class="kpi green"><div class="k-label">出差假天数（2026-09）</div><div class="k-val">'+fmt(k.出差天数,1)+'<small> 天</small></div></div>'+
+    '<div class="kpi"><div class="k-label">应出勤人天</div><div class="k-val">'+fmt(k.应出勤天数加总,0)+'<small> 天</small></div></div>'+
+    '<div class="kpi blue"><div class="k-label">实际出勤人数</div><div class="k-val">'+fmt(k.实际出勤人数,0)+'<small> 人</small></div></div>'+
+    '<div class="kpi purple"><div class="k-label">在职人数</div><div class="k-val">'+fmt(k.人数,0)+'<small> 人</small></div></div>';
+  // 排行
+  document.getElementById('lateRank').innerHTML = rankRows(SUMMARY.late_rank, '迟到次数');
+  document.getElementById('earlyRank').innerHTML = rankRows(SUMMARY.early_rank, '早退次数');
+  document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){return {nm:d.工号, v:d.外出};}), '外出天数');
+  document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){return {nm:d.工号, v:d.在家上班};}), '在家天数');
+  document.getElementById('absentRank').innerHTML = rankRows(SUMMARY.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
+}
+function rankRows(arr, key){
+  if(!arr||!arr.length) return '<div class="rank-row"><span class="nm">暂无数据</span></div>';
+  return arr.slice(0,10).map(function(r,i){
+    var nm = r.姓名||r.nm||r.bu||r.工号; var v = r[key]!==undefined?r[key]:(r.v!==undefined?r.v:0);
+    var sub = r.sub?'<span style="color:#9aa;font-size:11px;margin-left:6px">'+r.sub+'</span>':'';
+    return '<div class="rank-row"><span class="rk">'+(i+1)+'</span><span class="nm">'+nm+sub+'</span><span class="vv">'+fmt(v, v%1===0?0:1)+'</span></div>';
+  }).join('');
+}
+
+/* ===== 补卡&出差 折线图 ===== */
+function buildBukaChart(){
+  // 对齐 12 个月：trend(202510..202609) + buka 按月
+  var months = SUMMARY.meta.趋势月份; // '202510'...
+  var denom = {}; SUMMARY.trend.forEach(function(t){ denom[t.ym]=t.应出勤天数加总; });
+  var trip = {}; SUMMARY.trend.forEach(function(t){ trip[t.ym]=t.出差天数; });
+  var bukaMap = {}; BUKA.trend.months.forEach(function(m,i){ bukaMap[m]=i; });
+  var labels=[], tripR=[], outR=[], homeR=[];
+  months.forEach(function(ym){
+    var ym2 = ym.slice(0,4)+'-'+ym.slice(4);
+    var d = denom[ym]||1;
+    labels.push(ym2);
+    tripR.push(round2(trip[ym]/d*100));
+    var bi = bukaMap[ym2];
+    outR.push(bi!=null? round2(BUKA.trend.外出[bi]/d*100):null);   // 补卡源缺月留空(断点)
+    homeR.push(bi!=null? round2(BUKA.trend.在家上班[bi]/d*100):null);
+  });
+  var ctx=document.getElementById('bukaChart');
+  if(window._bukaChart) window._bukaChart.destroy();
+  window._bukaChart=new Chart(ctx,{type:'line',
+    data:{labels:labels,datasets:[
+      {label:'出差率(%)',data:tripR,borderColor:'#004E8C',backgroundColor:'#004E8C',tension:.25,borderWidth:2.5,pointRadius:3},
+      {label:'外出率(%)',data:outR,borderColor:'#F39200',backgroundColor:'#F39200',tension:.25,borderWidth:2.5,pointRadius:3},
+      {label:'在家办公率(%)',data:homeR,borderColor:'#1f9d55',backgroundColor:'#1f9d55',tension:.25,borderWidth:2.5,pointRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'},
+      tooltip:{callbacks:{label:function(c){return c.dataset.label+'：'+c.parsed.y+'%';}}}},
+      scales:{y:{title:{display:true,text:'占应出勤人天比例 (%)'},beginAtZero:true},x:{title:{display:true,text:'月份'}}}}
+  });
+}
+function round2(x){ return Math.round((x||0)*100)/100; }
+
+function applyDashFilter(){ /* 预留：当前 KPI/排行以2026-09当期为基准，筛选项用于后续按需下钻 */ renderDaily(); renderPersonal(); }
+function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_city','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
+
+/* ===== 每日出勤明细 ===== */
+function getDailyFiltered(){
+  var bu=val('d_bu'), ym=val('d_ym'), date=val('d_date'), area=val('d_area'), city=val('d_city'),
+      dept=val('d_dept'), eid=val('d_eid').trim(), name=val('d_name').trim(), status=val('d_status'), mgr=val('d_mgr');
+  return DAILY.filter(function(r){
+    var e=EMPMAP[r[IDX.eid]]||{};
+    if(bu && e.bu!==bu) return false;
+    if(ym){ var m=(r[IDX.date]||'').replace(/-/g,'').slice(0,6); if(m!==ym) return false; }
+    if(date && (r[IDX.date]||'').indexOf(date)<0) return false;
+    if(area && e.工作地点!==area) return false;
+    if(city && e.工作地点!==city) return false;
+    if(dept && e.所属部门!==dept) return false;
+    if(eid && (r[IDX.eid]||'').indexOf(eid)<0) return false;
+    if(name && (e.姓名||'').indexOf(name)<0) return false;
+    return true;
+  });
+}
+function renderDaily(){
+  if(!DAILY) return;
+  dailyView=getDailyFiltered(); dailySz=parseInt(val('dSize'))||50; if(dailyPg<0)dailyPg=0;
+  var totPages=Math.max(1,Math.ceil(dailyView.length/dailySz)); if(dailyPg>=totPages)dailyPg=totPages-1;
+  var slice=dailyView.slice(dailyPg*dailySz,(dailyPg+1)*dailySz);
+  var b=document.getElementById('dailyBody'); b.innerHTML='';
+  slice.forEach(function(r){
+    var e=EMPMAP[r[IDX.eid]]||{};
+    var st=r[IDX.res]||'';
+    var cls = st.indexOf('旷工')>=0?'tag-bad':(st==='考勤正常'?'tag-ok':'');
+    b.innerHTML+='<tr><td>'+r[IDX.eid]+'</td><td>'+(e.姓名||'')+'</td><td>在职</td><td><span class="cell-dept" title="'+(e.职称||'')+'">'+(e.职称||'')+'</span></td><td><span class="cell-dept" title="'+(e.职称||'')+'">'+(e.职称||'')+'</span></td><td>'+r[IDX.date]+'</td>'+
+      '<td class="'+cls+'">'+st+'</td><td>'+(r[IDX.in]||'')+'</td><td>'+(r[IDX.out]||'')+'</td>'+
+      '<td>'+fmt(r[IDX.late],0)+'</td><td>'+fmt(r[IDX.early],0)+'</td><td>'+fmt(r[IDX.abs],0)+'</td><td>'+fmt(r[IDX.act],1)+'</td></tr>';
+  });
+  var sLate=dailyView.reduce((a,r)=>a+(+r[IDX.late]||0),0), sEarly=dailyView.reduce((a,r)=>a+(+r[IDX.early]||0),0),
+      sAbs=dailyView.reduce((a,r)=>a+(+r[IDX.abs]||0),0), sAct=dailyView.reduce((a,r)=>a+(+r[IDX.act]||0),0);
+  document.getElementById('dSumLate').textContent=fmt(sLate,0);
+  document.getElementById('dSumEarly').textContent=fmt(sEarly,0);
+  document.getElementById('dSumAbs').textContent=fmt(sAbs,0);
+  document.getElementById('dSumAct').textContent=fmt(sAct,1);
+  document.getElementById('dailyCount').textContent=dailyView.length+' 条';
+  document.getElementById('dPageInfo').textContent='第 '+(dailyPg+1)+' / '+totPages+' 页';
+  document.getElementById('dPrev').disabled=dailyPg<=0; document.getElementById('dNext').disabled=dailyPg>=totPages-1;
+}
+function dailyPage(d){ dailyPg+=d; renderDaily(); }
+function resetDaily(){ ['d_bu','d_year','d_ym','d_date','d_area','d_city','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderDaily(); }
+
+/* ===== 个人月度出勤明细 ===== */
+function getPersFiltered(){
+  var bu=val('p_bu'), ym=val('p_year')+val('p_month'), area=val('p_area'), city=val('p_city'),
+      dept=val('p_dept'), title=val('p_title'), eid=val('p_eid').trim(), name=val('p_name').trim(), mgr=val('p_mgr');
+  return SUMMARY.person_month.filter(function(r){
+    if(bu && r.bu!==bu) return false;
+    if(area && r.工作地点!==area) return false;
+    if(city && r.工作地点!==city) return false;
+    if(dept && r.所属部门!==dept) return false;
+    if(title && r.职称!==title) return false;
+    if(eid && (r.工号||'').indexOf(eid)<0) return false;
+    if(name && (r.姓名||'').indexOf(name)<0) return false;
+    return true;
+  });
+}
+function renderPersonal(){
+  if(!SUMMARY) return;
+  persView=getPersFiltered(); persSz=parseInt(val('pSize'))||50; if(persPg<0)persPg=0;
+  var totPages=Math.max(1,Math.ceil(persView.length/persSz)); if(persPg>=totPages)persPg=totPages-1;
+  var slice=persView.slice(persPg*persSz,(persPg+1)*persSz);
+  var b=document.getElementById('persBody'); b.innerHTML='';
+  slice.forEach(function(r){
+    b.innerHTML+='<tr><td>'+r.工号+'</td><td>'+r.姓名+'</td><td>'+r.员工状态+'</td><td><span class="cell-dept" title="'+r.所属部门+'">'+r.所属部门+'</span></td><td>'+r.职称+'</td><td>'+r.职称+'</td>'+
+      '<td>'+fmt(r.迟到次数,0)+'</td><td>'+fmt(r.迟到时长_分钟,0)+'</td><td>'+fmt(r.早退次数,0)+'</td><td>'+fmt(r.早退时长_分钟,0)+'</td>'+
+      '<td>'+fmt(r.缺勤天数,1)+'</td><td>'+fmt(r.出差天数,1)+'</td><td>'+fmt(r.应出勤天数,1)+'</td><td>'+fmt(r.实际出勤天数,1)+'</td>'+
+      '<td>'+fmt(r.出勤率,1)+'%</td><td>'+fmt(r.补卡次数,0)+'</td></tr>';
+  });
+  var sLate=persView.reduce((a,r)=>a+(+r.迟到次数||0),0), sLateMin=persView.reduce((a,r)=>a+(+r.迟到时长_分钟||0),0),
+      sEarly=persView.reduce((a,r)=>a+(+r.早退次数||0),0), sEarlyMin=persView.reduce((a,r)=>a+(+r.早退时长_分钟||0),0),
+      sAbs=persView.reduce((a,r)=>a+(+r.缺勤天数||0),0), sTrip=persView.reduce((a,r)=>a+(+r.出差天数||0),0),
+      sShould=persView.reduce((a,r)=>a+(+r.应出勤天数||0),0), sAct=persView.reduce((a,r)=>a+(+r.实际出勤天数||0),0),
+      sBuka=persView.reduce((a,r)=>a+(+r.补卡次数||0),0);
+  var rate = sShould? round2(sAct/sShould*100):0;
+  document.getElementById('pSumLate').textContent=fmt(sLate,0);
+  document.getElementById('pSumLateMin').textContent=fmt(sLateMin,0);
+  document.getElementById('pSumEarly').textContent=fmt(sEarly,0);
+  document.getElementById('pSumEarlyMin').textContent=fmt(sEarlyMin,0);
+  document.getElementById('pSumAbs').textContent=fmt(sAbs,1);
+  document.getElementById('pSumTrip').textContent=fmt(sTrip,1);
+  document.getElementById('pSumShould').textContent=fmt(sShould,1);
+  document.getElementById('pSumActual').textContent=fmt(sAct,1);
+  document.getElementById('pSumRate').textContent=fmt(rate,1)+'%';
+  document.getElementById('pSumBuka').textContent=fmt(sBuka,0);
+  document.getElementById('persCount').textContent=persView.length+' 人';
+  document.getElementById('pPageInfo').textContent='第 '+(persPg+1)+' / '+totPages+' 页';
+  document.getElementById('pPrev').disabled=persPg<=0; document.getElementById('pNext').disabled=persPg>=totPages-1;
+}
+function persPage(d){ persPg+=d; renderPersonal(); }
+function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_city','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
+
+function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+</script>
+</body>
+</html>
