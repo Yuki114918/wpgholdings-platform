@@ -1532,6 +1532,15 @@ function mergeEmployeeData() {
         <span class="card-arrow">→</span>
       </a>
 
+      <a class="quick-card" href="http://127.0.0.1:60611/preview/p1/index.html" target="_blank" rel="noopener">
+        <div class="card-icon teal">🔗</div>
+        <div class="card-info">
+          <h3>人力月报预览(p1)</h3>
+          <p>本地预览 · 127.0.0.1:60611 工作台</p>
+        </div>
+        <span class="card-arrow">→</span>
+      </a>
+
       <a class="quick-card" href="sharepoint-search.html" target="_blank" rel="noopener">
         <div class="card-icon orange">📂</div>
         <div class="card-info">
@@ -1890,7 +1899,7 @@ function mergeEmployeeData() {
   <!-- 人力数据交互看板 -->
   <section class="section dashboard-section module-visible" data-module="roster" id="mod-dashboard">
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">📊 人力数据看板<span class="collapse-arrow">▼</span></h2>
-    <div class="dash-asof" id="dashAsOf">📅 数据截止：<strong>2026/10/12</strong>（含离职人员）</div>
+    <div class="dash-asof" id="dashAsOf">📅 数据截止：<strong>2026/11/06</strong>（含离职人员）</div>
     <!-- 看板筛选栏 -->
     <div class="dash-filter-bar" id="dashFilterBar">
       <span class="dash-filter-label">筛选条件</span>
@@ -5346,7 +5355,7 @@ function buildDashboard(){
   var female = D.filter(function(e){ return (e.gender||'')==='女'; }).length;
 
   // 计算平均年资（基于 join_date，截止到 2026/09/10）
-  var nowDate = new Date(2026, 9, 12); // 2026-10-12
+  var nowDate = new Date(2026, 10, 6); // 2026-11-06
   var totalTenure = 0, tenureCount = 0;
   D.forEach(function(e) {
     if (e.join_date) {

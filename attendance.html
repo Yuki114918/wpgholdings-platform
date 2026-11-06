@@ -126,16 +126,17 @@
 <!-- ============ 屏幕2：考勤分析仪表盘 ============ -->
 <section class="screen" id="screen-dashboard">
   <div class="filterbar" id="dashFilter">
-    <div class="fld"><label>年</label><select id="f_year"><option value="2026">2026</option><option value="2025">2025</option></select></div>
-    <div class="fld"><label>月</label><select id="f_month"></select></div>
-    <div class="fld"><label>归属事业部</label><select id="f_bu"></select></div>
-    <div class="fld"><label>工作区域</label><select id="f_area"></select></div>
-    <div class="fld"><label>职务</label><select id="f_title"></select></div>
-    <div class="fld"><label>部门</label><select id="f_dept"></select></div>
-    <div class="fld"><label>姓名</label><input id="f_name" placeholder="输入姓名"></div>
+    <div class="fld"><label>年</label><select id="f_year" onchange="applyDashFilter()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+    <div class="fld"><label>月</label><select id="f_month" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>归属事业部</label><select id="f_bu" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>工作区域</label><select id="f_area" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>职务</label><select id="f_title" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>部门</label><select id="f_dept" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>姓名</label><input id="f_name" placeholder="输入姓名" oninput="applyDashFilter()"></div>
     <div class="fld"><button class="btn" onclick="applyDashFilter()">查询</button></div>
     <div class="fld"><button class="btn ghost" onclick="resetDashFilter()">重置</button></div>
   </div>
+  <div id="dashMonthNote" style="display:none;margin:12px 0;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;font-size:13px;line-height:1.6;"></div>
 
   <div class="subtabs">
     <div class="subtab active" data-sub="late">迟到 & 早退</div>
@@ -324,6 +325,10 @@ function initAll(){
   if(SUMMARY.meta && SUMMARY.meta.结算日) document.getElementById('settleDate').textContent='数据结算日：'+SUMMARY.meta.结算日;
   buildGlossary();
   fillSelect('f_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
+  var _dp = (SUMMARY.meta && SUMMARY.meta.数据期) || '202609';
+  var _ye=document.getElementById('f_year'), _me=document.getElementById('f_month');
+  if(_ye) _ye.value = _dp.slice(0,4);
+  if(_me) _me.value = _dp.slice(4);
   fillSelect('p_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
   fillSelect('d_ym', SUMMARY.meta.趋势月份.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), true);
   // BU / 区域 / 城市 / 职务 / 部门 选项
@@ -457,7 +462,18 @@ function buildBukaChart(){
 function round2(x){ return Math.round((x||0)*100)/100; }
 
 function applyDashFilter(){
+  var year=val('f_year'), month=val('f_month');
   var bu=val('f_bu'), area=val('f_area'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
+  var dataPeriod = (SUMMARY.meta && SUMMARY.meta.数据期) || '202609';
+  var selYm = (year||dataPeriod.slice(0,4)) + (month||dataPeriod.slice(4));
+  var noteEl = document.getElementById('dashMonthNote');
+  // 考勤明细仅生成至 dataPeriod；选择其它月份时给出明确提示（明细仍展示 dataPeriod，已按维度筛选）
+  if(noteEl){
+    if(selYm !== dataPeriod){
+      noteEl.style.display='block';
+      noteEl.innerHTML='📅 考勤明细数据目前仅覆盖 <b>'+dataPeriod.slice(0,4)+'/'+dataPeriod.slice(4)+'</b>，暂未生成 '+selYm.slice(0,4)+'/'+selYm.slice(4)+' 的明细；下方仍展示 '+dataPeriod.slice(0,4)+'/'+dataPeriod.slice(4)+' 数据（「补卡&出差」趋势图可按月份查看）。';
+    } else { noteEl.style.display='none'; }
+  }
   var f = {bu:bu,area:area,title:title,dept:dept,name:name};
   var noFilter = !bu && !area && !title && !dept && !name;
   if(noFilter){ buildDashboard(); return; }
@@ -477,8 +493,12 @@ function applyDashFilter(){
   var absentS = Object.keys(byBu).map(function(b){return {bu:b, 缺勤天数:byBu[b], sub:(pm.filter(function(x){return x.bu===b;}).length)+'人'};}).sort(function(a,b){return b.缺勤天数-a.缺勤天数;}).slice(0,10);
   document.getElementById('lateRank').innerHTML = rankRows(lateS, '迟到次数');
   document.getElementById('earlyRank').innerHTML = rankRows(earlyS, '早退次数');
-  document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){return {nm:d.工号, v:d.外出};}), '外出天数');
-  document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){return {nm:d.工号, v:d.在家上班};}), '在家天数');
+  // 外出 / 在家办公排行按 归属事业部(BU) 联动（工号→BU 映射）
+  var outAll = BUKA.top_out||[], homeAll = BUKA.top_home||[];
+  var outS = bu ? outAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : outAll;
+  var homeS = bu ? homeAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : homeAll;
+  document.getElementById('outRank').innerHTML = rankRows(outS.slice(0,10).map(function(d){return {nm:d.工号, v:d.外出};}), '外出天数');
+  document.getElementById('homeRank').innerHTML = rankRows(homeS.slice(0,10).map(function(d){return {nm:d.工号, v:d.在家上班};}), '在家天数');
   document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
   _setRankTitles(f);
 }
