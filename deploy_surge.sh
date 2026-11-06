@@ -48,7 +48,7 @@ sleep 3
 for url in \
   "https://wpgholdings-todo.surge.sh/" \
   "https://wpgholdings-todo.surge.sh/report.html" \
-  "https://wpgholdings-todo.surge.sh/report-comparison-v18.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-comparison-v19.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-content-v12.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-hr-trends-v4.html.enc" \
   "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
@@ -58,7 +58,7 @@ for url in \
   "https://wpgholdings-todo.surge.sh/data/attendance-buka.json" \
   "https://hr-insight-report.surge.sh/" \
   "https://hr-insight-report.surge.sh/report-content-v12.html.enc" \
-  "https://hr-insight-report.surge.sh/report-comparison-v18.html.enc" \
+  "https://hr-insight-report.surge.sh/report-comparison-v19.html.enc" \
   "https://hr-insight-report.surge.sh/chart.umd.min.js" \
   "https://yuki114918.github.io/wpgholdings-platform/report.html" ; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
