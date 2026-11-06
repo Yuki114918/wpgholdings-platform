@@ -4,12 +4,14 @@
 # 用途：避免"重建 dist 漏文件"导致报告页/数据 404。每次改完内容跑一次即可。
 # 用法：bash deploy_surge.sh
 #
-# ⚠️ 2026-11-06 实测：Surge 两个域名发布均被拒
-#    "Aborted - you do not have permission to publish to wpgholdings-todo.surge.sh"
-#    "Aborted - you do not have permission to publish to hr-insight-report.surge.sh"
-#    token 仍可 surge list（能读），但 publish 权限已被收回，两域名冻结于 3 周前版本。
-#    → Surge 备份链路已失效，唯一生效部署通道为 GitHub Pages 主链（git push origin main）。
-#    本脚本目前会失败在第 [4/5] 步，仅 GitHub Pages 一侧有效；如需恢复 Surge 需换账号/重新认领域名。
+# ⚠️ 2026-11-06 实测 + 根因定位：Surge 发布被拒
+#    "Aborted - you do not have permission to publish to <任意域名>"（含全新测试域名也拒）
+#    → 非域名归属问题，而是「账号级发布权限」被锁，根因 = wpgholdings@surge.sh 邮箱未验证/验证失效。
+#    佐证：`surge verify wpgholdings@surge.sh` 返回 "Email sent - follow the link ... to verify"
+#          `surge whoami` 仍显示 Free 套餐、`surge list` 可读但两域名冻结于 3 周前版本。
+#    ✅ 恢复步骤：打开 wpgholdings@surge.sh 收件箱 → 点击 surge verify 刚发送的验证链接 → 重跑本脚本即恢复。
+#    ⛔ 当前 Surge 备份链路失效，唯一生效部署通道 = GitHub Pages 主链（git push origin main）。
+#    本脚本会失败在 surge deploy 步；GitHub Pages 一侧不受影响。验证邮箱后方可恢复 Surge。
 # ============================================================
 set -e
 
@@ -55,17 +57,17 @@ sleep 3
 for url in \
   "https://wpgholdings-todo.surge.sh/" \
   "https://wpgholdings-todo.surge.sh/report.html" \
-  "https://wpgholdings-todo.surge.sh/report-comparison-v19.html.enc" \
-  "https://wpgholdings-todo.surge.sh/report-content-v12.html.enc" \
-  "https://wpgholdings-todo.surge.sh/report-hr-trends-v4.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-comparison-v20.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-content-v13.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-hr-trends-v5.html.enc" \
   "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
   "https://wpgholdings-todo.surge.sh/attendance.html" \
   "https://wpgholdings-todo.surge.sh/attendance-summary.json" \
   "https://wpgholdings-todo.surge.sh/attendance-daily.json" \
   "https://wpgholdings-todo.surge.sh/data/attendance-buka.json" \
   "https://hr-insight-report.surge.sh/" \
-  "https://hr-insight-report.surge.sh/report-content-v12.html.enc" \
-  "https://hr-insight-report.surge.sh/report-comparison-v19.html.enc" \
+  "https://hr-insight-report.surge.sh/report-content-v13.html.enc" \
+  "https://hr-insight-report.surge.sh/report-comparison-v20.html.enc" \
   "https://hr-insight-report.surge.sh/chart.umd.min.js" \
   "https://yuki114918.github.io/wpgholdings-platform/report.html" ; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
