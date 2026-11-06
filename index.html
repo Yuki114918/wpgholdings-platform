@@ -2009,7 +2009,13 @@ function mergeEmployeeData() {
           <option value="36">近 36 月</option>
           <option value="60">近 60 月</option>
           <option value="ytd">本年（2026）</option>
+          <option value="custom">自定义月份区间…</option>
         </select></div>
+        <div class="m-bi-ctrl" id="mFMonthRangeBox" style="display:none;"><label class="m-bi-lbl">起止月份</label><div style="display:flex;gap:6px;align-items:center;">
+          <select class="m-bi-sel" id="mFMonthFrom" onchange="monthlyApplyFilter()"></select>
+          <span>~</span>
+          <select class="m-bi-sel" id="mFMonthTo" onchange="monthlyApplyFilter()"></select>
+        </div></div>
       </div>
     </div>
     <div class="m-bi-note" id="monthlyFilterNote"></div>
@@ -4158,6 +4164,11 @@ function monthlySameMonthLastYear(m) { if (!m || m.length < 7) return null; var 
 function monthlySelMonths() {
   var months = MONTHLY_MONTHS.slice();
   var r = MONTHLY_FILTER.range;
+  if (r === 'custom') {
+    var a = MONTHLY_FILTER.from, b = MONTHLY_FILTER.to;
+    if (a && b) { var lo = a <= b ? a : b, hi = a <= b ? b : a; return months.filter(function (m) { return m >= lo && m <= hi; }); }
+    return months;
+  }
   if (r === 'ytd') months = months.filter(function (m) { return m.indexOf('2026-') === 0; });
   else if (r && r !== 'all') { var n = parseInt(r, 10); if (months.length > n) months = months.slice(months.length - n); }
   return months;
@@ -4178,7 +4189,7 @@ function monthlyFilterNote() {
   if (f.subRegion !== 'all') parts.push('子区域=' + f.subRegion);
   if (f.region !== 'all') parts.push('工作区域=' + f.region);
   if (f.zhiXi !== 'all') parts.push('职系=' + f.zhiXi);
-  if (f.range !== 'all') parts.push('时间范围=' + (f.range === 'ytd' ? '本年' : '近' + f.range + '月'));
+  if (f.range !== 'all') parts.push('时间范围=' + (f.range === 'custom' ? (f.from || '') + '~' + (f.to || '') : (f.range === 'ytd' ? '本年' : '近' + f.range + '月')));
   return parts.length ? ('已筛选：' + parts.join(' · ')) : '';
 }
 
@@ -4202,7 +4213,8 @@ async function wpgLoadMonthly() {
     var m = window.MONTHLY_METRICS;
     if (!Array.isArray(m) || m.length < 50) return false;
     var last = m[m.length - 1];
-    return !!(last && last.headcount != null && last.supConv && last.groups);
+    // 旧版 .enc（无 subRegion/gStruct）即便解密成功也判为过期，强制穿透到新鲜源
+    return !!(last && last.headcount != null && last.supConv && last.groups && last.subRegion && last.gStruct);
   });
   if (!ok) return false;
   await tryLoad('monthly-move.js.enc', function () {
@@ -4223,14 +4235,25 @@ function monthlyPopulateFilters() {
   var subs = {}; MONTHLY_METRICS.forEach(function (m) { Object.keys(m.subRegion || {}).forEach(function (k) { subs[k] = 1; }); });
   var sb = Object.keys(subs).sort();
   fill('mFGroup', groups); fill('mFRegion', rg); fill('mFSubRegion', sb); fill('mFZhiXi', zx);
+  var months = (window.MONTHLY_METRICS || []).map(function (m) { return m.month; }).sort();
+  fill('mFMonthFrom', months); fill('mFMonthTo', months);
+  var mf = document.getElementById('mFMonthFrom'), mt = document.getElementById('mFMonthTo');
+  if (mf && mt) { mf.value = months[0]; mt.value = months[months.length - 1]; }
 }
 function monthlyApplyFilter() {
   var g = document.getElementById('mFGroup'), sr = document.getElementById('mFSubRegion'), r = document.getElementById('mFRegion'), z = document.getElementById('mFZhiXi'), rg = document.getElementById('mFRange');
+  var mf = document.getElementById('mFMonthFrom'), mt = document.getElementById('mFMonthTo');
   if (g) MONTHLY_FILTER.group = g.value;
   if (sr) MONTHLY_FILTER.subRegion = sr.value;
   if (r) MONTHLY_FILTER.region = r.value;
   if (z) MONTHLY_FILTER.zhiXi = z.value;
-  if (rg) MONTHLY_FILTER.range = rg.value;
+  if (rg) {
+    MONTHLY_FILTER.range = rg.value;
+    var box = document.getElementById('mFMonthRangeBox');
+    if (box) box.style.display = (rg.value === 'custom') ? 'flex' : 'none';
+  }
+  if (mf) MONTHLY_FILTER.from = mf.value;
+  if (mt) MONTHLY_FILTER.to = mt.value;
   MONTHLY_SEL = monthlySelMonths();
   var note = document.getElementById('monthlyFilterNote');
   if (note) note.textContent = monthlyFilterNote();
@@ -4239,7 +4262,7 @@ function monthlyApplyFilter() {
 function monthlyInit() {
   if (!window.MONTHLY_METRICS) { monthlyShowError('月度汇总数据未加载'); return; }
   MONTHLY_MONTHS = (window.MONTHLY_METRICS || []).map(function (m) { return m.month; }).sort();
-  MONTHLY_FILTER = { group: 'all', subRegion: 'all', region: 'all', zhiXi: 'all', range: 'all' };
+  MONTHLY_FILTER = { group: 'all', subRegion: 'all', region: 'all', zhiXi: 'all', range: 'all', from: '', to: '' };
   MONTHLY_SEL = monthlySelMonths();
   MONTHLY_READY = true;
   var loading = document.getElementById('monthlyLoading'); if (loading) loading.style.display = 'none';
@@ -4332,7 +4355,7 @@ function mPie(opts) {
   var W = H, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 10, IR = R * 0.58, s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
   var ang = -Math.PI / 2;
   data.forEach(function (d) { if (!d.value) return; var frac = d.value / total, a2 = ang + frac * 2 * Math.PI, large = frac > 0.5 ? 1 : 0; var x1 = cx + R * Math.cos(ang), y1 = cy + R * Math.sin(ang), x2 = cx + R * Math.cos(a2), y2 = cy + R * Math.sin(a2), xi1 = cx + IR * Math.cos(ang), yi1 = cy + IR * Math.sin(ang), xi2 = cx + IR * Math.cos(a2), yi2 = cy + IR * Math.sin(a2); s += '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' L' + xi2.toFixed(1) + ' ' + yi2.toFixed(1) + ' A' + IR + ' ' + IR + ' 0 ' + large + ' 0 ' + xi1.toFixed(1) + ' ' + yi1.toFixed(1) + ' Z" fill="' + d.color + '"/>'; ang = a2; });
-  s += '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="' + (R * 0.26) + '" font-weight="700" fill="#b01b30">' + total + '</text>';
+  s += '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="' + (R * 0.22) + '" font-weight="700" fill="#b01b30">' + total + '</text>';
   s += '<text x="' + cx + '" y="' + (cy + 15) + '" text-anchor="middle" font-size="11" fill="#64748b">' + (opts.centerLabel || '合计') + '</text></svg>';
   var leg = '<div class="m-legend">'; data.forEach(function (d) { var pct = total ? Math.round(d.value / total * 100) : 0; leg += '<span class="lg"><span class="sw" style="background:' + d.color + '"></span>' + d.label + ' ' + (d.value || 0) + '（' + pct + '%）</span>'; }); return s + leg + '</div>';
 }
