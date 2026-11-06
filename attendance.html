@@ -149,15 +149,15 @@
   <div class="subpanel" id="sub-late">
     <div class="kpis" id="lateKpis"></div>
     <div class="rank-grid">
-      <div class="rank-card"><h4>迟到次数 TOP 10（2026-09）</h4><div id="lateRank"></div></div>
-      <div class="rank-card orange"><h4>早退次数 TOP 10（2026-09）</h4><div id="earlyRank"></div></div>
+      <div class="rank-card"><h4 id="lateRankTitle">迟到次数 TOP 10</h4><div id="lateRank"></div></div>
+      <div class="rank-card orange"><h4 id="earlyRankTitle">早退次数 TOP 10</h4><div id="earlyRank"></div></div>
     </div>
   </div>
 
   <!-- 休假 -->
   <div class="subpanel" id="sub-leave" style="display:none">
     <div class="card">
-      <div class="sec-title">休假概况（2026-09 当期）</div>
+      <div class="sec-title" id="leaveTitle">休假概况（当期）</div>
       <div class="kpis" id="leaveKpis"></div>
       <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 出差假 / 调休假 等）。本屏为概括性指标，详细假别拆分可在后续版本扩展。</div>
     </div>
@@ -174,7 +174,7 @@
     <div class="rank-grid">
       <div class="rank-card orange"><h4>外出天数 TOP（补卡记录）</h4><div id="outRank"></div></div>
       <div class="rank-card"><h4>在家办公天数 TOP（补卡记录）</h4><div id="homeRank"></div></div>
-      <div class="rank-card green"><h4>各 BU 缺勤天数排行（2026-09）</h4><div id="absentRank"></div></div>
+      <div class="rank-card green"><h4 id="absentRankTitle">各 BU 缺勤天数排行</h4><div id="absentRank"></div></div>
     </div>
   </div>
 </section>
@@ -330,6 +330,8 @@ function initAll(){
   var _ye=document.getElementById('f_year'), _me=document.getElementById('f_month');
   if(_ye) _ye.value = _dp.slice(0,4);
   if(_me) _me.value = _dp.slice(4);
+  var _dpLabel = _dp.slice(0,4)+'-'+_dp.slice(4);
+  var _lt=document.getElementById('leaveTitle'); if(_lt) _lt.textContent='休假概况（'+_dpLabel+' 当期）';
   fillSelect('p_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
   fillSelect('d_ym', SUMMARY.meta.趋势月份.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), true);
   // BU / 区域 / 城市 / 职务 / 部门 选项
@@ -416,7 +418,8 @@ function recomputeKpi(pm){
     早退率: sumShould? round2(earlyCnt/sumShould*100):0};
 }
 function _setRankTitles(f){
-  var t = f? '（筛选后）':'（当期）';
+  var per = (SUMMARY.meta && SUMMARY.meta.数据期) ? (SUMMARY.meta.数据期.slice(0,4)+'-'+SUMMARY.meta.数据期.slice(4)) : '';
+  var t = f? '（筛选后）':'（'+per+' 当期）';
   var lt=document.querySelector('#lateRank'); if(lt&&lt.parentElement){var h=lt.parentElement.querySelector('h4'); if(h) h.textContent='迟到次数 TOP 10'+t;}
   var et=document.querySelector('#earlyRank'); if(et&&et.parentElement){var h2=et.parentElement.querySelector('h4'); if(h2) h2.textContent='早退次数 TOP 10'+t;}
   var at=document.querySelector('#absentRank'); if(at&&at.parentElement){var h3=at.parentElement.querySelector('h4'); if(h3) h3.textContent='各 BU 缺勤天数排行'+t;}
@@ -432,7 +435,7 @@ function rankRows(arr, key){
 
 /* ===== 补卡&出差 折线图 ===== */
 function buildBukaChart(){
-  // 对齐 12 个月：trend(202510..202609) + buka 按月
+  // 对齐各月：trend(202510..最新月) + buka 按月
   var months = SUMMARY.meta.趋势月份; // '202510'...
   var denom = {}; SUMMARY.trend.forEach(function(t){ denom[t.ym]=t.应出勤天数加总; });
   var trip = {}; SUMMARY.trend.forEach(function(t){ trip[t.ym]=t.出差天数; });
