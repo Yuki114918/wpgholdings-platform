@@ -2081,6 +2081,7 @@ function mergeEmployeeData() {
         <div class="m-move-filter">
           <label>类型</label><select id="mMoveType" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option><option value="hire">🟢 入职</option><option value="leave">🔴 离职</option></select>
           <label>集团</label><select id="mMoveGroup" class="m-bi-sel" onchange="monthlyRenderMoveTable()"></select>
+          <label>子区域</label><select id="mMoveSubRegion" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option></select>
           <span class="m-bi-count" id="mMoveFilterNote"></span>
         </div>
         <button class="m-toggle-table" id="mToggleTable" onclick="monthlyToggleTable()">📋 展开入离明细（0 笔）</button>
@@ -4270,6 +4271,11 @@ function monthlyPopulateFilters() {
   if (mf && mt) { mf.value = months[0]; mt.value = months[months.length - 1]; }
   var mg = document.getElementById('mMoveGroup');
   if (mg) mg.innerHTML = '<option value="all">全部</option>' + groups.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
+  var subs = {}; var mvAll = (window.MONTHLY_MOVE && window.MONTHLY_MOVE.recentEvents) || [];
+  mvAll.forEach(function (e) { if (e.sub) subs[e.sub] = 1; });
+  var sbOpts = Object.keys(subs).sort();
+  var msr = document.getElementById('mMoveSubRegion');
+  if (msr) msr.innerHTML = '<option value="all">全部</option>' + sbOpts.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
 }
 function monthlyApplyFilter() {
   var g = document.getElementById('mFGroup'), sr = document.getElementById('mFSubRegion'), r = document.getElementById('mFRegion'), z = document.getElementById('mFZhiXi'), rg = document.getElementById('mFRange');
@@ -4516,16 +4522,18 @@ function monthlyRenderMoveTable() {
   var evs = window.__mEvents || [];
   var tp = (document.getElementById('mMoveType') || {}).value || 'all';
   var gp = (document.getElementById('mMoveGroup') || {}).value || 'all';
-  var f = evs.filter(function (e) { if (tp !== 'all' && e.type !== tp) return false; if (gp !== 'all' && e.group !== gp) return false; return true; });
-  var mt = document.getElementById('mMoveType'), mg = document.getElementById('mMoveGroup');
+  var sr = (document.getElementById('mMoveSubRegion') || {}).value || 'all';
+  var f = evs.filter(function (e) { if (tp !== 'all' && e.type !== tp) return false; if (gp !== 'all' && e.group !== gp) return false; if (sr !== 'all' && (e.sub || '未知') !== sr) return false; return true; });
+  var mt = document.getElementById('mMoveType'), mg = document.getElementById('mMoveGroup'), msr = document.getElementById('mMoveSubRegion');
   if (mt) mt.classList.toggle('is-filtered', tp !== 'all');
   if (mg) mg.classList.toggle('is-filtered', gp !== 'all');
-  var note = document.getElementById('mMoveFilterNote'); if (note) note.textContent = (tp !== 'all' || gp !== 'all') ? ('🔎 匹配 ' + f.length + ' / ' + evs.length + ' 笔') : '';
+  if (msr) msr.classList.toggle('is-filtered', sr !== 'all');
+  var note = document.getElementById('mMoveFilterNote'); if (note) note.textContent = (tp !== 'all' || gp !== 'all' || sr !== 'all') ? ('🔎 匹配 ' + f.length + ' / ' + evs.length + ' 笔') : '';
   var t = document.getElementById('mMoveTable');
   if (!t) return;
   if (!f.length) { t.innerHTML = '<div style="padding:14px;color:#94a3b8;">当前筛选无匹配记录。</div>'; return; }
-  var rows = f.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
-  t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (f.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
+  var rows = f.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.sub || '未知') + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
+  t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>子区域</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (f.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
 }
 
 function _eduFullTimeGradAge(edu) {
