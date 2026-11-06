@@ -357,34 +357,63 @@ function buildGlossary(){
   document.getElementById('glossCount').textContent=(SUMMARY.glossary||[]).length+' 条';
 }
 
-/* ===== 仪表盘 KPI + 排行 ===== */
+/* ===== 仪表盘 KPI + 排行（筛选实时联动） ===== */
 function buildDashboard(){
-  var k=SUMMARY.sep_kpi;
-  var kpis=[
-    {l:'出勤率（人头）',v:k.出勤率,u:'%',c:''},
-    {l:'缺勤率',v:k.缺勤率,u:'%',c:'blue'},
-    {l:'迟到率',v:k.迟到率,u:'%',c:'orange'},
-    {l:'早退率',v:k.早退率,u:'%',c:'purple'},
-    {l:'迟到人数',v:k.迟到人数,u:'人',c:''},
-    {l:'早退人数',v:k.早退人数,u:'人',c:'blue'},
-    {l:'缺勤人数',v:k.缺勤人数,u:'人',c:'orange'},
-    {l:'出差天数',v:k.出差天数,u:'天',c:'green'},
-  ];
-  document.getElementById('lateKpis').innerHTML = kpis.map(function(x){
-    return '<div class="kpi '+x.c+'"><div class="k-label">'+x.l+'</div><div class="k-val">'+fmt(x.v,2)+'<small> '+x.u+'</small></div></div>';
-  }).join('');
-  // 休假 KPI（概要）
-  document.getElementById('leaveKpis').innerHTML =
-    '<div class="kpi green"><div class="k-label">出差假天数（2026-09）</div><div class="k-val">'+fmt(k.出差天数,1)+'<small> 天</small></div></div>'+
-    '<div class="kpi"><div class="k-label">应出勤人天</div><div class="k-val">'+fmt(k.应出勤天数加总,0)+'<small> 天</small></div></div>'+
-    '<div class="kpi blue"><div class="k-label">实际出勤人数</div><div class="k-val">'+fmt(k.实际出勤人数,0)+'<small> 人</small></div></div>'+
-    '<div class="kpi purple"><div class="k-label">在职人数</div><div class="k-val">'+fmt(k.人数,0)+'<small> 人</small></div></div>';
-  // 排行
+  _renderDashKpis(SUMMARY.sep_kpi, null);
   document.getElementById('lateRank').innerHTML = rankRows(SUMMARY.late_rank, '迟到次数');
   document.getElementById('earlyRank').innerHTML = rankRows(SUMMARY.early_rank, '早退次数');
   document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){return {nm:d.工号, v:d.外出};}), '外出天数');
   document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){return {nm:d.工号, v:d.在家上班};}), '在家天数');
   document.getElementById('absentRank').innerHTML = rankRows(SUMMARY.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
+  _setRankTitles(null);
+}
+function _renderDashKpis(k, f){
+  var tag = f? '（筛选）':'';
+  var kpis=[
+    {l:'出勤率（人头）'+tag,v:k.出勤率,u:'%',c:''},
+    {l:'缺勤率'+tag,v:k.缺勤率,u:'%',c:'blue'},
+    {l:'迟到率'+tag,v:k.迟到率,u:'%',c:'orange'},
+    {l:'早退率'+tag,v:k.早退率,u:'%',c:'purple'},
+    {l:'迟到人数'+tag,v:k.迟到人数,u:'人',c:''},
+    {l:'早退人数'+tag,v:k.早退人数,u:'人',c:'blue'},
+    {l:'缺勤人数'+tag,v:k.缺勤人数,u:'人',c:'orange'},
+    {l:'出差天数'+tag,v:k.出差天数,u:'天',c:'green'},
+  ];
+  document.getElementById('lateKpis').innerHTML = kpis.map(function(x){
+    return '<div class="kpi '+x.c+'"><div class="k-label">'+x.l+'</div><div class="k-val">'+fmt(x.v,2)+'<small> '+x.u+'</small></div></div>';
+  }).join('');
+  document.getElementById('leaveKpis').innerHTML =
+    '<div class="kpi green"><div class="k-label">出差假天数'+tag+'</div><div class="k-val">'+fmt(k.出差天数,1)+'<small> 天</small></div></div>'+
+    '<div class="kpi"><div class="k-label">应出勤人天'+tag+'</div><div class="k-val">'+fmt(k.应出勤天数加总,0)+'<small> 天</small></div></div>'+
+    '<div class="kpi blue"><div class="k-label">实际出勤人数'+tag+'</div><div class="k-val">'+fmt(k.实际出勤人数,0)+'<small> 人</small></div></div>'+
+    '<div class="kpi purple"><div class="k-label">在职人数'+tag+'</div><div class="k-val">'+fmt(k.人数,0)+'<small> 人</small></div></div>';
+}
+function recomputeKpi(pm){
+  var n=pm.length, sumShould=0, actPersons=0, absDays=0, lateCnt=0, earlyCnt=0, absPersons=0, latePersons=0, earlyPersons=0, tripDays=0;
+  pm.forEach(function(e){
+    var should=+e.应出勤天数||0, act=+e.实际出勤天数||0;
+    sumShould+=should;
+    if(act>0) actPersons++;
+    absDays += (+e.缺勤天数||0);
+    lateCnt += (+e.迟到次数||0); earlyCnt += (+e.早退次数||0);
+    tripDays += (+e.出差天数||0);
+    if((+e.缺勤天数||0)>0) absPersons++;
+    if((+e.迟到次数||0)>0) latePersons++;
+    if((+e.早退次数||0)>0) earlyPersons++;
+  });
+  return {人数:n, 应出勤人数:n, 实际出勤人数:actPersons, 应出勤天数加总:sumShould,
+    缺勤天数:absDays, 迟到次数:lateCnt, 早退次数:earlyCnt, 出差天数:tripDays,
+    缺勤人数:absPersons, 迟到人数:latePersons, 早退人数:earlyPersons,
+    出勤率: n? round2(actPersons/n*100):0,
+    缺勤率: sumShould? round2(absDays/sumShould*100):0,
+    迟到率: sumShould? round2(lateCnt/sumShould*100):0,
+    早退率: sumShould? round2(earlyCnt/sumShould*100):0};
+}
+function _setRankTitles(f){
+  var t = f? '（筛选后）':'（当期）';
+  var lt=document.querySelector('#lateRank'); if(lt&&lt.parentElement){var h=lt.parentElement.querySelector('h4'); if(h) h.textContent='迟到次数 TOP 10'+t;}
+  var et=document.querySelector('#earlyRank'); if(et&&et.parentElement){var h2=et.parentElement.querySelector('h4'); if(h2) h2.textContent='早退次数 TOP 10'+t;}
+  var at=document.querySelector('#absentRank'); if(at&&at.parentElement){var h3=at.parentElement.querySelector('h4'); if(h3) h3.textContent='各 BU 缺勤天数排行'+t;}
 }
 function rankRows(arr, key){
   if(!arr||!arr.length) return '<div class="rank-row"><span class="nm">暂无数据</span></div>';
@@ -427,7 +456,32 @@ function buildBukaChart(){
 }
 function round2(x){ return Math.round((x||0)*100)/100; }
 
-function applyDashFilter(){ /* 预留：当前 KPI/排行以2026-09当期为基准，筛选项用于后续按需下钻 */ renderDaily(); renderPersonal(); }
+function applyDashFilter(){
+  var bu=val('f_bu'), area=val('f_area'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
+  var f = {bu:bu,area:area,title:title,dept:dept,name:name};
+  var noFilter = !bu && !area && !title && !dept && !name;
+  if(noFilter){ buildDashboard(); return; }
+  var pm = SUMMARY.person_month.filter(function(e){
+    if(bu && e.bu!==bu) return false;
+    if(area && e.工作地点!==area) return false;
+    if(title && e.职称!==title) return false;
+    if(dept && (e.所属部门||'').indexOf(dept)<0) return false;
+    if(name && (e.姓名||'').indexOf(name)<0) return false;
+    return true;
+  });
+  var k = recomputeKpi(pm);
+  _renderDashKpis(k, f);
+  var lateS = pm.slice().sort(function(a,b){return (b.迟到次数||0)-(a.迟到次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 迟到次数:e.迟到次数};});
+  var earlyS = pm.slice().sort(function(a,b){return (b.早退次数||0)-(a.早退次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 早退次数:e.早退次数};});
+  var byBu={}; pm.forEach(function(e){ byBu[e.bu]=(byBu[e.bu]||0)+(+e.缺勤天数||0); });
+  var absentS = Object.keys(byBu).map(function(b){return {bu:b, 缺勤天数:byBu[b], sub:(pm.filter(function(x){return x.bu===b;}).length)+'人'};}).sort(function(a,b){return b.缺勤天数-a.缺勤天数;}).slice(0,10);
+  document.getElementById('lateRank').innerHTML = rankRows(lateS, '迟到次数');
+  document.getElementById('earlyRank').innerHTML = rankRows(earlyS, '早退次数');
+  document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){return {nm:d.工号, v:d.外出};}), '外出天数');
+  document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){return {nm:d.工号, v:d.在家上班};}), '在家天数');
+  document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
+  _setRankTitles(f);
+}
 function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_city','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
 
 /* ===== 每日出勤明细 ===== */
