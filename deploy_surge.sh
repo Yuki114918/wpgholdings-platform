@@ -3,6 +3,13 @@
 # 一键部署脚本：同步 git repo 源文件 → surge-dist / hr-report-dist → 部署两域名 → 验证
 # 用途：避免"重建 dist 漏文件"导致报告页/数据 404。每次改完内容跑一次即可。
 # 用法：bash deploy_surge.sh
+#
+# ⚠️ 2026-11-06 实测：Surge 两个域名发布均被拒
+#    "Aborted - you do not have permission to publish to wpgholdings-todo.surge.sh"
+#    "Aborted - you do not have permission to publish to hr-insight-report.surge.sh"
+#    token 仍可 surge list（能读），但 publish 权限已被收回，两域名冻结于 3 周前版本。
+#    → Surge 备份链路已失效，唯一生效部署通道为 GitHub Pages 主链（git push origin main）。
+#    本脚本目前会失败在第 [4/5] 步，仅 GitHub Pages 一侧有效；如需恢复 Surge 需换账号/重新认领域名。
 # ============================================================
 set -e
 
