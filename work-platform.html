@@ -76,7 +76,7 @@ async function wpgLoadOneChunk(idx){
         wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
         // 首次 25s（2MB 分块留足余量）；重试放宽到 45s 并加 cb 穿透缓存
         var timeout = attempt===0 ? 25000 : 45000;
-        var chunkUrl = DATA_BASES[b]+'employees-data-v20-part'+idx+'.js.enc';
+        var chunkUrl = DATA_BASES[b]+'employees-data-v21-part'+idx+'.js.enc';
         if(attempt>0) chunkUrl = wpgCacheBust(chunkUrl);
         var js = await wpgFetchData(chunkUrl, timeout);
         window.WPG_LOAD_EXTRA = '';
@@ -129,7 +129,7 @@ async function wpgStartRosterLoad(){
       try{
         wpgUpdateLoadProgress(window._wpgDone+window._wpgFailed.length, TOTAL_CHUNKS, window._wpgFailed, '，正在加载学历数据…');
         var timeout2 = attempt2===0 ? 25000 : 45000;
-        var eduUrl = DATA_BASES[b2]+'employees-education-v20.js.enc';
+        var eduUrl = DATA_BASES[b2]+'employees-education-v21.js.enc';
         if(attempt2>0) eduUrl = wpgCacheBust(eduUrl);
         var ejs = await wpgFetchData(eduUrl, timeout2);
         var esc=document.createElement('script'); esc.textContent=ejs; document.head.appendChild(esc);
