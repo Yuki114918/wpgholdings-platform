@@ -2001,6 +2001,15 @@ function mergeEmployeeData() {
       .m-bi-sel{border:1px solid #cdd7e3;border-radius:7px;background:#fff;padding:7px 10px;font-size:13px;color:#1f2a37;min-width:150px;cursor:pointer;}
       .m-bi-divider{height:2px;background:#004E8C;margin:10px 0 14px;border-radius:2px;}
       .m-bi-note{font-size:12px;font-weight:600;color:#004E8C;margin:0 0 2px;min-height:16px;}
+    .m-bi-sel.is-filtered{border-color:#E31937;background:#fff5f5;color:#E31937;font-weight:600;box-shadow:0 0 0 2px rgba(227,25,55,.12);}
+    .m-bi-ctrl-actions{display:flex;align-items:center;gap:10px;align-self:flex-end;}
+    .m-bi-count{font-size:12px;font-weight:600;color:#E31937;}
+    .m-bi-clear{border:1px solid #E31937;background:#E31937;color:#fff;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+    .m-bi-clear:hover{background:#c41630;}
+    .m-move-filter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 10px;}
+    .m-move-filter label{font-size:12px;font-weight:600;color:#475569;}
+    .m-move-filter select{border:1px solid #cdd7e3;border-radius:7px;background:#fff;padding:6px 10px;font-size:13px;color:#1f2a37;cursor:pointer;}
+    .m-move-filter select.is-filtered{border-color:#E31937;background:#fff5f5;color:#E31937;font-weight:600;}
     </style>
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">📅 月度人力月报<span class="m-cn-badge">CN区</span><span class="collapse-arrow">▼</span></h2>
     <div class="m-asof" id="monthlyAsOf"></div>
@@ -2025,6 +2034,10 @@ function mergeEmployeeData() {
           <span>~</span>
           <select class="m-bi-sel" id="mFMonthTo" onchange="monthlyApplyFilter()"></select>
         </div></div>
+        <div class="m-bi-ctrl m-bi-ctrl-actions">
+          <span class="m-bi-count" id="mFilterCount"></span>
+          <button class="m-bi-clear" id="mFilterClear" style="display:none;" onclick="monthlyClearFilter()">✕ 清除筛选</button>
+        </div>
       </div>
     </div>
     <div class="m-bi-note" id="monthlyFilterNote"></div>
@@ -2064,6 +2077,11 @@ function mergeEmployeeData() {
           <div class="m-card"><h3>逐月主管职转换（新升 / 卸任 / 净）</h3><div class="m-svg" id="mMoveSup"></div></div>
           <div class="m-card"><h3>所选月份离职原因（合计 TOP）</h3><div class="m-svg" id="mMoveReasons"></div></div>
           <div class="m-card"><h3>雇用分布（所选月份合计）</h3><div class="m-svg" id="mMoveHire"></div></div>
+        </div>
+        <div class="m-move-filter">
+          <label>类型</label><select id="mMoveType" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option><option value="hire">🟢 入职</option><option value="leave">🔴 离职</option></select>
+          <label>集团</label><select id="mMoveGroup" class="m-bi-sel" onchange="monthlyRenderMoveTable()"></select>
+          <span class="m-bi-count" id="mMoveFilterNote"></span>
         </div>
         <button class="m-toggle-table" id="mToggleTable" onclick="monthlyToggleTable()">📋 展开入离明细（0 笔）</button>
         <div class="monthly-table-block" id="monthlyTableBlock" style="display:none;">
@@ -4248,6 +4266,8 @@ function monthlyPopulateFilters() {
   fill('mFMonthFrom', months); fill('mFMonthTo', months);
   var mf = document.getElementById('mFMonthFrom'), mt = document.getElementById('mFMonthTo');
   if (mf && mt) { mf.value = months[0]; mt.value = months[months.length - 1]; }
+  var mg = document.getElementById('mMoveGroup');
+  if (mg) mg.innerHTML = '<option value="all">全部</option>' + groups.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
 }
 function monthlyApplyFilter() {
   var g = document.getElementById('mFGroup'), sr = document.getElementById('mFSubRegion'), r = document.getElementById('mFRegion'), z = document.getElementById('mFZhiXi'), rg = document.getElementById('mFRange');
@@ -4266,7 +4286,21 @@ function monthlyApplyFilter() {
   MONTHLY_SEL = monthlySelMonths();
   var note = document.getElementById('monthlyFilterNote');
   if (note) note.textContent = monthlyFilterNote();
+  monthlyFilterUi();
   monthlyRender();
+}
+function monthlyFilterUi() {
+  var ids = ['mFGroup', 'mFRegion', 'mFZhiXi', 'mFSubRegion', 'mFRange'];
+  var n = 0;
+  ids.forEach(function (id) { var e = document.getElementById(id); if (!e) return; var on = !!e.value && e.value !== 'all'; e.classList.toggle('is-filtered', on); if (on) n++; });
+  var cnt = document.getElementById('mFilterCount'); if (cnt) cnt.textContent = n ? ('🔎 已筛选 ' + n + ' 项') : '';
+  var clr = document.getElementById('mFilterClear'); if (clr) clr.style.display = n ? 'inline-block' : 'none';
+}
+function monthlyClearFilter() {
+  ['mFGroup', 'mFRegion', 'mFZhiXi', 'mFSubRegion'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = 'all'; });
+  var rg = document.getElementById('mFRange'); if (rg) rg.value = 'all';
+  var box = document.getElementById('mFMonthRangeBox'); if (box) box.style.display = 'none';
+  monthlyApplyFilter();
 }
 function monthlyInit() {
   if (!window.MONTHLY_METRICS) { monthlyShowError('月度汇总数据未加载'); return; }
@@ -4361,10 +4395,10 @@ function mPie(opts) {
   var data = opts.data || [], H = opts.height || 240, total = 0;
   data.forEach(function (d) { total += (d.value || 0); });
   if (total <= 0) return '<div style="padding:20px;text-align:center;color:#94a3b8;">无数据</div>';
-  var W = H, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 10, IR = R * 0.58, s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">';
+  var W = H, cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 10, IR = R * 0.58, s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:190px;height:auto;display:block;margin:0 auto;">';
   var ang = -Math.PI / 2;
   data.forEach(function (d) { if (!d.value) return; var frac = d.value / total, a2 = ang + frac * 2 * Math.PI, large = frac > 0.5 ? 1 : 0; var x1 = cx + R * Math.cos(ang), y1 = cy + R * Math.sin(ang), x2 = cx + R * Math.cos(a2), y2 = cy + R * Math.sin(a2), xi1 = cx + IR * Math.cos(ang), yi1 = cy + IR * Math.sin(ang), xi2 = cx + IR * Math.cos(a2), yi2 = cy + IR * Math.sin(a2); s += '<path d="M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A' + R + ' ' + R + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' L' + xi2.toFixed(1) + ' ' + yi2.toFixed(1) + ' A' + IR + ' ' + IR + ' 0 ' + large + ' 0 ' + xi1.toFixed(1) + ' ' + yi1.toFixed(1) + ' Z" fill="' + d.color + '"/>'; ang = a2; });
-  var cfs = R * (total >= 10000 ? 0.12 : total >= 1000 ? 0.15 : total >= 100 ? 0.19 : 0.22);
+  var cfs = R * (total >= 10000 ? 0.10 : total >= 1000 ? 0.13 : total >= 100 ? 0.16 : 0.20);
   s += '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="' + cfs.toFixed(1) + '" font-weight="700" fill="#b01b30">' + total + '</text>';
   s += '<text x="' + cx + '" y="' + (cy + 15) + '" text-anchor="middle" font-size="11" fill="#64748b">' + (opts.centerLabel || '合计') + '</text></svg>';
   var leg = '<div class="m-legend">'; data.forEach(function (d) { var pct = total ? Math.round(d.value / total * 100) : 0; leg += '<span class="lg"><span class="sw" style="background:' + d.color + '"></span>' + d.label + ' ' + (d.value || 0) + '（' + pct + '%）</span>'; }); return s + leg + '</div>';
@@ -4443,14 +4477,27 @@ function monthlyRenderMove(sel) {
   var selFlat = sel.map(function (s) { return s.replace('-', ''); });
   var evs = (move.recentEvents || []).filter(function (e) { return selFlat.indexOf(e.ym) >= 0; }).slice().sort(function (a, b) { return a.ym < b.ym ? 1 : (a.ym > b.ym ? -1 : 0); });
   window.__mTableCount = evs.length;
+  window.__mEvents = evs;
   var t = document.getElementById('mMoveTable');
   var btn = document.getElementById('mToggleTable');
   if (btn) btn.textContent = '📋 展开入离明细（' + evs.length + ' 笔）';
   if (!evs.length) t.innerHTML = '<div style="padding:14px;color:#94a3b8;">所选月份暂无近 24 月入离明细。</div>';
-  else {
-    var rows = evs.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
-    t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (evs.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
-  }
+  else monthlyRenderMoveTable();
+}
+function monthlyRenderMoveTable() {
+  var evs = window.__mEvents || [];
+  var tp = (document.getElementById('mMoveType') || {}).value || 'all';
+  var gp = (document.getElementById('mMoveGroup') || {}).value || 'all';
+  var f = evs.filter(function (e) { if (tp !== 'all' && e.type !== tp) return false; if (gp !== 'all' && e.group !== gp) return false; return true; });
+  var mt = document.getElementById('mMoveType'), mg = document.getElementById('mMoveGroup');
+  if (mt) mt.classList.toggle('is-filtered', tp !== 'all');
+  if (mg) mg.classList.toggle('is-filtered', gp !== 'all');
+  var note = document.getElementById('mMoveFilterNote'); if (note) note.textContent = (tp !== 'all' || gp !== 'all') ? ('🔎 匹配 ' + f.length + ' / ' + evs.length + ' 笔') : '';
+  var t = document.getElementById('mMoveTable');
+  if (!t) return;
+  if (!f.length) { t.innerHTML = '<div style="padding:14px;color:#94a3b8;">当前筛选无匹配记录。</div>'; return; }
+  var rows = f.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
+  t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (f.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
 }
 
 function _eduFullTimeGradAge(edu) {
