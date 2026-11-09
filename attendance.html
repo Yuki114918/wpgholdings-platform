@@ -291,6 +291,8 @@
 
 <script>
 /* ===== 全局数据 ===== */
+var APP_VER='20261109b';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
+var _cv=function(u){ return u + (u.indexOf('?')>=0?'&':'?') + 'v=' + APP_VER; };  // 追加版本缓存破坏
 var SUMMARY=null, DAILY=null, BUKA=null;
 var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
 // 压缩每日明细字段索引: 0工号 1考勤日期 2结果 3上班卡 4下班卡 5迟到 6早退 7缺勤 8实际出勤h
@@ -311,7 +313,7 @@ var LEAVE_META=[
 ];
 function ensurePerson(ym){
   if(PERSON_CACHE[ym]) return Promise.resolve(PERSON_CACHE[ym]);
-  return fetch('./attendance-person-'+ym+'.json').then(function(r){return r.json();}).then(function(pm){
+  return fetch(_cv('./attendance-person-'+ym+'.json')).then(function(r){return r.json();}).then(function(pm){
     PERSON_CACHE[ym]=pm;
     pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu,工作子区域:e.工作子区域}; });
     return pm;
@@ -319,7 +321,7 @@ function ensurePerson(ym){
 }
 function ensureDaily(ym){
   if(DAILY_CACHE[ym]) return Promise.resolve(DAILY_CACHE[ym]);
-  return fetch('./attendance-daily-'+ym+'.json').then(function(r){return r.json();}).then(function(dl){ DAILY_CACHE[ym]=dl; return dl; });
+  return fetch(_cv('./attendance-daily-'+ym+'.json')).then(function(r){return r.json();}).then(function(dl){ DAILY_CACHE[ym]=dl; return dl; });
 }
 
 function fmt(n,d){ d=(d==null?0:d); if(n==null||isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:d}); }
@@ -346,8 +348,8 @@ document.querySelectorAll('.subtab').forEach(function(t){
 
 /* ===== 加载数据 ===== */
 Promise.all([
-  fetch('./attendance-summary.json').then(r=>r.json()),
-  fetch('./data/attendance-buka.json').then(r=>r.json())
+  fetch(_cv('./attendance-summary.json')).then(r=>r.json()),
+  fetch(_cv('./data/attendance-buka.json')).then(r=>r.json())
 ]).then(function(res){
   SUMMARY=res[0]; BUKA=res[1]; DAILY=null;
   document.getElementById('loading').style.display='none';
