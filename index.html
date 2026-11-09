@@ -4770,12 +4770,13 @@ function recruitPopulateFilters() {
   var meta = window.RECRUIT.meta;
   function fill(id, opts, allLabel) {
     var e = document.getElementById(id); if (!e) return;
-    e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
+    function opt(o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '">' + l + '</option>'; }
+    e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(opt).join('');
   }
   fill('rFRegion', Object.keys(meta.byRegion), '全部区域');
   fill('rFBU', Object.keys(meta.byBu), '全部集团');
   fill('rFZhiXi', Object.keys(meta.byZhiXi), '全部职系');
-  fill('rFMonth', RECRUIT_MONTHS, '全部月份');
+  fill('rFMonth', RECRUIT_MONTHS.map(function (k) { return [k, k.slice(0, 4) + '-' + k.slice(4)]; }), '全部月份');
   var rm = document.getElementById('rFMonth'); if (rm && RECRUIT_MONTHS.length) rm.value = 'all';
 }
 
