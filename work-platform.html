@@ -34,7 +34,7 @@ var DATA_BASES = [
 ];
 var DATA_BASE = DATA_BASES[0];
 var WPG_KEY=null;
-async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
+async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
 // 重试时给 URL 加时间戳，穿透浏览器/边缘已缓存的 404 或旧分块
 function wpgCacheBust(url){ return url + (url.indexOf('?') < 0 ? '?' : '&') + 'cb=' + Date.now(); }
@@ -1434,6 +1434,10 @@ function mergeEmployeeData() {
         <span class="nav-icon">🕒</span><span class="nav-label">考勤分析</span>
       </div>
 
+      <div class="nav-item" data-target="recruit" onclick="switchModule('recruit')">
+        <span class="nav-icon">📋</span><span class="nav-label">CN招聘一览</span>
+      </div>
+
       <div class="nav-group-label">HR 工具</div>
       <div class="nav-item" data-target="hr-law" onclick="switchModule('hr-law')">
         <span class="nav-icon">⚖️</span><span class="nav-label">HR法令查询</span>
@@ -2097,6 +2101,61 @@ function mergeEmployeeData() {
     </div>
   </section>
 
+
+  <!-- ===== CN招聘情况一览（#390 · 参考「职缺进度一览表」版面） ===== -->
+  <section class="section module-visible" data-module="recruit" id="mod-recruit">
+    <style>
+      .r-asof{font-size:13px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;padding:0 16px;}
+      .r-kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin:6px 0 18px;}
+      .r-kpi{border:1px solid var(--border);border-radius:14px;padding:14px 16px;background:#fff;position:relative;overflow:hidden;border-left:4px solid #E31937;}
+      .r-kpi .r-kpi-label{font-size:12.5px;color:var(--text-secondary);font-weight:600;}
+      .r-kpi .r-kpi-val{font-size:30px;font-weight:800;line-height:1.1;margin-top:4px;color:#E31937;}
+      .r-kpi .r-kpi-sub{font-size:11.5px;margin-top:4px;color:var(--text-secondary);}
+      .r-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+      @media(max-width:860px){.r-grid{grid-template-columns:1fr;}}
+      .r-card{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fff;}
+      .r-card h3{margin:0 0 8px;font-size:14.5px;color:#E31937;}
+      .r-table-note{font-size:12px;color:var(--text-secondary);margin-bottom:8px;}
+      .r-foot{font-size:12px;color:var(--text-secondary);margin-top:14px;line-height:1.7;background:#fff5f6;border:1px solid #f3d6da;border-radius:8px;padding:10px 14px;}
+      table.r-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:760px;}
+      table.r-tbl th{background:#E31937;color:#fff;padding:8px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;}
+      table.r-tbl td{padding:7px 10px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
+      table.r-tbl tr:nth-child(even) td{background:#f8fbfd;}
+    </style>
+    <h2 class="section-title" onclick="toggleSection(this.parentElement)">📋 CN招聘情况一览<span class="m-cn-badge">CN区</span><span class="collapse-arrow">▼</span></h2>
+    <div class="r-asof" id="recruitAsOf"></div>
+    <div class="m-bi-filter">
+      <div class="m-bi-filter-head">
+        <div class="m-bi-inspect"><span class="m-bi-inspect-btn">選擇檢視</span><span class="m-bi-inspect-tag">招聘窗口</span></div>
+        <div class="m-bi-ctrl-actions">
+          <span class="m-bi-count" id="rFilterCount"></span>
+          <button class="m-bi-clear" id="rFilterClear" style="display:none;" onclick="recruitClearFilter()">✕ 清除筛选</button>
+        </div>
+      </div>
+      <div class="m-bi-controls">
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">区域</label><select class="m-bi-sel" id="rFRegion" onchange="recruitApplyFilter()"></select></div>
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">归属集团(BU)</label><select class="m-bi-sel" id="rFBU" onchange="recruitApplyFilter()"></select></div>
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">职系</label><select class="m-bi-sel" id="rFZhiXi" onchange="recruitApplyFilter()"></select></div>
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">申请月份</label><select class="m-bi-sel" id="rFMonth" onchange="recruitApplyFilter()"></select></div>
+      </div>
+    </div>
+    <div class="m-bi-note" id="recruitFilterNote"></div>
+    <div class="m-bi-divider"></div>
+    <div id="recruitLoading" style="padding:18px;text-align:center;color:var(--text-secondary);">⏳ 招聘数据加载中…</div>
+    <div id="recruitBody" style="display:none;">
+      <div class="r-kpi-strip" id="rKpis"></div>
+      <div class="r-grid">
+        <div class="r-card"><h3>状态分布（所选月份）</h3><div class="m-svg" id="rStatusDonut"></div></div>
+        <div class="r-card"><h3>逐月申请趋势（2024 / 2025 / 2026）</h3><div class="m-legend" id="rTrendLegend"></div><div class="m-svg" id="rTrend"></div></div>
+      </div>
+      <div class="r-card" style="margin-top:16px;">
+        <h3>职缺明细（按筛选）</h3>
+        <div class="r-table-note" id="rTableNote"></div>
+        <div class="m-table-wrap" id="rTable"></div>
+      </div>
+      <div class="r-foot" id="recruitFoot"></div>
+    </div>
+  </section>
 
   <!-- HR法令查询 -->
   <section class="section module-visible" data-module="hr-law" id="mod-hr-law">
@@ -4338,21 +4397,42 @@ function monthlySwitchTab(t) {
   document.getElementById('mTabMove').classList.toggle('active', t === 'move');
 }
 function monthlyRender() { var sel = MONTHLY_SEL.slice().sort(); monthlyRenderKpis(sel); monthlyRenderSummary(sel); monthlyRenderTrend(sel); monthlyRenderStruct(sel); monthlyRenderMove(sel); }
+function monthlyActiveDim() {
+  // 与 monthlyHeadcount 同优先级：归属集团 > 子区域 > 工作区域 > 职系
+  var f = MONTHLY_FILTER;
+  if (f.group !== 'all') return { k: 'group', v: f.group };
+  if (f.subRegion !== 'all') return { k: 'sub', v: f.subRegion };
+  if (f.region !== 'all') return { k: 'region', v: f.region };
+  if (f.zhiXi !== 'all') return { k: 'zhiXi', v: f.zhiXi };
+  return null;
+}
+function monthlyHireFor(bm, dim) {
+  if (!dim || !bm) return (bm && bm.hire) || 0;
+  var m = { group: 'hireByGroup', sub: 'hireBySub', region: 'hireByRegion', zhiXi: 'hireByZhiXi' }[dim.k];
+  return ((bm[m] || {})[dim.v]) || 0;
+}
+function monthlyLeaveFor(bm, dim) {
+  if (!dim || !bm) return (bm && bm.leave) || 0;
+  var m = { group: 'leaveByGroup', sub: 'leaveBySub', region: 'leaveByRegion', zhiXi: 'leaveByZhiXi' }[dim.k];
+  return ((bm[m] || {})[dim.v]) || 0;
+}
 function monthlyRenderSummary(sel) {
   var metrics = sel.map(monthlyMetric).filter(Boolean), move = window.MONTHLY_MOVE || {}, byMonth = move.byMonth || {};
   var sorted = sel.slice().sort(), first = sorted[0], last = sorted[sorted.length - 1];
   var fM = monthlyMetric(first), lM = monthlyMetric(last);
+  var dim = monthlyActiveDim();
   var totHire = 0, totLeave = 0, totPromote = 0, totDemote = 0, totNet = 0;
-  metrics.forEach(function (x) { var bm = byMonth[x.month] || {}; totHire += bm.hire || 0; totLeave += bm.leave || 0; var sc = x.supConv || {}; totPromote += sc.promote || 0; totDemote += sc.demote || 0; totNet += sc.net || 0; });
+  metrics.forEach(function (x) { var bm = byMonth[x.month] || {}; totHire += monthlyHireFor(bm, dim); totLeave += monthlyLeaveFor(bm, dim); var sc = x.supConv || {}; totPromote += sc.promote || 0; totDemote += sc.demote || 0; totNet += sc.net || 0; });
   var hcF = fM ? monthlyHeadcount(fM) : 0, hcL = lM ? monthlyHeadcount(lM) : 0;
+  var dimNote = dim ? ('（按 ' + dim.v + ' 口径）') : '（全集团口径）';
   var modEl = document.getElementById('mModSummary');
-  if (modEl) modEl.innerHTML = '📌 <b>所选区间</b> ' + first + ' ~ ' + last + '（' + sel.length + ' 期）：在职由 <b>' + monthlyFmt(hcF, 0) + '</b> 变动至 <b>' + monthlyFmt(hcL, 0) + '</b>（净 ' + (hcL - hcF >= 0 ? '+' : '') + (hcL - hcF) + '）；期间累计入职 <b>' + totHire + '</b> 人、离职 <b>' + totLeave + '</b> 人；主管新升 ' + totPromote + '、卸任 ' + totDemote + '、净 ' + (totNet >= 0 ? '+' : '') + totNet + '。';
+  if (modEl) modEl.innerHTML = '📌 <b>所选区间</b> ' + first + ' ~ ' + last + '（' + sel.length + ' 期）' + dimNote + '：在职由 <b>' + monthlyFmt(hcF, 0) + '</b> 变动至 <b>' + monthlyFmt(hcL, 0) + '</b>（净 ' + (hcL - hcF >= 0 ? '+' : '') + (hcL - hcF) + '）；期间累计入职 <b>' + totHire + '</b> 人、离职 <b>' + totLeave + '</b> 人；主管新升 ' + totPromote + '、卸任 ' + totDemote + '、净 ' + (totNet >= 0 ? '+' : '') + totNet + '。';
   var mvEl = document.getElementById('mMoveSummary');
   if (mvEl) {
     var reas = {}; metrics.forEach(function (x) { (x.leaveReasonsTop || []).forEach(function (p) { reas[p[0]] = (reas[p[0]] || 0) + p[1]; }); });
     var rk = Object.keys(reas).map(function (k) { return { k: k, v: reas[k] }; }).sort(function (a, b) { return b.v - a.v; }).slice(0, 3);
     var reasTxt = rk.length ? rk.map(function (r) { return r.k + '（' + r.v + '）'; }).join('、') : '—';
-    mvEl.innerHTML = '<div class="m-sum-row"><span>📌 <b>区间摘要</b>（' + first + ' ~ ' + last + '，' + sel.length + ' 期）</span></div>' +
+    mvEl.innerHTML = '<div class="m-sum-row"><span>📌 <b>区间摘要</b>（' + first + ' ~ ' + last + '，' + sel.length + ' 期）' + dimNote + '</span></div>' +
       '<div class="m-sum-row"><span>在职：<b>' + monthlyFmt(hcL, 0) + '</b> 人（期末 ' + last + '）</span><span>累计入职 <span class="m-sum-hi">' + totHire + '</span> 人</span><span>累计离职 <span class="m-sum-hi">' + totLeave + '</span> 人</span><span>入离轧差 ' + (totHire - totLeave >= 0 ? '+' : '') + (totHire - totLeave) + ' 人</span></div>' +
       '<div class="m-sum-row"><span>主管新升 ' + totPromote + ' 人</span><span>卸任 ' + totDemote + ' 人</span><span>净转换 ' + (totNet >= 0 ? '+' : '') + totNet + ' 人</span><span>离职主因 TOP3：' + reasTxt + '</span></div>' +
       '<div class="m-sum-row"><span class="m-drill" onclick="monthlyDrillNames()">🔍 点击查看所选区间 入职 / 离职 / 晋升 人员名单（含姓名）</span></div>';
@@ -4641,6 +4721,203 @@ function applyEduTags(e) {
   e._is211 = tags.is211 && !nonFullTime;
   e._noSchool = tags.noSchool;
   e._eduType = et;
+}
+
+// ==================== CN招聘情况一览（#390） ====================
+var RECRUIT_FILTER = { region: 'all', bu: 'all', zhiXi: 'all', month: 'all' };
+var RECRUIT_MONTHS = [];
+var RECRUIT_READY = false;
+
+async function wpgLoadRecruitment() {
+  async function tryLoad(name, validate) {
+    for (var b = 0; b < DATA_BASES.length; b++) {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          var u = DATA_BASES[b] + name;
+          if (attempt > 0) u = wpgCacheBust(u);
+          var ctrl = new AbortController();
+          var t = setTimeout(function () { ctrl.abort(); }, attempt === 0 ? 25000 : 45000);
+          var res = await fetch(u, { signal: ctrl.signal });
+          clearTimeout(t);
+          if (!res.ok) throw new Error('http' + res.status);
+          var js = await res.text();
+          var sc = document.createElement('script'); sc.textContent = js; document.head.appendChild(sc);
+          if (validate && !validate()) continue;
+          return true;
+        } catch (e) { console.warn('招聘数据从 ' + DATA_BASES[b] + ' 尝试' + (attempt + 1) + '失败:', e.message || e); }
+      }
+    }
+    return false;
+  }
+  var ok = await tryLoad('recruitment-data.js', function () { return !!(window.RECRUIT && window.RECRUIT.slots && window.RECRUIT.slots.length); });
+  if (ok) recruitInit(); else { var l = document.getElementById('recruitLoading'); if (l) l.textContent = '⚠️ 招聘数据加载失败（请检查网络或稍后重试）'; }
+  return ok;
+}
+
+function recruitInit() {
+  if (!window.RECRUIT) return;
+  RECRUIT_MONTHS = Object.keys(window.RECRUIT.meta.byMonth).sort();
+  RECRUIT_FILTER = { region: 'all', bu: 'all', zhiXi: 'all', month: RECRUIT_MONTHS.length ? 'all' : 'all' };
+  RECRUIT_READY = true;
+  var loading = document.getElementById('recruitLoading'); if (loading) loading.style.display = 'none';
+  var body = document.getElementById('recruitBody'); if (body) body.style.display = 'block';
+  var asof = document.getElementById('recruitAsOf');
+  if (asof) asof.innerHTML = '📅 数据来源：增補人員需求表（测试档）。口径：以「申請日期」为招聘月份基准；职缺数按「需求人数」逐单展开槽位（一张单可有多个职缺）；BU 按增補人員所屬BU 归一；区域由工作地點城市映射；状态＝表單狀態＋結案＋新人名字（待入职暂留空）。数据结算日 ' + (window.RECRUIT.meta.settleDate || '');
+  recruitPopulateFilters();
+  recruitApplyFilter();
+}
+
+function recruitPopulateFilters() {
+  if (!window.RECRUIT) return;
+  var meta = window.RECRUIT.meta;
+  function fill(id, opts, allLabel) {
+    var e = document.getElementById(id); if (!e) return;
+    e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('');
+  }
+  fill('rFRegion', Object.keys(meta.byRegion), '全部区域');
+  fill('rFBU', Object.keys(meta.byBu), '全部集团');
+  fill('rFZhiXi', Object.keys(meta.byZhiXi), '全部职系');
+  fill('rFMonth', RECRUIT_MONTHS, '全部月份');
+  var rm = document.getElementById('rFMonth'); if (rm && RECRUIT_MONTHS.length) rm.value = 'all';
+}
+
+function recruitApplyFilter() {
+  var rg = document.getElementById('rFRegion'), bu = document.getElementById('rFBU'), zx = document.getElementById('rFZhiXi'), mo = document.getElementById('rFMonth');
+  if (rg) RECRUIT_FILTER.region = rg.value;
+  if (bu) RECRUIT_FILTER.bu = bu.value;
+  if (zx) RECRUIT_FILTER.zhiXi = zx.value;
+  if (mo) RECRUIT_FILTER.month = mo.value;
+  recruitFilterUi();
+  recruitRender();
+}
+function recruitFilterUi() {
+  var ids = ['rFRegion', 'rFBU', 'rFZhiXi', 'rFMonth'], n = 0;
+  ids.forEach(function (id) { var e = document.getElementById(id); if (!e) return; var on = !!e.value && e.value !== 'all'; e.classList.toggle('is-filtered', on); if (on) n++; });
+  var cnt = document.getElementById('rFilterCount'); if (cnt) cnt.textContent = n ? ('🔎 已筛选 ' + n + ' 项') : '';
+  var clr = document.getElementById('rFilterClear'); if (clr) clr.style.display = n ? 'inline-block' : 'none';
+  var note = document.getElementById('recruitFilterNote');
+  if (note) { var f = RECRUIT_FILTER, parts = []; if (f.region !== 'all') parts.push('区域=' + f.region); if (f.bu !== 'all') parts.push('集团=' + f.bu); if (f.zhiXi !== 'all') parts.push('职系=' + f.zhiXi); if (f.month !== 'all') parts.push('月份=' + f.month); note.textContent = parts.length ? ('已筛选：' + parts.join(' · ')) : ''; }
+}
+function recruitClearFilter() {
+  ['rFRegion', 'rFBU', 'rFZhiXi'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = 'all'; });
+  var mo = document.getElementById('rFMonth'); if (mo && RECRUIT_MONTHS.length) mo.value = 'all';
+  recruitApplyFilter();
+}
+
+function recruitBaseFiltered() {
+  var f = RECRUIT_FILTER, slots = window.RECRUIT.slots;
+  return slots.filter(function (s) {
+    if (f.region !== 'all' && s.region !== f.region) return false;
+    if (f.bu !== 'all' && s.bu !== f.bu) return false;
+    if (f.zhiXi !== 'all' && s.zhiXi !== f.zhiXi) return false;
+    return true;
+  });
+}
+function recruitPrevMonthKey(m) {
+  if (!m || m === 'all') return null;
+  var y = +m.slice(0, 4), mo = +m.slice(4, 6); mo -= 1; if (mo === 0) { mo = 12; y -= 1; }
+  return '' + y + (mo < 10 ? '0' : '') + mo;
+}
+function recruitRender() {
+  if (!RECRUIT_READY) return;
+  var f = RECRUIT_FILTER, base = recruitBaseFiltered(), isAll = (f.month === 'all'), selMonth = f.month;
+  var monthSlots = isAll ? base : base.filter(function (s) { return s.applyKey === selMonth; });
+  var prevMonth = recruitPrevMonthKey(selMonth);
+  function activeAsOf(pk) { return base.filter(function (s) { return (pk === 'all' || s.applyKey <= pk) && s.status !== '已完成'; }).length; }
+  var kpiTotal = isAll ? base.length : activeAsOf(selMonth);
+  var kpiPrev = isAll ? null : activeAsOf(prevMonth);
+  var cnt = {}; monthSlots.forEach(function (s) { var k = s.status || '（待入职/空）'; cnt[k] = (cnt[k] || 0) + 1; });
+  var kpis = [
+    { l: '月总职缺', v: kpiTotal, s: isAll ? '全期在招累计' : '截至 ' + selMonth + ' 在招' },
+    { l: '上月职缺', v: kpiPrev == null ? '—' : kpiPrev, s: isAll ? '—' : (prevMonth || '—') + ' 在招' },
+    { l: '本月新增', v: monthSlots.length, s: isAll ? '全期新增' : selMonth + ' 新增' },
+    { l: '已完成', v: cnt['已完成'] || 0, s: '已到职结案' },
+    { l: '待入职', v: cnt['（待入职/空）'] || 0, s: '暂留空未判断' },
+    { l: '暂停招聘', v: cnt['暫停招聘'] || 0, s: '表單駁回' },
+    { l: '本月在招', v: cnt['本月在招'] || 0, s: '处理中' }
+  ];
+  var kc = document.getElementById('rKpis');
+  if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="r-kpi"><div class="r-kpi-label">' + k.l + '</div><div class="r-kpi-val">' + k.v + '</div><div class="r-kpi-sub">' + k.s + '</div></div>'; }).join('');
+  recruitStatusDonut(monthSlots);
+  recruitTrend(base);
+  recruitTable(monthSlots, isAll);
+}
+
+function recruitStatusDonut(slots) {
+  var counts = {}; slots.forEach(function (s) { var k = s.status || '（待入职/空）'; counts[k] = (counts[k] || 0) + 1; });
+  var order = ['已完成', '本月在招', '暫停招聘', '（待入职/空）'];
+  var colors = { '已完成': '#1a9c5b', '本月在招': '#E31937', '暫停招聘': '#94a3b8', '（待入职/空）': '#f59e0b' };
+  var total = slots.length || 0;
+  var segs = order.filter(function (k) { return counts[k]; }).map(function (k) { return { k: k, v: counts[k], c: colors[k] }; });
+  var W = 220, H = 220, cx = 110, cy = 110, r = 80, sw = 26;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="max-width:260px;margin:auto;display:block;">';
+  if (total === 0) { svg += '<text x="110" y="115" text-anchor="middle" fill="#94a3b8" font-size="14">无数据</text>'; }
+  else {
+    var ang = -Math.PI / 2, C = 2 * Math.PI * r;
+    segs.forEach(function (seg) {
+      var frac = seg.v / total, a2 = ang + frac * 2 * Math.PI;
+      var x1 = cx + r * Math.cos(ang), y1 = cy + r * Math.sin(ang), x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+      var large = frac > 0.5 ? 1 : 0;
+      svg += '<path d="M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + '" fill="none" stroke="' + seg.c + '" stroke-width="' + sw + '"/>';
+      ang = a2;
+    });
+    svg += '<text x="110" y="104" text-anchor="middle" font-size="30" font-weight="800" fill="#E31937">' + total + '</text>';
+    svg += '<text x="110" y="128" text-anchor="middle" font-size="13" fill="#64748b">职缺</text>';
+  }
+  svg += '</svg>';
+  var legend = segs.map(function (seg) { return '<span class="lg"><span class="sw" style="background:' + seg.c + '"></span>' + seg.k + ' ' + seg.v + '</span>'; }).join('');
+  var el = document.getElementById('rStatusDonut'); if (el) el.innerHTML = svg + '<div class="m-legend" style="justify-content:center;margin-top:6px;">' + legend + '</div>';
+}
+
+function recruitTrend(base) {
+  var years = {};
+  base.forEach(function (s) { if (!s.applyKey) return; var y = s.applyKey.slice(0, 4), mo = +s.applyKey.slice(4, 6); if (!years[y]) years[y] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; years[y][mo - 1]++; });
+  var ys = Object.keys(years).sort();
+  var W = 520, H = 240, padL = 38, padR = 14, padT = 16, padB = 28, x0 = padL, x1 = W - padR, y0 = H - padB, y1 = padT;
+  var maxV = 0; ys.forEach(function (y) { years[y].forEach(function (v) { if (v > maxV) maxV = v; }); });
+  maxV = Math.max(maxV, 4); var top = Math.ceil(maxV / 4) * 4;
+  var colors = { '2024': '#94a3b8', '2025': '#004E8C', '2026': '#E31937' };
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">';
+  for (var g = 0; g <= 4; g++) { var yy = y0 + (y1 - y0) * g / 4; svg += '<line x1="' + x0 + '" y1="' + yy.toFixed(1) + '" x2="' + x1 + '" y2="' + yy.toFixed(1) + '" stroke="#eef2f6"/>'; svg += '<text x="' + (x0 - 6) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#94a3b8">' + Math.round(top * (1 - g / 4)) + '</text>'; }
+  for (var mo = 1; mo <= 12; mo += 2) { var xx = x0 + (x1 - x0) * (mo - 1) / 11; svg += '<text x="' + xx.toFixed(1) + '" y="' + (y0 + 16) + '" text-anchor="middle" font-size="10" fill="#94a3b8">' + mo + '月</text>'; }
+  ys.forEach(function (y) {
+    var arr = years[y], col = colors[y] || '#64748b';
+    var pts = arr.map(function (v, i) { var xx = x0 + (x1 - x0) * i / 11; var yy = y0 + (y1 - y0) * (1 - v / top); return xx.toFixed(1) + ',' + yy.toFixed(1); });
+    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.5" stroke-linejoin="round"/>';
+    arr.forEach(function (v, i) { if (v > 0) { var xx = x0 + (x1 - x0) * i / 11; var yy = y0 + (y1 - y0) * (1 - v / top); svg += '<circle cx="' + xx.toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="2.6" fill="' + col + '"/>'; } });
+  });
+  svg += '</svg>';
+  var legend = ys.map(function (y) { return '<span class="lg"><span class="sw line" style="background:' + (colors[y] || '#64748b') + '"></span>' + y + ' 年</span>'; }).join('');
+  var le = document.getElementById('rTrendLegend'); if (le) le.innerHTML = legend;
+  var el = document.getElementById('rTrend'); if (el) el.innerHTML = svg;
+}
+
+function recruitTable(slots, isAll) {
+  var el = document.getElementById('rTable'); if (!el) return;
+  var note = document.getElementById('rTableNote');
+  var arr = slots.slice().sort(function (a, b) { return (b.applyKey || '').localeCompare(a.applyKey || '') || (a.bu || '').localeCompare(b.bu || ''); });
+  if (note) note.innerHTML = '共 ' + arr.length + ' 笔职缺' + (isAll ? '（全期）' : '') + '；灯号：🟢≤60天 · 🟡60-90天 · 🔴≥90天';
+  if (!arr.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;">无匹配职缺</div>'; return; }
+  var lightColor = { '绿': '#1a9c5b', '黄': '#f59e0b', '红': '#E31937', '': '' };
+  var dot = function (s) { var c = lightColor[s.light]; return c ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + c + ';margin-right:6px;vertical-align:middle;"></span>' : ''; };
+  var sbadge = function (s) { var m = { '已完成': '#1a9c5b', '本月在招': '#E31937', '暫停招聘': '#94a3b8' }; var c = m[s.status] || '#f59e0b'; return '<span style="color:' + c + ';font-weight:700;">' + (s.status || '待入职') + '</span>'; };
+  var rows = arr.map(function (s) {
+    return '<tr>' +
+      '<td>' + s.region + '</td>' +
+      '<td>' + s.bu + '</td>' +
+      '<td>' + s.city + '</td>' +
+      '<td>' + s.zhiXi + '</td>' +
+      '<td>' + s.single + '<span style="color:#94a3b8;"> #' + s.slot + '</span></td>' +
+      '<td>' + (s.inout === '外' ? '<span style="color:#b4530a;font-weight:700;">外</span>' : '内') + '</td>' +
+      '<td style="text-align:right;">' + dot(s) + (s.recruitDays == null ? '—' : s.recruitDays) + '</td>' +
+      '<td>' + (s.mgr || '—') + '</td>' +
+      '<td>' + (s.reportDate || '—') + '</td>' +
+      '<td>' + sbadge(s) + '</td>' +
+      '</tr>';
+  }).join('');
+  el.innerHTML = '<table class="r-tbl"><thead><tr><th>区域</th><th>集团</th><th>城市</th><th>职系</th><th>职缺增补</th><th>内外</th><th>招聘天数</th><th>申请主管</th><th>预计报到</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  var foot = document.getElementById('recruitFoot');
+  if (foot) foot.innerHTML = 'ℹ️ 职缺数按「需求人数」逐单展开（一张单可含多个槽位）；招聘天数＝申請日期至报到日（未报到则至结算日）。状态判定：表單狀態＝駁回→暂停招聘；有新人名且已报到/结案→已完成；仅有名未报到→待入职（暂留空）；处理中且无名→本月在招。BU 归一：富威 / WPG SA / SAC 暂挂「后勤(WPGH)」，如有出入请反馈调整。';
 }
 
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================
