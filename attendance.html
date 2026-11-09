@@ -96,6 +96,15 @@
   .chart-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;height:360px;}
   .loading{padding:40px;text-align:center;color:#8a98a8;}
   .pill{display:inline-block;background:var(--wpg-blue-l);color:var(--wpg-blue-d);border-radius:20px;padding:3px 12px;font-size:12px;margin-left:8px;}
+  /* 休假拆分表 / 个人请假排行 */
+  .leave-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:14px;margin-top:14px;}
+  .leave-grid .datatbl th{position:static;background:var(--purple-h);color:#2a2a4a;}
+  .leave-grid .datatbl td{padding:6px 10px;font-size:12.5px;}
+  .leave-grid .datatbl tbody tr:nth-child(even){background:#f7f8fc;}
+  .leave-grid .rank-card h4{position:static;}
+  @media(max-width:760px){.leave-grid{grid-template-columns:1fr;}}
+  /* 可搜索 combobox（datalist）与下拉同款样式 */
+  .fld input[list]::placeholder{color:#aab4c0;}
 </style>
 </head>
 <body>
@@ -129,10 +138,11 @@
   <div class="filterbar" id="dashFilter">
     <div class="fld"><label>年</label><select id="f_year" onchange="applyDashFilter()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
     <div class="fld"><label>月</label><select id="f_month" onchange="applyDashFilter()"></select></div>
-    <div class="fld"><label>归属事业部</label><select id="f_bu" onchange="applyDashFilter()"></select></div>
-    <div class="fld"><label>工作区域</label><select id="f_area" onchange="applyDashFilter()"></select></div>
-    <div class="fld"><label>职务</label><select id="f_title" onchange="applyDashFilter()"></select></div>
-    <div class="fld"><label>部门</label><select id="f_dept" onchange="applyDashFilter()"></select></div>
+    <div class="fld"><label>归属事业部</label><input id="f_bu" list="list_f_bu" placeholder="全部" oninput="applyDashFilter()"></div>
+    <div class="fld"><label>工作区域</label><input id="f_area" list="list_f_area" placeholder="全部" oninput="applyDashFilter()"></div>
+    <div class="fld"><label>工作子区域</label><input id="f_sub" list="list_f_sub" placeholder="全部" oninput="applyDashFilter()"></div>
+    <div class="fld"><label>职务</label><input id="f_title" list="list_f_title" placeholder="全部" oninput="applyDashFilter()"></div>
+    <div class="fld"><label>部门</label><input id="f_dept" list="list_f_dept" placeholder="全部" oninput="applyDashFilter()"></div>
     <div class="fld"><label>姓名</label><input id="f_name" placeholder="输入姓名" oninput="applyDashFilter()"></div>
     <div class="fld"><button class="btn" onclick="applyDashFilter()">查询</button></div>
     <div class="fld"><button class="btn ghost" onclick="resetDashFilter()">重置</button></div>
@@ -159,7 +169,11 @@
     <div class="card">
       <div class="sec-title" id="leaveTitle">休假概况（当期）</div>
       <div class="kpis" id="leaveKpis"></div>
-      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 出差假 / 调休假 等）。本屏为概括性指标，详细假别拆分可在后续版本扩展。</div>
+      <div class="leave-grid">
+        <div class="rank-card"><h4 id="leaveBreakTitle">各类假别拆分（当期）</h4><div id="leaveBreak" style="max-height:380px;overflow:auto"></div></div>
+        <div class="rank-card orange"><h4 id="leaveRankTitle">个人请假时长 TOP 15</h4><div id="leaveRank"></div></div>
+      </div>
+      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 调休假 / 产假 / 婚假 / 丧假 / 育儿假 / 出差假 等共 21 类）。拆分按各假别「总时长」降序，单位区分 小时 / 天，人数为该月发生该假别的人数；个人 TOP 排行按「请假总时长_小时」排序。源数据含个别异常单元格（单日 >24h 或 >1天），已按日结上限自动剔除。</div>
     </div>
   </div>
 
@@ -184,16 +198,17 @@
   <div class="two-col">
     <div class="side-filter">
       <div class="sec-title" style="font-size:14px">筛选条件</div>
-      <div class="fld"><label>归属事业体</label><select id="d_bu"></select></div>
-      <div class="fld"><label>年</label><select id="d_year"><option>2026</option><option>2025</option></select></div>
-      <div class="fld"><label>年月</label><select id="d_ym"></select></div>
-      <div class="fld"><label>日期</label><input id="d_date" type="date"></div>
-      <div class="fld"><label>工作区域</label><select id="d_area"></select></div>
-      <div class="fld"><label>部门</label><select id="d_dept"></select></div>
-      <div class="fld"><label>在职状态</label><select id="d_status"><option value="">全部</option><option>在职</option></select></div>
-      <div class="fld"><label>是否主管</label><select id="d_mgr"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
-      <div class="fld"><label>工号</label><input id="d_eid" placeholder="输入工号"></div>
-      <div class="fld"><label>姓名</label><input id="d_name" placeholder="输入姓名"></div>
+      <div class="fld"><label>归属事业体</label><input id="d_bu" list="list_d_bu" placeholder="全部" oninput="renderDaily()"></div>
+      <div class="fld"><label>年</label><select id="d_year" onchange="renderDaily()"><option>2026</option><option>2025</option></select></div>
+      <div class="fld"><label>年月</label><select id="d_ym" onchange="renderDaily()"></select></div>
+      <div class="fld"><label>日期</label><input id="d_date" type="date" onchange="renderDaily()"></div>
+      <div class="fld"><label>工作区域</label><input id="d_area" list="list_d_area" placeholder="全部" oninput="renderDaily()"></div>
+      <div class="fld"><label>工作子区域</label><input id="d_sub" list="list_d_sub" placeholder="全部" oninput="renderDaily()"></div>
+      <div class="fld"><label>部门</label><input id="d_dept" list="list_d_dept" placeholder="全部" oninput="renderDaily()"></div>
+      <div class="fld"><label>在职状态</label><select id="d_status" onchange="renderDaily()"><option value="">全部</option><option>在职</option></select></div>
+      <div class="fld"><label>是否主管</label><select id="d_mgr" onchange="renderDaily()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>工号</label><input id="d_eid" placeholder="输入工号" oninput="renderDaily()"></div>
+      <div class="fld"><label>姓名</label><input id="d_name" placeholder="输入姓名" oninput="renderDaily()"></div>
       <button class="btn" onclick="renderDaily()">查询</button>
       <button class="btn ghost" onclick="resetDaily()" style="margin-top:8px">重置</button>
     </div>
@@ -233,15 +248,16 @@
   <div class="two-col">
     <div class="side-filter">
       <div class="sec-title" style="font-size:14px">筛选条件</div>
-      <div class="fld"><label>归属事业体</label><select id="p_bu"></select></div>
-      <div class="fld"><label>年</label><select id="p_year"><option>2026</option><option>2025</option></select></div>
-      <div class="fld"><label>月</label><select id="p_month"></select></div>
-      <div class="fld"><label>工作区域</label><select id="p_area"></select></div>
-      <div class="fld"><label>部门</label><select id="p_dept"></select></div>
-      <div class="fld"><label>职务</label><select id="p_title"></select></div>
-      <div class="fld"><label>是否主管</label><select id="p_mgr"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
-      <div class="fld"><label>工号</label><input id="p_eid" placeholder="输入工号"></div>
-      <div class="fld"><label>姓名</label><input id="p_name" placeholder="输入姓名"></div>
+      <div class="fld"><label>归属事业体</label><input id="p_bu" list="list_p_bu" placeholder="全部" oninput="renderPersonal()"></div>
+      <div class="fld"><label>年</label><select id="p_year" onchange="renderPersonal()"><option>2026</option><option>2025</option></select></div>
+      <div class="fld"><label>月</label><select id="p_month" onchange="renderPersonal()"></select></div>
+      <div class="fld"><label>工作区域</label><input id="p_area" list="list_p_area" placeholder="全部" oninput="renderPersonal()"></div>
+      <div class="fld"><label>工作子区域</label><input id="p_sub" list="list_p_sub" placeholder="全部" oninput="renderPersonal()"></div>
+      <div class="fld"><label>部门</label><input id="p_dept" list="list_p_dept" placeholder="全部" oninput="renderPersonal()"></div>
+      <div class="fld"><label>职务</label><input id="p_title" list="list_p_title" placeholder="全部" oninput="renderPersonal()"></div>
+      <div class="fld"><label>是否主管</label><select id="p_mgr" onchange="renderPersonal()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>工号</label><input id="p_eid" placeholder="输入工号" oninput="renderPersonal()"></div>
+      <div class="fld"><label>姓名</label><input id="p_name" placeholder="输入姓名" oninput="renderPersonal()"></div>
       <button class="btn" onclick="renderPersonal()">查询</button>
       <button class="btn ghost" onclick="resetPersonal()" style="margin-top:8px">重置</button>
     </div>
@@ -283,11 +299,21 @@ var dailyView=[], dailyPg=0, dailySz=50;
 var persView=[], persPg=0, persSz=50;
 var PERSON_CACHE={}, DAILY_CACHE={};   // 逐月 person / daily 缓存（按月份 lazy 加载）
 var currentDashYm=null, currentPersYm=null, currentDailyYm=null;
+var DASH_PM=null, DASH_DETAIL=null;    // 当前月 person 全量 / detail（供休假屏拆分）
+// 休假类别元数据（与 build/_attendance_core.py LEAVE_COLS 保持一致）
+var LEAVE_META=[
+  {name:'年假_小时',unit:'小时'},{name:'事假_小时',unit:'小时'},{name:'病假_小时',unit:'小时'},{name:'调休假_小时',unit:'小时'},
+  {name:'产假_天',unit:'天'},{name:'陪产假_天',unit:'天'},{name:'丧假_天',unit:'天'},{name:'婚假_天',unit:'天'},
+  {name:'育儿假_天',unit:'天'},{name:'流产假_天',unit:'天'},{name:'产检假_天',unit:'天'},{name:'哺乳假_小时',unit:'小时'},
+  {name:'返乡假_小时',unit:'小时'},{name:'综合假期_小时',unit:'小时'},{name:'生日假新_小时',unit:'小时'},
+  {name:'54青年假_小时',unit:'小时'},{name:'外训_小时',unit:'小时'},{name:'指定假_小时',unit:'小时'},
+  {name:'公假_小时',unit:'小时'},{name:'38妇女假_小时',unit:'小时'},{name:'出差假-最新_天',unit:'天'}
+];
 function ensurePerson(ym){
   if(PERSON_CACHE[ym]) return Promise.resolve(PERSON_CACHE[ym]);
   return fetch('./attendance-person-'+ym+'.json').then(function(r){return r.json();}).then(function(pm){
     PERSON_CACHE[ym]=pm;
-    pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu}; });
+    pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu,工作子区域:e.工作子区域}; });
     return pm;
   });
 }
@@ -349,16 +375,19 @@ function initAll(){
   fillSelect('p_year', years.map(function(y){return {v:y,t:y};}), false);
   fillSelect('p_month', MONTHS.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), false);
   fillSelect('d_ym', MONTHS.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), false);
+  var _dym=document.getElementById('d_ym'); if(_dym) _dym.value=latest;
+  var _pm=document.getElementById('p_month'); if(_pm) _pm.value=latest.slice(4);
   // 筛选项来自 meta.filters（跨月并集，切月后选项稳定不缺失）
   var FL = SUMMARY.meta.filters||{};
-  fillSelect('f_bu', opt(FL.bu||[]), true); fillSelect('d_bu', opt(FL.bu||[]), true); fillSelect('p_bu', opt(FL.bu||[]), true);
-  fillSelect('f_area', opt(FL.area||[]), true); fillSelect('d_area', opt(FL.area||[]), true); fillSelect('p_area', opt(FL.area||[]), true);
-  fillSelect('f_dept', opt(FL.dept||[]), true); fillSelect('d_dept', opt(FL.dept||[]), true); fillSelect('p_dept', opt(FL.dept||[]), true);
-  fillSelect('f_title', opt(FL.title||[]), true); fillSelect('p_title', opt(FL.title||[]), true);
-  if(FL.area){ fillSelect('d_city', opt(FL.area), true); fillSelect('p_city', opt(FL.area), true); }
+  fillDatalist('list_f_bu', opt(FL.bu||[])); fillDatalist('list_d_bu', opt(FL.bu||[])); fillDatalist('list_p_bu', opt(FL.bu||[]));
+  fillDatalist('list_f_area', opt(FL.area||[])); fillDatalist('list_d_area', opt(FL.area||[])); fillDatalist('list_p_area', opt(FL.area||[]));
+  fillDatalist('list_f_sub', opt(FL.sub||[])); fillDatalist('list_d_sub', opt(FL.sub||[])); fillDatalist('list_p_sub', opt(FL.sub||[]));
+  fillDatalist('list_f_dept', opt(FL.dept||[])); fillDatalist('list_d_dept', opt(FL.dept||[])); fillDatalist('list_p_dept', opt(FL.dept||[]));
+  fillDatalist('list_f_title', opt(FL.title||[])); fillDatalist('list_p_title', opt(FL.title||[]));
   currentDashYm = latest; currentPersYm = latest; currentDailyYm = latest;
   // 先确保最新月 person（建立 EMPMAP），再渲染各屏
-  ensurePerson(latest).then(function(){
+  ensurePerson(latest).then(function(pm){
+    DASH_PM = pm;
     buildDashboard();
     buildBukaChart();
     renderDaily(); renderPersonal();
@@ -371,6 +400,12 @@ function fillSelect(id, items, withAll){
   var html = withAll?'<option value="">全部</option>':'';
   items.forEach(function(it){ html+='<option value="'+it.v+'">'+it.t+'</option>'; });
   s.innerHTML=html;
+}
+// 可搜索 combobox：将选项写入 <datalist>，<input list="..."> 即具备输入即筛选/自动补全能力
+function fillDatalist(listId, items){
+  var dl=document.getElementById(listId);
+  if(!dl){ dl=document.createElement('datalist'); dl.id=listId; document.body.appendChild(dl); }
+  dl.innerHTML = items.map(function(it){ return '<option value="'+it.v+'">'+it.t+'</option>'; }).join('');
 }
 
 /* ===== 名词解释 ===== */
@@ -386,15 +421,18 @@ function buildGlossary(){
 function buildDashboard(){
   var det = currentDashYm ? SUMMARY.detail[currentDashYm] : null;
   if(!det) return;
-  _renderDashKpis(det.sep_kpi, null);
+  DASH_DETAIL = det;
+  var per = currentDashYm.slice(0,4)+'-'+currentDashYm.slice(4);
+  _renderDashKpis(det.sep_kpi, null, det.leave_total);
   document.getElementById('lateRank').innerHTML = rankRows(det.late_rank, '迟到次数');
   document.getElementById('earlyRank').innerHTML = rankRows(det.early_rank, '早退次数');
   document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
   document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
   document.getElementById('absentRank').innerHTML = rankRows(det.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
   _setRankTitles(null);
+  if(DASH_PM) renderLeaveFromPm(DASH_PM, '（'+per+' 当期）');
 }
-function _renderDashKpis(k, f){
+function _renderDashKpis(k, f, leaveTotal){
   var tag = f? '（筛选）':'';
   var kpis=[
     {l:'出勤率（人头）'+tag,v:k.出勤率,u:'%',c:''},
@@ -413,7 +451,26 @@ function _renderDashKpis(k, f){
     '<div class="kpi green"><div class="k-label">出差假天数'+tag+'</div><div class="k-val">'+fmt(k.出差天数,1)+'<small> 天</small></div></div>'+
     '<div class="kpi"><div class="k-label">应出勤人天'+tag+'</div><div class="k-val">'+fmt(k.应出勤天数加总,0)+'<small> 天</small></div></div>'+
     '<div class="kpi blue"><div class="k-label">实际出勤人数'+tag+'</div><div class="k-val">'+fmt(k.实际出勤人数,0)+'<small> 人</small></div></div>'+
-    '<div class="kpi purple"><div class="k-label">在职人数'+tag+'</div><div class="k-val">'+fmt(k.人数,0)+'<small> 人</small></div></div>';
+    '<div class="kpi purple"><div class="k-label">在职人数'+tag+'</div><div class="k-val">'+fmt(k.人数,0)+'<small> 人</small></div></div>'+
+    '<div class="kpi orange"><div class="k-label">总请假时长'+tag+'</div><div class="k-val">'+fmt(leaveTotal,1)+'<small> 小时</small></div></div>';
+}
+/* 休假：各类假别拆分 + 个人请假 TOP15（支持按筛选后集合重算） */
+function renderLeaveFromPm(pm, tag){
+  var t = tag||'';
+  var agg={}; LEAVE_META.forEach(function(m){ agg[m.name]={unit:m.unit,total:0,persons:0}; });
+  pm.forEach(function(e){
+    LEAVE_META.forEach(function(m){ var v=+e[m.name]||0; if(v>0){ agg[m.name].total+=v; agg[m.name].persons++; } });
+  });
+  var rows=LEAVE_META.map(function(m){ var a=agg[m.name]; return {name:m.name,unit:m.unit,total:a.total,persons:a.persons}; })
+    .filter(function(r){return r.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var html='<table class="datatbl" style="font-size:12.5px"><thead><tr><th>假别</th><th>单位</th><th>总时长</th><th>人数</th></tr></thead><tbody>';
+  rows.forEach(function(r){ html+='<tr><td>'+r.name+'</td><td>'+r.unit+'</td><td>'+fmt(r.total,1)+'</td><td>'+r.persons+'</td></tr>'; });
+  html+='</tbody></table>';
+  document.getElementById('leaveBreak').innerHTML = rows.length? html : '<div class="note">当前筛选无休假记录</div>';
+  var rank=pm.slice().sort(function(a,b){return (b.请假总时长_小时||0)-(a.请假总时长_小时||0);}).slice(0,15);
+  document.getElementById('leaveRank').innerHTML = rankRows(rank.map(function(e){return {姓名:e.姓名, v:e.请假总时长_小时, sub:(e.bu||'')+'·'+(e.工作子区域||'')};}), '请假总时长_小时');
+  var lt=document.getElementById('leaveBreakTitle'); if(lt) lt.textContent='各类假别拆分'+t;
+  var lrt=document.getElementById('leaveRankTitle'); if(lrt) lrt.textContent='个人请假时长 TOP 15'+t;
 }
 function recomputeKpi(pm){
   var n=pm.length, sumShould=0, actPersons=0, absDays=0, lateCnt=0, earlyCnt=0, absPersons=0, latePersons=0, earlyPersons=0, tripDays=0;
@@ -497,7 +554,7 @@ function markFiltered(ids){
   });
 }
 function applyDashFilter(){
-  markFiltered(['f_bu','f_area','f_title','f_dept','f_name']);
+  markFiltered(['f_bu','f_area','f_sub','f_title','f_dept','f_name']);
   var year=val('f_year'), month=val('f_month');
   var dataPeriod = (SUMMARY.meta && SUMMARY.meta.数据期) || '202609';
   var selYm = (year||dataPeriod.slice(0,4)) + (month||dataPeriod.slice(4));
@@ -508,21 +565,24 @@ function applyDashFilter(){
   }
   currentDashYm = selYm;
   if(noteEl) noteEl.style.display='none';
-  var bu=val('f_bu'), area=val('f_area'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
-  var f = {bu:bu,area:area,title:title,dept:dept,name:name};
-  var noFilter = !bu && !area && !title && !dept && !name;
-  if(noFilter){ buildDashboard(); return; }
+  var bu=val('f_bu'), area=val('f_area'), sub=val('f_sub'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
+  var f = {bu:bu,area:area,sub:sub,title:title,dept:dept,name:name};
+  var noFilter = !bu && !area && !sub && !title && !dept && !name;
+  if(noFilter){ ensurePerson(selYm).then(function(pm){ DASH_PM=pm; buildDashboard(); }); return; }
   ensurePerson(selYm).then(function(pm){
+    DASH_PM=pm;
     var fp = pm.filter(function(e){
       if(bu && e.bu!==bu) return false;
       if(area && e.工作地点!==area) return false;
+      if(sub && e.工作子区域!==sub) return false;
       if(title && e.职称!==title) return false;
       if(dept && (e.所属部门||'').indexOf(dept)<0) return false;
       if(name && (e.姓名||'').indexOf(name)<0) return false;
       return true;
     });
     var k = recomputeKpi(fp);
-    _renderDashKpis(k, f);
+    var leaveTotal = fp.reduce(function(a,e){return a+(+e.请假总时长_小时||0);},0);
+    _renderDashKpis(k, f, leaveTotal);
     var lateS = fp.slice().sort(function(a,b){return (b.迟到次数||0)-(a.迟到次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 迟到次数:e.迟到次数};});
     var earlyS = fp.slice().sort(function(a,b){return (b.早退次数||0)-(a.早退次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 早退次数:e.早退次数};});
     var byBu={}; fp.forEach(function(e){ byBu[e.bu]=(byBu[e.bu]||0)+(+e.缺勤天数||0); });
@@ -536,13 +596,14 @@ function applyDashFilter(){
     document.getElementById('homeRank').innerHTML = rankRows(homeS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
     document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
     _setRankTitles(f);
+    renderLeaveFromPm(fp, '（筛选后）');
   });
 }
-function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_city','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
+function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_sub','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
 
 /* ===== 每日出勤明细 ===== */
 function getDailyFiltered(){
-  var bu=val('d_bu'), ym=val('d_ym'), date=val('d_date'), area=val('d_area'), city=val('d_city'),
+  var bu=val('d_bu'), ym=val('d_ym'), date=val('d_date'), area=val('d_area'), sub=val('d_sub'),
       dept=val('d_dept'), eid=val('d_eid').trim(), name=val('d_name').trim(), status=val('d_status'), mgr=val('d_mgr');
   return DAILY.filter(function(r){
     var e=EMPMAP[r[IDX.eid]]||{};
@@ -550,7 +611,7 @@ function getDailyFiltered(){
     if(ym){ var m=(r[IDX.date]||'').replace(/-/g,'').slice(0,6); if(m!==ym) return false; }
     if(date && (r[IDX.date]||'').indexOf(date)<0) return false;
     if(area && e.工作地点!==area) return false;
-    if(city && e.工作地点!==city) return false;
+    if(sub && e.工作子区域!==sub) return false;
     if(dept && e.所属部门!==dept) return false;
     if(eid && (r[IDX.eid]||'').indexOf(eid)<0) return false;
     if(name && (e.姓名||'').indexOf(name)<0) return false;
@@ -558,7 +619,7 @@ function getDailyFiltered(){
   });
 }
 function renderDaily(){
-  markFiltered(['d_bu','d_area','d_dept','d_status','d_mgr','d_date','d_eid','d_name']);
+  markFiltered(['d_bu','d_area','d_sub','d_dept','d_status','d_mgr','d_date','d_eid','d_name']);
   var ym=val('d_ym')||currentDailyYm; currentDailyYm=ym;
   ensureDaily(ym).then(function(daily){
     ensurePerson(ym).then(function(){
@@ -592,20 +653,20 @@ function _renderDailyCore(){
   document.getElementById('dPrev').disabled=dailyPg<=0; document.getElementById('dNext').disabled=dailyPg>=totPages-1;
 }
 function dailyPage(d){ dailyPg+=d; renderDaily(); }
-function resetDaily(){ ['d_bu','d_year','d_ym','d_date','d_area','d_city','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderDaily(); }
+function resetDaily(){ ['d_bu','d_year','d_ym','d_date','d_area','d_sub','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderDaily(); }
 
 /* ===== 个人月度出勤明细 ===== */
 function renderPersonal(){
-  markFiltered(['p_bu','p_area','p_dept','p_title','p_mgr','p_eid','p_name']);
+  markFiltered(['p_bu','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name']);
   if(!SUMMARY) return;
   var ym = (val('p_year')||'') + (val('p_month')||''); currentPersYm = ym;
   ensurePerson(ym).then(function(pm){
-    var bu=val('p_bu'), area=val('p_area'), city=val('p_city'),
+    var bu=val('p_bu'), area=val('p_area'), sub=val('p_sub'),
         dept=val('p_dept'), title=val('p_title'), eid=val('p_eid').trim(), name=val('p_name').trim(), mgr=val('p_mgr');
     var view = pm.filter(function(r){
       if(bu && r.bu!==bu) return false;
       if(area && r.工作地点!==area) return false;
-      if(city && r.工作地点!==city) return false;
+      if(sub && r.工作子区域!==sub) return false;
       if(dept && r.所属部门!==dept) return false;
       if(title && r.职称!==title) return false;
       if(eid && (r.工号||'').indexOf(eid)<0) return false;
@@ -644,7 +705,7 @@ function renderPersonal(){
   });
 }
 function persPage(d){ persPg+=d; renderPersonal(); }
-function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_city','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
+function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
 
 function val(id){ var e=document.getElementById(id); return e?e.value:''; }
 </script>
