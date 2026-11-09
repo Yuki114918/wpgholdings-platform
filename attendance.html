@@ -281,6 +281,20 @@ var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
 var IDX={eid:0,date:1,res:2,in:3,out:4,late:5,early:6,abs:7,act:8};
 var dailyView=[], dailyPg=0, dailySz=50;
 var persView=[], persPg=0, persSz=50;
+var PERSON_CACHE={}, DAILY_CACHE={};   // 逐月 person / daily 缓存（按月份 lazy 加载）
+var currentDashYm=null, currentPersYm=null, currentDailyYm=null;
+function ensurePerson(ym){
+  if(PERSON_CACHE[ym]) return Promise.resolve(PERSON_CACHE[ym]);
+  return fetch('./attendance-person-'+ym+'.json').then(function(r){return r.json();}).then(function(pm){
+    PERSON_CACHE[ym]=pm;
+    pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu}; });
+    return pm;
+  });
+}
+function ensureDaily(ym){
+  if(DAILY_CACHE[ym]) return Promise.resolve(DAILY_CACHE[ym]);
+  return fetch('./attendance-daily-'+ym+'.json').then(function(r){return r.json();}).then(function(dl){ DAILY_CACHE[ym]=dl; return dl; });
+}
 
 function fmt(n,d){ d=(d==null?0:d); if(n==null||isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:d}); }
 
@@ -307,45 +321,48 @@ document.querySelectorAll('.subtab').forEach(function(t){
 /* ===== 加载数据 ===== */
 Promise.all([
   fetch('./attendance-summary.json').then(r=>r.json()),
-  fetch('./attendance-daily.json').then(r=>r.json()),
   fetch('./data/attendance-buka.json').then(r=>r.json())
 ]).then(function(res){
-  SUMMARY=res[0]; DAILY=res[1]; BUKA=res[2];
+  SUMMARY=res[0]; BUKA=res[1]; DAILY=null;
   document.getElementById('loading').style.display='none';
   initAll();
 }).catch(function(e){
-  document.getElementById('loading').innerHTML='数据加载失败：'+e.message+'<br>请确认 attendance-summary.json / attendance-daily.json / data/attendance-buka.json 已生成并通过本地服务器访问。';
+  document.getElementById('loading').innerHTML='数据加载失败：'+e.message+'<br>请确认 attendance-summary.json / attendance-person-*.json / attendance-daily-*.json / data/attendance-buka.json 已生成并通过本地服务器访问。';
   console.error(e);
 });
 
 function initAll(){
-  // 工号 -> 属性 映射（用于每日明细关联姓名/职称/部门/工作地点/BU）
   EMPMAP={};
-  SUMMARY.person_month.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu}; });
-  // 结算日
   if(SUMMARY.meta && SUMMARY.meta.结算日) document.getElementById('settleDate').textContent='数据结算日：'+SUMMARY.meta.结算日;
   buildGlossary();
-  fillSelect('f_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
-  var _dp = (SUMMARY.meta && SUMMARY.meta.数据期) || '202609';
+  var MONTHS = SUMMARY.meta.趋势月份;
+  var latest = MONTHS[MONTHS.length-1];
+  var years = [...new Set(MONTHS.map(function(m){return m.slice(0,4);}))].sort();
+  // 年月下拉（必选，默认最新月）
+  fillSelect('f_year', years.map(function(y){return {v:y,t:y};}), false);
+  fillSelect('f_month', MONTHS.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), false);
   var _ye=document.getElementById('f_year'), _me=document.getElementById('f_month');
-  if(_ye) _ye.value = _dp.slice(0,4);
-  if(_me) _me.value = _dp.slice(4);
-  var _dpLabel = _dp.slice(0,4)+'-'+_dp.slice(4);
+  if(_ye) _ye.value = latest.slice(0,4);
+  if(_me) _me.value = latest.slice(4);
+  var _dpLabel = latest.slice(0,4)+'-'+latest.slice(4);
   var _lt=document.getElementById('leaveTitle'); if(_lt) _lt.textContent='休假概况（'+_dpLabel+' 当期）';
-  fillSelect('p_month', SUMMARY.meta.趋势月份.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), true);
-  fillSelect('d_ym', SUMMARY.meta.趋势月份.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), true);
-  // BU / 区域 / 城市 / 职务 / 部门 选项
-  var bus=Object.keys(SUMMARY.bu_agg).sort();
-  fillSelect('f_bu', opt(bus), true); fillSelect('d_bu', opt(bus), true); fillSelect('p_bu', opt(bus), true);
-  var areas=[...new Set(SUMMARY.person_month.map(d=>d.工作地点).filter(Boolean))].sort();
-  fillSelect('f_area', opt(areas), true); fillSelect('d_area', opt(areas), true); fillSelect('p_area', opt(areas), true);
-  var depts=[...new Set(SUMMARY.person_month.map(d=>d.所属部门).filter(Boolean))].sort();
-  fillSelect('f_dept', opt(depts), true); fillSelect('d_dept', opt(depts), true); fillSelect('p_dept', opt(depts), true);
-  var titles=[...new Set(SUMMARY.person_month.map(d=>d.职称).filter(Boolean))].sort();
-  fillSelect('f_title', opt(titles), true); fillSelect('p_title', opt(titles), true);
-  buildDashboard();
-  buildBukaChart();
-  renderDaily(); renderPersonal();
+  fillSelect('p_year', years.map(function(y){return {v:y,t:y};}), false);
+  fillSelect('p_month', MONTHS.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), false);
+  fillSelect('d_ym', MONTHS.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), false);
+  // 筛选项来自 meta.filters（跨月并集，切月后选项稳定不缺失）
+  var FL = SUMMARY.meta.filters||{};
+  fillSelect('f_bu', opt(FL.bu||[]), true); fillSelect('d_bu', opt(FL.bu||[]), true); fillSelect('p_bu', opt(FL.bu||[]), true);
+  fillSelect('f_area', opt(FL.area||[]), true); fillSelect('d_area', opt(FL.area||[]), true); fillSelect('p_area', opt(FL.area||[]), true);
+  fillSelect('f_dept', opt(FL.dept||[]), true); fillSelect('d_dept', opt(FL.dept||[]), true); fillSelect('p_dept', opt(FL.dept||[]), true);
+  fillSelect('f_title', opt(FL.title||[]), true); fillSelect('p_title', opt(FL.title||[]), true);
+  if(FL.area){ fillSelect('d_city', opt(FL.area), true); fillSelect('p_city', opt(FL.area), true); }
+  currentDashYm = latest; currentPersYm = latest; currentDailyYm = latest;
+  // 先确保最新月 person（建立 EMPMAP），再渲染各屏
+  ensurePerson(latest).then(function(){
+    buildDashboard();
+    buildBukaChart();
+    renderDaily(); renderPersonal();
+  });
 }
 
 function opt(arr){ return arr.map(function(v){return {v:v,t:v};}); }
@@ -367,12 +384,14 @@ function buildGlossary(){
 
 /* ===== 仪表盘 KPI + 排行（筛选实时联动） ===== */
 function buildDashboard(){
-  _renderDashKpis(SUMMARY.sep_kpi, null);
-  document.getElementById('lateRank').innerHTML = rankRows(SUMMARY.late_rank, '迟到次数');
-  document.getElementById('earlyRank').innerHTML = rankRows(SUMMARY.early_rank, '早退次数');
+  var det = currentDashYm ? SUMMARY.detail[currentDashYm] : null;
+  if(!det) return;
+  _renderDashKpis(det.sep_kpi, null);
+  document.getElementById('lateRank').innerHTML = rankRows(det.late_rank, '迟到次数');
+  document.getElementById('earlyRank').innerHTML = rankRows(det.early_rank, '早退次数');
   document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
   document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
-  document.getElementById('absentRank').innerHTML = rankRows(SUMMARY.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
+  document.getElementById('absentRank').innerHTML = rankRows(det.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
   _setRankTitles(null);
 }
 function _renderDashKpis(k, f){
@@ -418,7 +437,7 @@ function recomputeKpi(pm){
     早退率: sumShould? round2(earlyCnt/sumShould*100):0};
 }
 function _setRankTitles(f){
-  var per = (SUMMARY.meta && SUMMARY.meta.数据期) ? (SUMMARY.meta.数据期.slice(0,4)+'-'+SUMMARY.meta.数据期.slice(4)) : '';
+  var per = currentDashYm ? (currentDashYm.slice(0,4)+'-'+currentDashYm.slice(4)) : '';
   var t = f? '（筛选后）':'（'+per+' 当期）';
   var lt=document.querySelector('#lateRank'); if(lt&&lt.parentElement){var h=lt.parentElement.querySelector('h4'); if(h) h.textContent='迟到次数 TOP 10'+t;}
   var et=document.querySelector('#earlyRank'); if(et&&et.parentElement){var h2=et.parentElement.querySelector('h4'); if(h2) h2.textContent='早退次数 TOP 10'+t;}
@@ -480,44 +499,44 @@ function markFiltered(ids){
 function applyDashFilter(){
   markFiltered(['f_bu','f_area','f_title','f_dept','f_name']);
   var year=val('f_year'), month=val('f_month');
-  var bu=val('f_bu'), area=val('f_area'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
   var dataPeriod = (SUMMARY.meta && SUMMARY.meta.数据期) || '202609';
   var selYm = (year||dataPeriod.slice(0,4)) + (month||dataPeriod.slice(4));
   var noteEl = document.getElementById('dashMonthNote');
-  // 考勤明细仅生成至 dataPeriod；选择其它月份时给出明确提示（明细仍展示 dataPeriod，已按维度筛选）
-  if(noteEl){
-    if(selYm !== dataPeriod){
-      noteEl.style.display='block';
-      noteEl.innerHTML='📅 考勤明细数据目前仅覆盖 <b>'+dataPeriod.slice(0,4)+'/'+dataPeriod.slice(4)+'</b>，暂未生成 '+selYm.slice(0,4)+'/'+selYm.slice(4)+' 的明细；下方仍展示 '+dataPeriod.slice(0,4)+'/'+dataPeriod.slice(4)+' 数据（「补卡&出差」趋势图可按月份查看）。';
-    } else { noteEl.style.display='none'; }
+  if(!SUMMARY.detail[selYm]){
+    if(noteEl){ noteEl.style.display='block'; noteEl.innerHTML='⚠️ 暂无 '+selYm.slice(0,4)+'/'+selYm.slice(4)+' 的考勤明细数据。'; }
+    return;
   }
+  currentDashYm = selYm;
+  if(noteEl) noteEl.style.display='none';
+  var bu=val('f_bu'), area=val('f_area'), title=val('f_title'), dept=val('f_dept'), name=val('f_name');
   var f = {bu:bu,area:area,title:title,dept:dept,name:name};
   var noFilter = !bu && !area && !title && !dept && !name;
   if(noFilter){ buildDashboard(); return; }
-  var pm = SUMMARY.person_month.filter(function(e){
-    if(bu && e.bu!==bu) return false;
-    if(area && e.工作地点!==area) return false;
-    if(title && e.职称!==title) return false;
-    if(dept && (e.所属部门||'').indexOf(dept)<0) return false;
-    if(name && (e.姓名||'').indexOf(name)<0) return false;
-    return true;
+  ensurePerson(selYm).then(function(pm){
+    var fp = pm.filter(function(e){
+      if(bu && e.bu!==bu) return false;
+      if(area && e.工作地点!==area) return false;
+      if(title && e.职称!==title) return false;
+      if(dept && (e.所属部门||'').indexOf(dept)<0) return false;
+      if(name && (e.姓名||'').indexOf(name)<0) return false;
+      return true;
+    });
+    var k = recomputeKpi(fp);
+    _renderDashKpis(k, f);
+    var lateS = fp.slice().sort(function(a,b){return (b.迟到次数||0)-(a.迟到次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 迟到次数:e.迟到次数};});
+    var earlyS = fp.slice().sort(function(a,b){return (b.早退次数||0)-(a.早退次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 早退次数:e.早退次数};});
+    var byBu={}; fp.forEach(function(e){ byBu[e.bu]=(byBu[e.bu]||0)+(+e.缺勤天数||0); });
+    var absentS = Object.keys(byBu).map(function(b){return {bu:b, 缺勤天数:byBu[b], sub:(fp.filter(function(x){return x.bu===b;}).length)+'人'};}).sort(function(a,b){return b.缺勤天数-a.缺勤天数;}).slice(0,10);
+    document.getElementById('lateRank').innerHTML = rankRows(lateS, '迟到次数');
+    document.getElementById('earlyRank').innerHTML = rankRows(earlyS, '早退次数');
+    var outAll = BUKA.top_out||[], homeAll = BUKA.top_home||[];
+    var outS = bu ? outAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : outAll;
+    var homeS = bu ? homeAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : homeAll;
+    document.getElementById('outRank').innerHTML = rankRows(outS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
+    document.getElementById('homeRank').innerHTML = rankRows(homeS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
+    document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
+    _setRankTitles(f);
   });
-  var k = recomputeKpi(pm);
-  _renderDashKpis(k, f);
-  var lateS = pm.slice().sort(function(a,b){return (b.迟到次数||0)-(a.迟到次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 迟到次数:e.迟到次数};});
-  var earlyS = pm.slice().sort(function(a,b){return (b.早退次数||0)-(a.早退次数||0);}).slice(0,10).map(function(e){return {姓名:e.姓名, 早退次数:e.早退次数};});
-  var byBu={}; pm.forEach(function(e){ byBu[e.bu]=(byBu[e.bu]||0)+(+e.缺勤天数||0); });
-  var absentS = Object.keys(byBu).map(function(b){return {bu:b, 缺勤天数:byBu[b], sub:(pm.filter(function(x){return x.bu===b;}).length)+'人'};}).sort(function(a,b){return b.缺勤天数-a.缺勤天数;}).slice(0,10);
-  document.getElementById('lateRank').innerHTML = rankRows(lateS, '迟到次数');
-  document.getElementById('earlyRank').innerHTML = rankRows(earlyS, '早退次数');
-  // 外出 / 在家办公排行按 归属事业部(BU) 联动（工号→BU 映射）
-  var outAll = BUKA.top_out||[], homeAll = BUKA.top_home||[];
-  var outS = bu ? outAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : outAll;
-  var homeS = bu ? homeAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : homeAll;
-  document.getElementById('outRank').innerHTML = rankRows(outS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
-  document.getElementById('homeRank').innerHTML = rankRows(homeS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
-  document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
-  _setRankTitles(f);
 }
 function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_city','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
 
@@ -540,6 +559,15 @@ function getDailyFiltered(){
 }
 function renderDaily(){
   markFiltered(['d_bu','d_area','d_dept','d_status','d_mgr','d_date','d_eid','d_name']);
+  var ym=val('d_ym')||currentDailyYm; currentDailyYm=ym;
+  ensureDaily(ym).then(function(daily){
+    ensurePerson(ym).then(function(){
+      DAILY=daily;
+      _renderDailyCore();
+    });
+  });
+}
+function _renderDailyCore(){
   if(!DAILY) return;
   dailyView=getDailyFiltered(); dailySz=parseInt(val('dSize'))||50; if(dailyPg<0)dailyPg=0;
   var totPages=Math.max(1,Math.ceil(dailyView.length/dailySz)); if(dailyPg>=totPages)dailyPg=totPages-1;
@@ -567,24 +595,24 @@ function dailyPage(d){ dailyPg+=d; renderDaily(); }
 function resetDaily(){ ['d_bu','d_year','d_ym','d_date','d_area','d_city','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderDaily(); }
 
 /* ===== 个人月度出勤明细 ===== */
-function getPersFiltered(){
-  var bu=val('p_bu'), ym=val('p_year')+val('p_month'), area=val('p_area'), city=val('p_city'),
-      dept=val('p_dept'), title=val('p_title'), eid=val('p_eid').trim(), name=val('p_name').trim(), mgr=val('p_mgr');
-  return SUMMARY.person_month.filter(function(r){
-    if(bu && r.bu!==bu) return false;
-    if(area && r.工作地点!==area) return false;
-    if(city && r.工作地点!==city) return false;
-    if(dept && r.所属部门!==dept) return false;
-    if(title && r.职称!==title) return false;
-    if(eid && (r.工号||'').indexOf(eid)<0) return false;
-    if(name && (r.姓名||'').indexOf(name)<0) return false;
-    return true;
-  });
-}
 function renderPersonal(){
   markFiltered(['p_bu','p_area','p_dept','p_title','p_mgr','p_eid','p_name']);
   if(!SUMMARY) return;
-  persView=getPersFiltered(); persSz=parseInt(val('pSize'))||50; if(persPg<0)persPg=0;
+  var ym = (val('p_year')||'') + (val('p_month')||''); currentPersYm = ym;
+  ensurePerson(ym).then(function(pm){
+    var bu=val('p_bu'), area=val('p_area'), city=val('p_city'),
+        dept=val('p_dept'), title=val('p_title'), eid=val('p_eid').trim(), name=val('p_name').trim(), mgr=val('p_mgr');
+    var view = pm.filter(function(r){
+      if(bu && r.bu!==bu) return false;
+      if(area && r.工作地点!==area) return false;
+      if(city && r.工作地点!==city) return false;
+      if(dept && r.所属部门!==dept) return false;
+      if(title && r.职称!==title) return false;
+      if(eid && (r.工号||'').indexOf(eid)<0) return false;
+      if(name && (r.姓名||'').indexOf(name)<0) return false;
+      return true;
+    });
+    persView=view; persSz=parseInt(val('pSize'))||50; if(persPg<0)persPg=0;
   var totPages=Math.max(1,Math.ceil(persView.length/persSz)); if(persPg>=totPages)persPg=totPages-1;
   var slice=persView.slice(persPg*persSz,(persPg+1)*persSz);
   var b=document.getElementById('persBody'); b.innerHTML='';
@@ -613,6 +641,7 @@ function renderPersonal(){
   document.getElementById('persCount').textContent=persView.length+' 人';
   document.getElementById('pPageInfo').textContent='第 '+(persPg+1)+' / '+totPages+' 页';
   document.getElementById('pPrev').disabled=persPg<=0; document.getElementById('pNext').disabled=persPg>=totPages-1;
+  });
 }
 function persPage(d){ persPg+=d; renderPersonal(); }
 function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_city','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
