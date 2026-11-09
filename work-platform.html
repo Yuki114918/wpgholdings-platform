@@ -33,6 +33,9 @@ var DATA_BASES = [
   'https://yuki114918.github.io/wpgholdings-platform/data/'
 ];
 var DATA_BASE = DATA_BASES[0];
+// 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
+// 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
+var DATA_VER = '20261109c';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -2087,9 +2090,10 @@ function mergeEmployeeData() {
           <div class="m-card"><h3>雇用分布（所选月份合计）</h3><div class="m-svg" id="mMoveHire"></div></div>
         </div>
         <div class="m-move-filter">
-          <label>类型</label><select id="mMoveType" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option><option value="hire">🟢 入职</option><option value="leave">🔴 离职</option></select>
+          <label>类型</label><select id="mMoveType" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option><option value="hire">🟢 入职</option><option value="leave">🔴 离职</option><option value="other">🟡 其他异动</option></select>
           <label>集团</label><select id="mMoveGroup" class="m-bi-sel" onchange="monthlyRenderMoveTable()"></select>
           <label>子区域</label><select id="mMoveSubRegion" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部</option></select>
+          <label>月份</label><select id="mMoveMonth" class="m-bi-sel" onchange="monthlyRenderMoveTable()"><option value="all">全部(区间)</option></select>
           <span class="m-bi-count" id="mMoveFilterNote"></span>
         </div>
         <button class="m-toggle-table" id="mToggleTable" onclick="monthlyToggleTable()">📋 展开入离明细（0 笔）</button>
@@ -2152,6 +2156,22 @@ function mergeEmployeeData() {
         <h3>职缺明细（按筛选）</h3>
         <div class="r-table-note" id="rTableNote"></div>
         <div class="m-table-wrap" id="rTable"></div>
+      </div>
+      <div class="r-card" style="margin-top:16px;border-left:4px solid #004E8C;">
+        <h3>📨 北森 Offer / 待入职（补充视角）</h3>
+        <div class="r-asof" id="offerAsOf" style="padding:0;margin-bottom:10px;"></div>
+        <div class="m-bi-controls" style="margin-bottom:10px;">
+          <div class="m-bi-ctrl"><label class="m-bi-lbl">归属集团(BU)</label><select class="m-bi-sel" id="oFBU" onchange="offerApplyFilter()"></select></div>
+          <div class="m-bi-ctrl"><label class="m-bi-lbl">区域</label><select class="m-bi-sel" id="oFRegion" onchange="offerApplyFilter()"></select></div>
+          <div class="m-bi-ctrl"><label class="m-bi-lbl">计划入职月份</label><select class="m-bi-sel" id="oFMonth" onchange="offerApplyFilter()"></select></div>
+        </div>
+        <div class="r-kpi-strip" id="oKpis"></div>
+        <div class="r-grid" style="grid-template-columns:repeat(2,1fr);">
+          <div class="r-card" style="border:none;padding:0;"><h3>录用状态分布</h3><div class="m-svg" id="oStatusDonut"></div></div>
+          <div class="r-card" style="border:none;padding:0;"><h3>逐月计划入职趋势</h3><div class="m-svg" id="oTrend"></div></div>
+        </div>
+        <div class="r-table-note" id="oTableNote"></div>
+        <div class="m-table-wrap" id="oTable"></div>
       </div>
       <div class="r-foot" id="recruitFoot"></div>
     </div>
@@ -4291,7 +4311,7 @@ async function wpgLoadMonthly() {
     for (var b = 0; b < DATA_BASES.length; b++) {
       for (var attempt = 0; attempt < 2; attempt++) {
         try {
-          var u = DATA_BASES[b] + name;
+          var u = DATA_BASES[b] + name + (name.indexOf('?') < 0 ? '?' : '&') + 'dv=' + DATA_VER;
           if (attempt > 0) u = wpgCacheBust(u);
           var js = await wpgFetchData(u, attempt === 0 ? 20000 : 45000);
           var sc = document.createElement('script'); sc.textContent = js; document.head.appendChild(sc);
@@ -4599,25 +4619,39 @@ function monthlyRenderMove(sel) {
   var t = document.getElementById('mMoveTable');
   var btn = document.getElementById('mToggleTable');
   if (btn) btn.textContent = '📋 展开入离明细（' + evs.length + ' 笔）';
-  if (!evs.length) t.innerHTML = '<div style="padding:14px;color:#94a3b8;">所选月份暂无近 24 月入离明细。</div>';
+  if (!evs.length) t.innerHTML = '<div style="padding:14px;color:#94a3b8;">所选区间暂无近 24 月 入离 / 其他 明细。</div>';
   else monthlyRenderMoveTable();
+  // 同步月份下拉（与上方时间范围一致；保留已选月份若仍在区间内）
+  var mmSel = document.getElementById('mMoveMonth');
+  if (mmSel) {
+    var mmOpts = '<option value="all">全部(区间)</option>' + selFlat.map(function (ym) { return '<option value="' + ym + '">' + ym.slice(0, 4) + '-' + ym.slice(4) + '</option>'; }).join('');
+    var curM = mmSel.value;
+    mmSel.innerHTML = mmOpts;
+    mmSel.value = (curM && selFlat.indexOf(curM) >= 0) ? curM : 'all';
+  }
 }
 function monthlyRenderMoveTable() {
   var evs = window.__mEvents || [];
   var tp = (document.getElementById('mMoveType') || {}).value || 'all';
   var gp = (document.getElementById('mMoveGroup') || {}).value || 'all';
   var sr = (document.getElementById('mMoveSubRegion') || {}).value || 'all';
-  var f = evs.filter(function (e) { if (tp !== 'all' && e.type !== tp) return false; if (gp !== 'all' && e.group !== gp) return false; if (sr !== 'all' && (e.sub || '未知') !== sr) return false; return true; });
-  var mt = document.getElementById('mMoveType'), mg = document.getElementById('mMoveGroup'), msr = document.getElementById('mMoveSubRegion');
+  var mo = (document.getElementById('mMoveMonth') || {}).value || 'all';
+  var f = evs.filter(function (e) { if (tp !== 'all' && e.type !== tp) return false; if (gp !== 'all' && e.group !== gp) return false; if (sr !== 'all' && (e.sub || '未知') !== sr) return false; if (mo !== 'all' && e.ym !== mo) return false; return true; });
+  var mt = document.getElementById('mMoveType'), mg = document.getElementById('mMoveGroup'), msr = document.getElementById('mMoveSubRegion'), mmo = document.getElementById('mMoveMonth');
   if (mt) mt.classList.toggle('is-filtered', tp !== 'all');
   if (mg) mg.classList.toggle('is-filtered', gp !== 'all');
   if (msr) msr.classList.toggle('is-filtered', sr !== 'all');
-  var note = document.getElementById('mMoveFilterNote'); if (note) note.textContent = (tp !== 'all' || gp !== 'all' || sr !== 'all') ? ('🔎 匹配 ' + f.length + ' / ' + evs.length + ' 笔') : '';
+  if (mmo) mmo.classList.toggle('is-filtered', mo !== 'all');
+  var note = document.getElementById('mMoveFilterNote'); if (note) note.textContent = (tp !== 'all' || gp !== 'all' || sr !== 'all' || mo !== 'all') ? ('🔎 匹配 ' + f.length + ' / ' + evs.length + ' 笔') : '';
   var t = document.getElementById('mMoveTable');
   if (!t) return;
   if (!f.length) { t.innerHTML = '<div style="padding:14px;color:#94a3b8;">当前筛选无匹配记录。</div>'; return; }
-  var rows = f.slice(0, 300).map(function (e) { return '<tr><td>' + e.ym + '</td><td>' + (e.type === 'hire' ? '🟢 入职' : '🔴 离职') + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.sub || '未知') + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>'; }).join('');
-  t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>子区域</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (f.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔</div>' : '');
+  function typeCell(e) { if (e.type === 'hire') return '🟢 入职'; if (e.type === 'leave') return '🔴 离职'; return '🟡 其他异动'; }
+  var rows = f.slice(0, 300).map(function (e) {
+    var otherCls = e.type === 'other' ? ' style="background:#fff8e6;"' : '';
+    return '<tr' + otherCls + '><td>' + e.ym + '</td><td>' + typeCell(e) + '</td><td>' + e.id + '</td><td>' + e.name + '</td><td>' + e.group + '</td><td>' + (e.sub || '未知') + '</td><td>' + (e.age != null ? e.age : '-') + '</td><td style="text-align:left;white-space:normal;min-width:200px;">' + e.reason + '</td></tr>';
+  }).join('');
+  t.innerHTML = '<table class="m-tbl"><thead><tr><th>月份</th><th>类型</th><th>工号</th><th>姓名</th><th>集团</th><th>子区域</th><th>年龄</th><th>原因 / 事件</th></tr></thead><tbody>' + rows + '</tbody></table>' + (f.length > 300 ? '<div style="padding:8px;color:#94a3b8;font-size:12px;">仅显示前 300 笔（可用类型/集团/子区域/月份筛选缩小范围）</div>' : '');
 }
 
 function _eduFullTimeGradAge(edu) {
@@ -4733,7 +4767,7 @@ async function wpgLoadRecruitment() {
     for (var b = 0; b < DATA_BASES.length; b++) {
       for (var attempt = 0; attempt < 2; attempt++) {
         try {
-          var u = DATA_BASES[b] + name;
+          var u = DATA_BASES[b] + name + (name.indexOf('?') < 0 ? '?' : '&') + 'dv=' + DATA_VER;
           if (attempt > 0) u = wpgCacheBust(u);
           var ctrl = new AbortController();
           var t = setTimeout(function () { ctrl.abort(); }, attempt === 0 ? 25000 : 45000);
@@ -4750,7 +4784,9 @@ async function wpgLoadRecruitment() {
     return false;
   }
   var ok = await tryLoad('recruitment-data.js', function () { return !!(window.RECRUIT && window.RECRUIT.slots && window.RECRUIT.slots.length); });
+  var okOffer = await tryLoad('offer-data.js', function () { return !!(window.OFFER && window.OFFER.offers && window.OFFER.offers.length); });
   if (ok) recruitInit(); else { var l = document.getElementById('recruitLoading'); if (l) l.textContent = '⚠️ 招聘数据加载失败（请检查网络或稍后重试）'; }
+  if (okOffer) offerInit();
   return ok;
 }
 
@@ -4918,7 +4954,134 @@ function recruitTable(slots, isAll) {
   }).join('');
   el.innerHTML = '<table class="r-tbl"><thead><tr><th>区域</th><th>集团</th><th>城市</th><th>职系</th><th>职缺增补</th><th>内外</th><th>招聘天数</th><th>申请主管</th><th>预计报到</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>';
   var foot = document.getElementById('recruitFoot');
-  if (foot) foot.innerHTML = 'ℹ️ 职缺数按「需求人数」逐单展开（一张单可含多个槽位）；招聘天数＝申請日期至报到日（未报到则至结算日）。状态判定：表單狀態＝駁回→暂停招聘；有新人名且已报到/结案→已完成；仅有名未报到→待入职（暂留空）；处理中且无名→本月在招。BU 归一：富威 / WPG SA / SAC 暂挂「后勤(WPGH)」，如有出入请反馈调整。';
+  if (foot) foot.innerHTML = 'ℹ️ 职缺数按「需求人数」逐单展开（一张单可含多个槽位）；招聘天数＝申請日期至报到日（未报到则至结算日）。状态判定：表單狀態＝駁回→暂停招聘；有新人名且已报到/结案→已完成；仅有名未报到→待入职（暂留空）；处理中且无名→本月在招。BU 归一（用户确认口径）：鑫衡廣→AIT；世平偉業(含「偉」字样)→TGBC；含「控股」字样→WPGH；SAC / Yosun / 富威→AIT；WPG SA→其他。';
+}
+
+// ==================== 北森 Offer / 待入职（#396 补充视角） ====================
+var OFFER_FILTER = { bu: 'all', region: 'all', month: 'all' };
+var OFFER_MONTHS = [];
+var OFFER_READY = false;
+
+function offerInit() {
+  if (!window.OFFER) return;
+  OFFER_MONTHS = Object.keys(window.OFFER.meta.byMonth).sort();
+  OFFER_FILTER = { bu: 'all', region: 'all', month: 'all' };
+  OFFER_READY = true;
+  var asof = document.getElementById('offerAsOf');
+  if (asof) asof.innerHTML = '📅 数据来源：北森 Offer 信息汇总（2025 / 2026）。BU 经「增补单号(MRQ)」关联招聘职缺取归一集团；未关联者按录用部门兜底。月份＝计划入职日期（缺则用发送Offer时间）。总 Offer ' + window.OFFER.meta.total + ' 笔。';
+  offerPopulateFilters();
+  offerApplyFilter();
+}
+function offerPopulateFilters() {
+  if (!window.OFFER) return;
+  var meta = window.OFFER.meta;
+  function fill(id, opts, allLabel) {
+    var e = document.getElementById(id); if (!e) return;
+    function opt(o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '">' + l + '</option>'; }
+    e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(opt).join('');
+  }
+  fill('oFBU', Object.keys(meta.byBu), '全部集团');
+  fill('oFRegion', Object.keys(meta.byRegion), '全部区域');
+  fill('oFMonth', OFFER_MONTHS.map(function (k) { return [k, k.slice(0, 4) + '-' + k.slice(4)]; }), '全部月份');
+}
+function offerApplyFilter() {
+  var bu = document.getElementById('oFBU'), rg = document.getElementById('oFRegion'), mo = document.getElementById('oFMonth');
+  if (bu) OFFER_FILTER.bu = bu.value;
+  if (rg) OFFER_FILTER.region = rg.value;
+  if (mo) OFFER_FILTER.month = mo.value;
+  offerRender();
+}
+function offerBaseFiltered() {
+  var f = OFFER_FILTER, arr = window.OFFER.offers;
+  return arr.filter(function (o) {
+    if (f.bu !== 'all' && o.bu !== f.bu) return false;
+    if (f.region !== 'all' && o.region !== f.region) return false;
+    if (f.month !== 'all' && o.ym !== f.month) return false;
+    return true;
+  });
+}
+function offerRender() {
+  if (!OFFER_READY) return;
+  var base = offerBaseFiltered();
+  var buckets = { '已到岗': 0, '已录用未到岗': 0, '进行中': 0, '其他': 0 };
+  base.forEach(function (o) { buckets[o.bucket] = (buckets[o.bucket] || 0) + 1; });
+  var kpis = [
+    { l: '总 Offer', v: base.length, s: '当前筛选' },
+    { l: '已到岗', v: buckets['已到岗'] || 0, s: '已报到' },
+    { l: '已录用未到岗', v: buckets['已录用未到岗'] || 0, s: '待入职' },
+    { l: '进行中', v: buckets['进行中'] || 0, s: '流程中' }
+  ];
+  var kc = document.getElementById('oKpis');
+  if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="r-kpi" style="border-left-color:#004E8C;"><div class="r-kpi-label">' + k.l + '</div><div class="r-kpi-val" style="color:#004E8C;">' + k.v + '</div><div class="r-kpi-sub">' + k.s + '</div></div>'; }).join('');
+  offerStatusDonut(base);
+  offerTrend(base);
+  offerTable(base);
+}
+function offerStatusDonut(arr) {
+  var counts = {}; arr.forEach(function (o) { var k = o.bucket; counts[k] = (counts[k] || 0) + 1; });
+  var order = ['已到岗', '已录用未到岗', '进行中', '其他'];
+  var colors = { '已到岗': '#1a9c5b', '已录用未到岗': '#E31937', '进行中': '#f59e0b', '其他': '#94a3b8' };
+  var total = arr.length || 0;
+  var segs = order.filter(function (k) { return counts[k]; }).map(function (k) { return { k: k, v: counts[k], c: colors[k] }; });
+  var W = 220, H = 220, cx = 110, cy = 110, r = 80, sw = 26;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="max-width:260px;margin:auto;display:block;">';
+  if (total === 0) { svg += '<text x="110" y="115" text-anchor="middle" fill="#94a3b8" font-size="14">无数据</text>'; }
+  else {
+    var ang = -Math.PI / 2;
+    segs.forEach(function (seg) {
+      var frac = seg.v / total, a2 = ang + frac * 2 * Math.PI;
+      var x1 = cx + r * Math.cos(ang), y1 = cy + r * Math.sin(ang), x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+      var large = frac > 0.5 ? 1 : 0;
+      svg += '<path d="M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + '" fill="none" stroke="' + seg.c + '" stroke-width="' + sw + '"/>';
+      ang = a2;
+    });
+    svg += '<text x="110" y="104" text-anchor="middle" font-size="30" font-weight="800" fill="#004E8C">' + total + '</text>';
+    svg += '<text x="110" y="128" text-anchor="middle" font-size="13" fill="#64748b">Offer</text>';
+  }
+  svg += '</svg>';
+  var legend = segs.map(function (seg) { return '<span class="lg"><span class="sw" style="background:' + seg.c + '"></span>' + seg.k + ' ' + seg.v + '</span>'; }).join('');
+  var el = document.getElementById('oStatusDonut'); if (el) el.innerHTML = svg + '<div class="m-legend" style="justify-content:center;margin-top:6px;">' + legend + '</div>';
+}
+function offerTrend(base) {
+  var months = {}; base.forEach(function (o) { if (!o.ym) return; months[o.ym] = (months[o.ym] || 0) + 1; });
+  var keys = Object.keys(months).sort();
+  var W = 520, H = 240, padL = 38, padR = 14, padT = 16, padB = 28, x0 = padL, x1 = W - padR, y0 = H - padB, y1 = padT;
+  var maxV = 0; keys.forEach(function (k) { if (months[k] > maxV) maxV = months[k]; }); maxV = Math.max(maxV, 4); var top = Math.ceil(maxV / 4) * 4;
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">';
+  for (var g = 0; g <= 4; g++) { var yy = y0 + (y1 - y0) * g / 4; svg += '<line x1="' + x0 + '" y1="' + yy.toFixed(1) + '" x2="' + x1 + '" y2="' + yy.toFixed(1) + '" stroke="#eef2f6"/>'; svg += '<text x="' + (x0 - 6) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#94a3b8">' + Math.round(top * (1 - g / 4)) + '</text>'; }
+  if (keys.length) {
+    var pts = keys.map(function (k, i) { var xx = x0 + (x1 - x0) * (keys.length === 1 ? 0 : i / (keys.length - 1)); var yy = y0 + (y1 - y0) * (1 - months[k] / top); return xx.toFixed(1) + ',' + yy.toFixed(1); });
+    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#004E8C" stroke-width="2.5" stroke-linejoin="round"/>';
+    keys.forEach(function (k, i) { var xx = x0 + (x1 - x0) * (keys.length === 1 ? 0 : i / (keys.length - 1)); var yy = y0 + (y1 - y0) * (1 - months[k] / top); svg += '<circle cx="' + xx.toFixed(1) + '" cy="' + yy.toFixed(1) + '" r="2.6" fill="#004E8C"/>'; });
+    keys.forEach(function (k, i) { var xx = x0 + (x1 - x0) * (keys.length === 1 ? 0 : i / (keys.length - 1)); var yy = y0 + (y1 - y0) * (1 - months[k] / top); svg += '<text x="' + xx.toFixed(1) + '" y="' + (y0 + 15) + '" text-anchor="middle" font-size="9" fill="#94a3b8">' + k.slice(4) + '/' + k.slice(2, 4) + '</text>'; });
+  } else { svg += '<text x="' + (W / 2) + '" y="' + (H / 2) + '" text-anchor="middle" fill="#94a3b8" font-size="13">无数据</text>'; }
+  svg += '</svg>';
+  var el = document.getElementById('oTrend'); if (el) el.innerHTML = svg;
+}
+function offerTable(arr) {
+  var el = document.getElementById('oTable'); if (!el) return;
+  var note = document.getElementById('oTableNote');
+  var sorted = arr.slice().sort(function (a, b) { return (b.ym || '').localeCompare(a.ym || '') || (a.bu || '').localeCompare(b.bu || ''); });
+  if (note) note.innerHTML = '共 ' + sorted.length + ' 笔 Offer（BU 经 MRQ 关联招聘职缺归一）';
+  if (!sorted.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;">无匹配 Offer</div>'; return; }
+  var bucketColor = { '已到岗': '#1a9c5b', '已录用未到岗': '#E31937', '进行中': '#f59e0b', '其他': '#94a3b8' };
+  var rows = sorted.map(function (o) {
+    var bc = bucketColor[o.bucket] || '#64748b';
+    return '<tr>' +
+      '<td>' + o.name + '</td>' +
+      '<td>' + o.bu + '</td>' +
+      '<td>' + o.region + '</td>' +
+      '<td>' + (o.city || '—') + '</td>' +
+      '<td>' + (o.dept || '—') + '</td>' +
+      '<td>' + o.offerType + '</td>' +
+      '<td><span style="color:' + bc + ';font-weight:700;">' + (o.curStatus || o.offerStatus || '—') + '</span></td>' +
+      '<td>' + (o.sendDate || '—') + '</td>' +
+      '<td>' + (o.planEntry || '—') + '</td>' +
+      '<td>' + (o.mrq || '—') + '</td>' +
+      '<td>' + (o.channel || '—') + '</td>' +
+      '</tr>';
+  }).join('');
+  el.innerHTML = '<table class="r-tbl"><thead><tr><th>姓名</th><th>集团</th><th>区域</th><th>城市</th><th>录用部门</th><th>Offer类型</th><th>当前状态</th><th>发送Offer</th><th>计划入职</th><th>增补单号</th><th>渠道</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================

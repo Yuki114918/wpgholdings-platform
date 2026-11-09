@@ -105,6 +105,23 @@
   @media(max-width:760px){.leave-grid{grid-template-columns:1fr;}}
   /* 可搜索 combobox（datalist）与下拉同款样式 */
   .fld input[list]::placeholder{color:#aab4c0;}
+  /* 休假明细下钻 */
+  .leave-grid .datatbl tbody tr.leave-click{cursor:pointer;transition:background .15s;}
+  .leave-grid .datatbl tbody tr.leave-click:hover{background:#fff0d8!important;}
+  .leave-grid .datatbl td.lv-drill{color:var(--wpg-orange-d);font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .leave-hint{font-size:11.5px;color:var(--wpg-orange-d);margin:0 0 8px;display:flex;align-items:center;gap:6px;}
+  /* 明细弹窗 */
+  .leave-modal{position:fixed;inset:0;background:rgba(20,30,50,.45);display:none;align-items:flex-start;justify-content:center;z-index:999;padding:40px 16px;overflow:auto;}
+  .leave-modal.open{display:flex;}
+  .leave-modal-box{background:#fff;border-radius:12px;width:min(980px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+  .leave-modal-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:2px solid var(--wpg-orange);position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0;z-index:2;}
+  .leave-modal-head h3{margin:0;font-size:17px;color:var(--wpg-blue-d);flex:1;}
+  .leave-modal-head .lm-sub{font-size:12px;color:#7a8a9c;margin-left:4px;}
+  .leave-modal-close{background:var(--wpg-blue);color:#fff;border:none;border-radius:7px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap;}
+  .leave-modal-close:hover{background:var(--wpg-blue-d);}
+  .leave-modal-body{padding:6px 16px 14px;overflow:auto;}
+  .leave-modal-body .datatbl td.lv-name{font-weight:700;color:var(--wpg-blue-d);}
+  .leave-modal-foot{font-size:12px;color:#8a98a8;padding:0 20px 16px;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -291,7 +308,7 @@
 
 <script>
 /* ===== 全局数据 ===== */
-var APP_VER='20261109b';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
+var APP_VER='20261109c';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
 var _cv=function(u){ return u + (u.indexOf('?')>=0?'&':'?') + 'v=' + APP_VER; };  // 追加版本缓存破坏
 var SUMMARY=null, DAILY=null, BUKA=null;
 var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
@@ -459,16 +476,26 @@ function _renderDashKpis(k, f, leaveTotal){
 /* 休假：各类假别拆分 + 个人请假 TOP15（支持按筛选后集合重算） */
 function renderLeaveFromPm(pm, tag){
   var t = tag||'';
+  window.LEAVE_PM = pm; window.LEAVE_TAG = t;   // 供明细下钻使用（已套用当前筛选）
   var agg={}; LEAVE_META.forEach(function(m){ agg[m.name]={unit:m.unit,total:0,persons:0}; });
   pm.forEach(function(e){
     LEAVE_META.forEach(function(m){ var v=+e[m.name]||0; if(v>0){ agg[m.name].total+=v; agg[m.name].persons++; } });
   });
   var rows=LEAVE_META.map(function(m){ var a=agg[m.name]; return {name:m.name,unit:m.unit,total:a.total,persons:a.persons}; })
     .filter(function(r){return r.total>0;}).sort(function(a,b){return b.total-a.total;});
-  var html='<table class="datatbl" style="font-size:12.5px"><thead><tr><th>假别</th><th>单位</th><th>总时长</th><th>人数</th></tr></thead><tbody>';
-  rows.forEach(function(r){ html+='<tr><td>'+r.name+'</td><td>'+r.unit+'</td><td>'+fmt(r.total,1)+'</td><td>'+r.persons+'</td></tr>'; });
-  html+='</tbody></table>';
-  document.getElementById('leaveBreak').innerHTML = rows.length? html : '<div class="note">当前筛选无休假记录</div>';
+  if(rows.length){
+    var html='<div class="leave-hint">👆 点击任一行可查看该假别「逐人明细」（已套用上方 年/月/BU/区域/子区域/职务/部门/姓名 筛选）</div>';
+    html+='<table class="datatbl" style="font-size:12.5px"><thead><tr><th>假别</th><th>单位</th><th>总时长</th><th>人数</th><th>明细</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      html+='<tr class="leave-click" onclick="openLeaveDetail(\''+r.name+'\')" title="点击查看 '+r.name.replace(/_小时|_天/g,'')+' 逐人明细">'
+        +'<td>'+r.name.replace(/_小时|_天/g,'')+'</td><td>'+r.unit+'</td><td>'+fmt(r.total,1)+'</td><td>'+r.persons+'</td>'
+        +'<td class="lv-drill">查看 ▸</td></tr>';
+    });
+    html+='</tbody></table>';
+    document.getElementById('leaveBreak').innerHTML = html;
+  } else {
+    document.getElementById('leaveBreak').innerHTML = '<div class="note">当前筛选无休假记录</div>';
+  }
   var rank=pm.slice().sort(function(a,b){return (b.请假总时长_小时||0)-(a.请假总时长_小时||0);}).slice(0,15);
   document.getElementById('leaveRank').innerHTML = rankRows(rank.map(function(e){return {姓名:e.姓名, v:e.请假总时长_小时, sub:(e.bu||'')+'·'+(e.工作子区域||'')};}), '请假总时长_小时');
   var lt=document.getElementById('leaveBreakTitle'); if(lt) lt.textContent='各类假别拆分'+t;
@@ -710,6 +737,45 @@ function persPage(d){ persPg+=d; renderPersonal(); }
 function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
 
 function val(id){ var e=document.getElementById(id); return e?e.value:''; }
+
+/* ===== 休假明细下钻（点击各类假别拆分行，查看逐人明细） ===== */
+function openLeaveDetail(name){
+  var pm = window.LEAVE_PM||[];
+  var meta = LEAVE_META.filter(function(m){return m.name===name;})[0] || {name:name,unit:'小时'};
+  var list = pm.filter(function(e){return (+e[name]||0)>0;})
+    .map(function(e){return {工号:e.工号,姓名:e.姓名,所属部门:e.所属部门,工作地点:e.工作地点,工作子区域:e.工作子区域,bu:e.bu,职称:e.职称,v:+e[name]||0};})
+    .sort(function(a,b){return b.v-a.v;});
+  var total = list.reduce(function(a,e){return a+e.v;},0);
+  var disp = name.replace(/_小时|_天/g,'');
+  document.getElementById('leaveModalTitle').textContent = '【'+disp+'】请假明细';
+  document.getElementById('leaveModalSub').textContent = '共 '+list.length+' 人 · 总 '+fmt(total,1)+' '+meta.unit + (window.LEAVE_TAG?(' · '+window.LEAVE_TAG):'');
+  var unitCol = meta.unit==='天' ? '天数' : '时长(小时)';
+  var head = '<table class="datatbl" style="font-size:12.5px"><thead><tr>'
+    +'<th>工号</th><th>姓名</th><th>所属部门</th><th>工作地点</th><th>工作子区域</th><th>BU</th><th>职称</th><th>'+unitCol+'</th>'
+    +'</tr></thead><tbody>';
+  var rowsHtml = list.length ? list.map(function(e){
+      return '<tr><td>'+e.工号+'</td><td class="lv-name">'+e.姓名+'</td>'
+        +'<td class="cell-dept">'+(e.所属部门||'')+'</td><td>'+(e.工作地点||'')+'</td>'
+        +'<td>'+(e.工作子区域||'')+'</td><td>'+(e.bu||'')+'</td><td>'+(e.职称||'')+'</td>'
+        +'<td>'+fmt(e.v,1)+'</td></tr>';
+    }).join('') : '<tr><td colspan="8" style="text-align:center;color:#8a98a8;padding:20px">当前筛选条件下无该假别记录</td></tr>';
+  document.getElementById('leaveModalBody').innerHTML = head + rowsHtml + '</tbody></table>';
+  document.getElementById('leaveModalFoot').innerHTML = '明细取自当前考勤月与上方筛选（年 / 月 / BU / 区域 / 子区域 / 职务 / 部门 / 姓名）下的人员月考勤记录；时长单位：'+meta.unit+'。点击明细行外区域或「关闭」可退出。';
+  document.getElementById('leaveModal').classList.add('open');
+  var box=document.querySelector('.leave-modal-box'); if(box) box.scrollTop=0;
+}
+function closeLeaveModal(){ document.getElementById('leaveModal').classList.remove('open'); }
 </script>
+<div class="leave-modal" id="leaveModal" onclick="if(event.target===this)closeLeaveModal()">
+  <div class="leave-modal-box">
+    <div class="leave-modal-head">
+      <h3 id="leaveModalTitle">假别明细</h3>
+      <span class="lm-sub" id="leaveModalSub"></span>
+      <button class="leave-modal-close" onclick="closeLeaveModal()">关闭 ✕</button>
+    </div>
+    <div class="leave-modal-body" id="leaveModalBody"></div>
+    <div class="leave-modal-foot" id="leaveModalFoot"></div>
+  </div>
+</div>
 </body>
 </html>
