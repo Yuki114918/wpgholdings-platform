@@ -442,7 +442,28 @@ footer span{display:block}
   </main><!-- /report-main -->
 </div></div><!-- /report-layout /tab-external -->
 
-<div id="tab-internal" style="display:none"><div id="internalReportBody"></div>
+<div id="tab-internal" style="display:none">
+  <style>
+    .wpg-gbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:30;
+      padding:10px 18px;background:#fff;border-bottom:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(20,40,60,.06);}
+    .wpg-gbar .lb{font-size:13px;font-weight:700;color:#1f4e79;white-space:nowrap;}
+    .wpg-gbar .chips{display:flex;gap:6px;flex-wrap:wrap;}
+    .wpg-chip{font-size:12.5px;padding:5px 11px;border-radius:20px;border:1px solid #d6dee8;background:#fff;
+      color:#475569;cursor:pointer;user-select:none;transition:.15s;white-space:nowrap;}
+    .wpg-chip:hover{border-color:#1b9e8f;}
+    .wpg-chip.on{color:#fff;border-color:transparent;font-weight:600;}
+    .wpg-gbar .st{font-size:12px;color:#64748b;margin-left:auto;white-space:nowrap;}
+    .wpg-narr{font-size:12px;padding:5px 11px;border-radius:6px;border:1px solid #d6dee8;background:#fff;
+      color:#475569;cursor:pointer;white-space:nowrap;}
+    .wpg-narr:hover{border-color:#1b9e8f;color:#0f6e56;}
+  </style>
+  <div class="wpg-gbar" id="wpgGroupBar">
+    <span class="lb">🎯 集团视图</span>
+    <div class="chips" id="wpgGroupChips"></div>
+    <span class="st" id="wpgGroupStat">总览：显示全部集团</span>
+    <button class="wpg-narr" id="wpgNarrBtn" style="display:none;" onclick="wpgToggleNarr()">▸ 展开全区叙述</button>
+  </div>
+  <div id="internalReportBody"></div>
 </div>
 <div id="tab-trends" style="display:none"><div id="trendsReportBody"></div>
 </div>
@@ -505,12 +526,145 @@ function waitForChart(timeoutMs){
     }, 80);
   });
 }
+// ==================== 内部资料对比：集团视图筛选（纯显示层，不改动报告数据） ====================
+// 口径：总览=原报告全文；选中某集团后，表格只保留该集团数据行、分集团详解只留该集团章节，
+//       全区叙述/KPI 默认收起（可一键展开）。所有数字均来自原报告，未做任何重算。
+var WPG_GROUPS = [
+  { k:'all',  n:'📊 总览（全部集团）', c:'#1f4e79' },
+  { k:'AIT',  n:'AIT 诠鼎',           c:'#2e6da4' },
+  { k:'WPI',  n:'WPI 世平',           c:'#1b9e8f' },
+  { k:'TGBC', n:'TGBC 鑫联大',        c:'#e08e0b' },
+  { k:'BSC',  n:'后勤 BSC+WPGH',      c:'#7b3fa0' },
+  { k:'LOG',  n:'LOG 运筹',           c:'#c0392b' },
+  { k:'GBG',  n:'GBG 海外',           c:'#687587' }
+];
+var WPG_GROUP_RE = [
+  ['BSC',  /后勤|BSC|WPGH/i],
+  ['TGBC', /鑫联大|TGBC/i],
+  ['LOG',  /运筹|LOG/i],
+  ['GBG',  /海外|GBG/i],
+  ['AIT',  /诠鼎|AIT/i],
+  ['WPI',  /世平|WPI/i]
+];
+var WPG_GROUP_SEL = 'all';
+var WPG_NARR_OPEN = false;
+function wpgGroupLabel(k){ var g=WPG_GROUPS.filter(function(x){return x.k===k;})[0]; return g?g.n:k; }
+function wpgGroupOf(tx){
+  for(var i=0;i<WPG_GROUP_RE.length;i++){ if(WPG_GROUP_RE[i][1].test(tx)) return WPG_GROUP_RE[i][0]; }
+  return '';
+}
+function wpgInitGroupFilter(){
+  var root=document.getElementById('internalReportBody');
+  if(!root) return;
+  var wrap=root.querySelector('.ir26sep');
+  // 幂等：先清掉上一次的标记与内联 display
+  root.querySelectorAll('[data-wpggrp],[data-wpgnarr]').forEach(function(el){
+    el.removeAttribute('data-wpggrp'); el.removeAttribute('data-wpgnarr'); el.style.display='';
+  });
+  root.querySelectorAll('h3,h4').forEach(function(el){ el.style.display=''; });
+  if(!wrap) return;
+
+  // ① 第六节「分集团详解」按 g1~g6 打标
+  var gmap={g1:'AIT',g2:'WPI',g3:'TGBC',g4:'BSC',g5:'LOG',g6:'GBG'};
+  wrap.querySelectorAll('h2[id^="g"]').forEach(function(h){
+    var g=gmap[h.id]; if(!g) return;
+    h.setAttribute('data-wpggrp',g);
+    var n=h.nextElementSibling;
+    while(n && !(n.tagName==='H2' || (n.classList && n.classList.contains('sec-hd')))){
+      n.setAttribute('data-wpggrp',g);
+      n=n.nextElementSibling;
+    }
+  });
+
+  // ② 表格数据行：按首列集团名打标；全区合计行归入「全区叙述」（筛选时收起、可展开）
+  wrap.querySelectorAll('table tbody tr').forEach(function(tr){
+    if(tr.closest('[data-wpggrp]')) return;      // 分集团详解内部的表格已整块归属集团
+    var td=tr.querySelector('td.l')||tr.querySelector('td');
+    if(!td) return;
+    var tx=(td.textContent||'').replace(/\s/g,'');
+    var g=wpgGroupOf(tx);
+    if(g) tr.setAttribute('data-wpggrp',g);
+    else if(/合计|全区|总计|整体|小计/.test(tx)) tr.setAttribute('data-wpgnarr','1');
+  });
+  // ③ 条形图：标签为集团名的行打标（职系/岗位类条形图保留）
+  wrap.querySelectorAll('.bar-row').forEach(function(r){
+    var lb=r.querySelector('.bar-lb'); if(!lb) return;
+    var g=wpgGroupOf((lb.textContent||'').replace(/\s/g,''));
+    if(g) r.setAttribute('data-wpggrp',g);
+  });
+  // ④ 无表格的内容块 = 全区叙述；含表格的容器继续向内递归（表格另按⑤处理）
+  function markNarr(container){
+    Array.prototype.forEach.call(container.children, function(el){
+      if(el.hasAttribute('data-wpggrp')) return;                       // 分集团详解区块
+      if(/^(STYLE|SCRIPT|H1|H2|H3|H4|TABLE|THEAD|TBODY|TR|TD|TH)$/.test(el.tagName)) return;
+      if(el.classList && el.classList.contains('sec-hd')) return;
+      if(el.querySelector('table')){ markNarr(el); return; }
+      el.setAttribute('data-wpgnarr','1');
+    });
+  }
+  markNarr(wrap);
+  // ⑤ 表头不含「集团」的表格属全区口径，筛选时同样收起
+  wrap.querySelectorAll('table').forEach(function(tb){
+    if(tb.closest('[data-wpggrp]')) return;
+    var head=(tb.querySelector('thead')||{textContent:''}).textContent;
+    if(!/集团/.test(head)) tb.setAttribute('data-wpgnarr','1');
+  });
+
+  // ⑤ 生成筛选 chips
+  var box=document.getElementById('wpgGroupChips');
+  if(box){
+    box.innerHTML=WPG_GROUPS.map(function(g){
+      var on=(WPG_GROUP_SEL===g.k);
+      return '<span class="wpg-chip'+(on?' on':'')+'" onclick="wpgApplyGroup(\''+g.k+'\')"'+(on?' style="background:'+g.c+';"':'')+'>'+g.n+'</span>';
+    }).join('');
+  }
+  wpgApplyGroup(WPG_GROUP_SEL, true);
+}
+function wpgApplyGroup(g, keepNarr){
+  var root=document.getElementById('internalReportBody');
+  if(!root) return;
+  WPG_GROUP_SEL=g;
+  if(g!=='all' && !keepNarr) WPG_NARR_OPEN=false;
+  var isAll=(g==='all');
+  var hiddenGrp=0, shownRows=0, hiddenNarr=0;
+  root.querySelectorAll('[data-wpggrp]').forEach(function(el){
+    var v=el.getAttribute('data-wpggrp');
+    var show=isAll || v===g || v==='all';
+    el.style.display=show?'':'none';
+    if(!show) hiddenGrp++; else if(el.tagName==='TR') shownRows++;
+  });
+  root.querySelectorAll('[data-wpgnarr]').forEach(function(el){
+    var show=isAll || WPG_NARR_OPEN;
+    el.style.display=show?'':'none';
+    if(!show) hiddenNarr++;
+  });
+  // 非集团区块内的小节标题，筛选时随全区叙述一起收起
+  root.querySelectorAll('h3,h4').forEach(function(el){
+    if(el.hasAttribute('data-wpggrp')) return;
+    el.style.display=(isAll || WPG_NARR_OPEN)?'':'none';
+  });
+  var box=document.getElementById('wpgGroupChips');
+  if(box) box.querySelectorAll('.wpg-chip').forEach(function(c,i){
+    var g2=WPG_GROUPS[i], on=g2 && g2.k===g;
+    c.classList.toggle('on',!!on);
+    c.style.background=on?g2.c:'';
+    c.style.color=on?'#fff':'';
+  });
+  var nb=document.getElementById('wpgNarrBtn');
+  if(nb){ nb.style.display=isAll?'none':'inline-block'; nb.textContent=WPG_NARR_OPEN?'▾ 收起全区叙述':'▸ 展开全区叙述'; }
+  var st=document.getElementById('wpgGroupStat');
+  if(st) st.textContent=isAll
+    ? '总览：显示全部集团与全区叙述（报告原文，未改动任何数字）'
+    : (wpgGroupLabel(g)+' · 表格行 '+shownRows+' 条 + 分集团详解｜已收起 '+hiddenGrp+' 个其他集团区块 / '+hiddenNarr+' 个全区叙述块');
+}
+function wpgToggleNarr(){ WPG_NARR_OPEN=!WPG_NARR_OPEN; wpgApplyGroup(WPG_GROUP_SEL, true); }
+
 async function wpgAfterUnlock(){
   var ec=document.getElementById('reportBodyContent');
   var ic=document.getElementById('internalReportBody');
   var tc=document.getElementById('trendsReportBody');
   function renderExternal(html){ if(!ec) return; ec.innerHTML=html; executeScripts(html, ec); initReportCharts(); initReportScrollSpy(); }
-  function renderInternal(html){ if(!ic) return; ic.innerHTML=html; executeScripts(html, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); wpgBootstrapCharts(); }
+  function renderInternal(html){ if(!ic) return; ic.innerHTML=html; executeScripts(html, ic); if(typeof initComparisonCharts==='function') initComparisonCharts(); wpgBootstrapCharts(); wpgInitGroupFilter(); }
   function renderTrends(html){ if(tc) tc.innerHTML=html; }
 
   // 先尝试从缓存立即渲染，减少重复进入时的等待

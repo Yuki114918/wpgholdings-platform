@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261110c';
+var DATA_VER = '20261110d';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -1415,7 +1415,7 @@ function mergeEmployeeData() {
       </div>
 
       <div class="nav-group-label">专题报告</div>
-      <div class="nav-item" data-target="report" onclick="location.href='report.html?v=20'">
+      <div class="nav-item" data-target="report" onclick="location.href='report.html?v=21'">
         <span class="nav-icon">📊</span><span class="nav-label">HR 数据洞察报告</span>
         <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
       </div>
@@ -2289,6 +2289,24 @@ function mergeEmployeeData() {
           <button onclick="resetLegal()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);">↺ 返回</button>
         </div>
       </div>
+      <style>
+        .hr6-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;}
+        .hr6-bar .hr6-lb{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;}
+        .hr6-chips{display:flex;gap:6px;flex-wrap:wrap;}
+        .hr6-chip{font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-secondary);cursor:pointer;user-select:none;transition:.15s;}
+        .hr6-chip:hover{border-color:#F37021;}
+        .hr6-chip.on{color:#fff;border-color:transparent;font-weight:600;}
+        .hr6-stat{font-size:12px;color:var(--text-secondary);margin-left:auto;white-space:nowrap;}
+        .hr6-clear{font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--text);}
+        .hr6-clear:hover{background:#fff5f5;border-color:#E31937;color:#E31937;}
+      </style>
+      <div class="hr6-bar" id="hr6Bar">
+        <span class="hr6-lb">🧩 HR 六大模块（可复选）</span>
+        <span style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">📅 法令核验至 2026-11-10</span>
+        <div class="hr6-chips" id="hr6Chips"></div>
+        <span class="hr6-stat" id="hr6Stat"></span>
+        <button class="hr6-clear" onclick="hr6Clear()">✕ 清除</button>
+      </div>
       <div class="legal-content" id="legalContent">
         <!-- 动态填充 -->
       </div>
@@ -2458,6 +2476,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (e) { console.error('时间初始化失败:', e); }
 
   try {
+    hr6RenderChips();
     renderNationalLaws();
   } catch (e) { console.error('全国法规渲染失败:', e); }
 
@@ -2767,6 +2786,8 @@ function updateWorkTimer() {
 function renderCityData(cityKey) {
   const data = cityData[cityKey];
   const container = document.getElementById('legalContent');
+  const shownPolicies = data.policies.filter(hr6Pass);
+  hr6Stat(shownPolicies.length, data.policies.length);
 
   container.innerHTML = `
     <div class="legal-grid">
@@ -2817,19 +2838,73 @@ function renderCityData(cityKey) {
 
     <h4 style="margin: 24px 0 12px; font-size: 15px; color: var(--text);">📜 ${data.name}市主要劳动法规政策</h4>
     <div class="policy-list">
-      ${data.policies.map(p => `
+      ${shownPolicies.length ? shownPolicies.map(p => `
         <div class="policy-item" onclick="showPolicyDetail('${p.title.replace(/'/g, "\\'")}', '${p.desc.replace(/'/g, "\\'")}', '${p.ref.replace(/'/g, "\\'")}', '${data.name}', '${(p.url || '').replace(/'/g, "\\'")}')">
           <div class="policy-title">${p.title}</div>
           <div class="policy-desc">${p.desc}</div>
           <div class="policy-meta"><span>📖 ${p.ref}</span><span>📍 ${data.name}</span></div>
         </div>
-      `).join('')}
+      `).join('') : '<div style="padding:14px;color:var(--text-secondary);font-size:13px;">所选 HR 模块下该城市暂无匹配政策，可点击「✕ 清除」查看全部或改选其他模块。</div>'}
     </div>
   `;
 }
 
 
 // ==================== HR法令数据（全国法规 + 地方法规 + 典型案例） ====================
+// ----- HR 六大模块筛选（可复选；同模块 OR，跨模块合并去重） -----
+const HR6_MODULES = [
+  { k:'plan',  n:'① 人力资源规划', c:'#1f4e79' },
+  { k:'staff', n:'② 招聘与配置',   c:'#0e7490' },
+  { k:'train', n:'③ 培训与开发',   c:'#7c3aed' },
+  { k:'perf',  n:'④ 绩效管理',     c:'#c2410c' },
+  { k:'comp',  n:'⑤ 薪酬福利管理', c:'#047857' },
+  { k:'er',    n:'⑥ 劳动关系管理', c:'#b91c1c' }
+];
+var HR6_SEL = new Set();
+var HR6_OVERRIDES = [
+  [/职业教育法|专项培训|培训服务期|服务期违约金|继续教育|职工教育经费/, ['train','plan','comp']],
+  [/绩效管理|不胜任工作|绩效考核|末位淘汰/, ['perf','er']],
+  [/女职工|妇女权益|三期保护|产假|哺乳|禁忌从事的劳动范围|女职工保健/, ['comp','staff','er']],
+  [/就业促进法|人才引进|就业促进|劳务派遣|职业介绍|人力资源规划|人口与计划生育法/, ['plan','staff']],
+  [/工资|薪酬|报酬|经济补偿|赔偿金|个税|个人所得税|社会保险|社保|公积金|养老|退休|工伤|医疗|失业|生育保险|年金|最低工资|残保金|奖金|津贴|缴费基数|税收/, ['comp']],
+  [/劳动争议|仲裁|竞业|集体合同|解除合同|终止合同|劳动合同法|工时|休假|劳动保护|超龄|新就业形态/, ['er']]
+];
+function lawModulesOf(o){
+  var t = ((o.title||'') + ' ' + (o.category||'') + ' ' + (o.ref||'')).toLowerCase();
+  if (o.modules && o.modules.length) return o.modules;
+  for (var i=0;i<HR6_OVERRIDES.length;i++){ if (HR6_OVERRIDES[i][0].test(t)) return HR6_OVERRIDES[i][1]; }
+  var m=[], s=t+' '+((o.desc||'').slice(0,150)).toLowerCase();
+  function add(){ for(var j=0;j<arguments.length;j++){ if(m.indexOf(arguments[j])<0) m.push(arguments[j]); } }
+  if (/女职工|妇女|产假|哺乳|生育|计划生育|育儿|孕期|经期|特殊保护|禁忌劳动|护理假/.test(s)) add('er','comp');
+  if (/招聘|就业|人才|录用|劳务派遣|职业介绍|调配|职位|落户|居住证|新就业形态/.test(s)) add('staff','plan');
+  if (/培训|职业教育|技能|服务期|继续教育|学徒|进修/.test(s)) add('train');
+  if (/绩效|考核|不胜任|晋升|评聘|职称/.test(s)) add('perf');
+  if (/工资|薪酬|报酬|经济补偿|赔偿|个税|税|社保|社会保险|公积金|养老|退休|工伤|医疗|失业|年金|福利|残保金|奖金|津贴|基数/.test(s)) add('comp');
+  if (/劳动合同|争议|仲裁|解除|终止|集体合同|工时|休假|年休假|劳动保护|超龄|竞业|监察|工会|民法典/.test(s)) add('er');
+  if (/综合|规划|统计|人口|基本法|劳动法/.test(s)) add('plan');
+  if (!m.length) add('er');
+  return m;
+}
+function hr6Pass(o){ return !HR6_SEL.size || lawModulesOf(o).some(function(k){ return HR6_SEL.has(k); }); }
+function hr6RenderChips(){
+  var el=document.getElementById('hr6Chips'); if(!el) return;
+  el.innerHTML = HR6_MODULES.map(function(m){
+    var on=HR6_SEL.has(m.k);
+    return '<span class="hr6-chip'+(on?' on':'')+'" data-k="'+m.k+'" onclick="hr6Toggle(\''+m.k+'\')"'+(on?' style="background:'+m.c+';"':'')+'>'+m.n+'</span>';
+  }).join('');
+}
+function hr6Toggle(k){ if(HR6_SEL.has(k)) HR6_SEL.delete(k); else HR6_SEL.add(k); hr6RenderChips(); hr6Apply(); }
+function hr6Clear(){ HR6_SEL.clear(); hr6RenderChips(); hr6Apply(); }
+function hr6Apply(){
+  var city=document.querySelector('.city-tab.active'), key=city?city.dataset.city:'national';
+  var inp=document.getElementById('legalSearchInput'), kw=inp?inp.value.trim():'';
+  if(kw) searchLegal(); else if(key==='national') renderNationalLaws(); else renderCityData(key);
+}
+function hr6Stat(n, total){
+  var el=document.getElementById('hr6Stat'); if(!el) return;
+  var names=HR6_MODULES.filter(function(m){return HR6_SEL.has(m.k);}).map(function(m){return m.n.replace(/^[①-⑥]\s*/,'');});
+  el.textContent = HR6_SEL.size ? ('已选：'+names.join(' + ')+' · 命中 '+n+'/'+total+' 条') : ('全部模块 · 共 '+total+' 条');
+}
 const nationalLaws = [
   {
     title: '中华人民共和国劳动法',
@@ -2900,8 +2975,8 @@ const nationalLaws = [
     desc: '对女职工在经期、孕期、产期、哺乳期给予特殊保护，明确98天基本产假+各地奖励假，禁止安排女职工从事禁忌劳动，设立哺乳时间和设施要求。',
     ref: '国务院令第619号（2012年）',
     url: 'https://www.gov.cn/zwgk/2012-05/07/content_2131567.htm',
-    category: '特殊保护',
-    chapters: '共16条 | 核心：第5条（禁忌劳动）、第6条（孕期保护）、第7条（产假98天）、第9条（哺乳期保护）、第10条（哺乳时间每天1小时）'
+    category: '女职工与三期保护',
+    chapters: '共16条 | 核心：第3条（劳动安全卫生培训）、第4条（禁忌岗位书面告知）、第5条（不得因怀孕生育哺乳降薪辞退解约）、第6条（孕期减轻劳动量／怀孕7个月以上不加班不夜班／产检计入劳动时间）、第7条（产假98天，产前15天；难产+15天；多胞胎每多1个+15天；未满4个月流产15天、满4个月42天）、第8条（生育津贴）、第9条（哺乳未满1周岁不加班不夜班）、第10条（每天1小时哺乳时间，多胞胎每多1个+1小时）、第11条（哺乳室等设施）、附录（女职工禁忌从事的劳动范围）'
   },
   {
     title: '职工带薪年休假条例',
@@ -3054,6 +3129,78 @@ const nationalLaws = [
     url: 'https://www.mohrss.gov.cn/',
     category: '退休养老',
     chapters: '共10条｜第1条提前≤3年且不低于原法定退休年龄｜第2条提前3个月书面告知单位｜第3条按法定年龄退休的及时办手续｜第4条延迟≤3年需协商一致、提前1个月书面明确｜第5条延迟期间劳动关系延续并足额缴社保｜第6条延迟期满或协商终止后办理退休｜第7条最低缴费年限口径｜第8条单位不晚于退休当月提出申请｜第9条次月起领取养老金｜第10条已领取养老金者不再受理'
+  },
+  {
+    title: '中华人民共和国妇女权益保障法（2022年修订，劳动权益专章）',
+    desc: '2022年10月30日修订、2023年1月1日起施行，是「女职工保护条例」体系的上位法。第四章「劳动和社会保障权益」：第43条用人单位招录时不得以性别为由拒绝录用妇女、不得差别化提高录用标准、不得询问或调查女性求职者婚育情况、不得将限制结婚生育或婚育状况作为录用条件、不得将妊娠测试作为入职体检项目；第44条劳动合同／聘用合同中不得设置限制女职工结婚生育的内容，同工同酬、晋职晋级、评聘专业技术职称男女平等；第45条用人单位应保障女职工在晋职、晋级、职称评聘、培训等方面享有与男子平等的权利；第46条不得因结婚、怀孕、产假、哺乳等情形降低女职工工资福利待遇、限制晋职晋级、辞退或单方解除合同；第47条女职工孕期、产期、哺乳期劳动合同期满的，合同期限自动顺延至三期结束；第48条用人单位不得因怀孕降低工资福利待遇或变相调岗（最高法第四批典型案例「孕期女职工变相调岗降薪案」即适用本条）；第25条用人单位应预防和制止职场性骚扰，建立投诉受理与处置机制。第77-80条明确侵害妇女劳动权益的行政责任与民事赔偿。',
+    ref: '全国人大常委会｜主席令第122号（2022.10.30修订，2023.1.1施行）',
+    url: 'https://www.gov.cn/xinwen/2022-10/30/content_5723386.htm',
+    category: '女职工与三期保护',
+    modules: ['er','staff','comp'],
+    chapters: '核心：第43条（招聘性别歧视禁令／禁问婚育）、第44条（合同不得限婚育／同工同酬）、第45条（晋升培训平等）、第46条（三期不得降薪辞退）、第47条（三期合同自动顺延）、第48条（孕期不得变相调岗降薪）、第25条（职场性骚扰防治）'
+  },
+  {
+    title: '女职工禁忌从事的劳动范围（《女职工劳动保护特别规定》附录）',
+    desc: '以附录形式列明四类禁忌：①女职工禁忌从事的劳动范围（矿山井下作业、体力劳动强度分级第IV级、每小时负重6次以上且每次超过20公斤或间断负重每次超过25公斤的作业等）；②女职工在经期禁忌从事的劳动范围（冷水作业分级第II/III/IV级、低温作业分级第II/III/IV级、高处作业分级第III/IV级、体力劳动强度分级第III/IV级）；③孕期禁忌（作业场所空气中铅、汞、苯、镉、铍、砷、氰化物、氮氧化物、一氧化碳、二硫化碳、氯、己内酰胺、氯丁二烯、氯乙烯、环氧乙烷、苯胺、甲醛等有毒物质浓度超标的作业、抗癌药物及麻醉剂气体、非密封源放射性物质操作、高处／冷水／低温／高温／噪声／体力劳动强度分级第III/IV级作业、密闭空间及高压室作业等）；④哺乳期禁忌（孕期禁忌中的有毒物质作业、全身或局部震动、体力劳动强度分级第III/IV级作业）。用人单位须将本单位属于禁忌范围的岗位书面告知女职工（规定第4条）。',
+    ref: '国务院令第619号｜附录（2012.4.28公布施行）',
+    url: 'https://www.gov.cn/zwgk/2012-05/07/content_2131567.htm',
+    category: '女职工与三期保护',
+    modules: ['er','comp'],
+    chapters: '四类禁忌清单：一般禁忌 / 经期 / 孕期 / 哺乳期｜配套义务：第3条培训、第4条岗位书面告知、第13条监督检查'
+  },
+  {
+    title: '女职工保健工作规定（含妇科检查与哺乳室设施要求）',
+    desc: '卫生部、劳动部、人事部、全国总工会、全国妇联联合发布，与《女职工劳动保护特别规定》配套，细化用人单位对女职工的健康保障义务：建立女职工保健制度；对女职工进行青春期、经期、婚前、孕前、孕期、产期、哺乳期、更年期各期保健；定期进行妇科疾病与乳腺疾病检查（用人单位应至少每1-2年组织一次，检查时间计入劳动时间）；女职工人数较多的单位应建立女职工卫生室、孕妇休息室、哺乳室，配备必要设施；不得安排孕期、哺乳期女职工从事有毒有害作业；对确诊重度更年期综合征且不能适应原劳动的，经本人申请可适当减轻劳动量或协商调整岗位。',
+    ref: '卫妇发〔1993〕第11号｜卫生部等五部门',
+    url: 'https://www.nhc.gov.cn/',
+    category: '女职工与三期保护',
+    modules: ['er','comp'],
+    chapters: '核心：八期保健制度 / 定期妇科与乳腺检查 / 卫生室·孕妇休息室·哺乳室 / 更年期保护｜与国务院令619号第11条衔接'
+  },
+  {
+    title: '中华人民共和国人口与计划生育法（产假、育儿假与生育奖励假上位依据）',
+    desc: '2021年8月20日修正，第25条：符合法律、法规规定生育子女的夫妻，可以获得延长生育假的奖励或者其他福利待遇；国家支持有条件的地方设立父母育儿假。第26条：妇女怀孕、生育和哺乳期间，按照国家有关规定享受特殊劳动保护并可以获得帮助和补偿；用人单位不得因女职工怀孕、生育、哺乳降低其工资、辞退或解除合同。各地据此在《人口与计划生育条例》中明确：基础产假98天（《特别规定》第7条）+ 地方奖励假（各地30～90天不等）、男方陪产／护理假、子女3周岁前夫妻双方每年各5～15天育儿假、独生子女父母护理假。本平台各城市页签已逐地列明具体天数。',
+    ref: '全国人大常委会｜主席令第96号（2021.8.20修正）',
+    url: 'https://www.gov.cn/xinwen/2021-08/20/content_5632486.htm',
+    category: '女职工与三期保护',
+    modules: ['comp'],
+    chapters: '核心：第25条（延长生育假与育儿假授权地方立法）、第26条（三期特殊保护与不得降薪辞退）、第24条（生育保险与生育津贴）'
+  },
+  {
+    title: '中华人民共和国就业促进法（反就业歧视与招聘合规）',
+    desc: '2008年1月1日施行、2015年修正。第3条劳动者依法享有平等就业和自主择业的权利；第26条用人单位招用人员应提供平等就业机会和公平就业条件，不得实施就业歧视；第27条不得以性别为由拒绝录用妇女或提高录用标准，不得在劳动合同中规定限制女职工结婚生育的内容；第28条各民族劳动者享有平等劳动权利；第30条不得以传染病病原携带者为由拒绝录用（经治愈或排除传染嫌疑的）；第31条不得歧视农村劳动者进城就业。第62条：违反本法实施就业歧视的，劳动者可向人民法院提起诉讼。第8-11章规定职业中介、职业培训与就业援助。与《妇女权益保障法》第43条共同构成招聘环节性别歧视禁令。',
+    ref: '全国人大常委会｜主席令第5号（2007年通过，2015年修正）',
+    url: 'https://www.gov.cn/flfg/2007-08/30/content_732597.htm',
+    category: '招聘与配置',
+    modules: ['plan','staff'],
+    chapters: '核心：第3条（平等就业权）、第26条（公平就业条件）、第27条（性别歧视禁令／合同不得限婚育）、第62条（歧视可起诉）'
+  },
+  {
+    title: '中华人民共和国职业教育法（2022年修订，企业培训义务）',
+    desc: '2022年4月20日修订、2022年5月1日起施行，由「教育法」定位升级为「产业人才供给法」。第24条企业应当根据本单位实际，有计划地对本单位职工和准备招用的人员实施职业教育；第25条企业可以按照国家有关规定从营业收入中提取职工教育经费，一般企业按职工工资总额1.5%以上、从业人员技术素质要求高或培训任务重的企业可按2.5%以上提取；第26条企业应当建立职工培训制度，保障职工参加职业培训的时间；第27条企业与职业学校、职业培训机构开展校企合作；第58条企业未按规定提取和使用职工教育经费的，由有关部门责令改正。与《劳动合同法》第22条「专项培训费用＋服务期＋违约金」配合，构成培训与开发模块的法定基础。',
+    ref: '全国人大常委会｜主席令第112号（2022.4.20修订，2022.5.1施行）',
+    url: 'https://www.gov.cn/xinwen/2022-04/20/content_5686342.htm',
+    category: '培训与开发',
+    modules: ['train','plan','comp'],
+    chapters: '核心：第24条（企业职业教育义务）、第25条（职工教育经费1.5%~2.5%）、第26条（培训制度与培训时间保障）、第58条（未提取经费责令改正）'
+  },
+  {
+    title: '专项培训服务期与违约金规则（劳动合同法第22条）',
+    desc: '用人单位为劳动者提供专项培训费用、对其进行专业技术培训的，可以与该劳动者订立协议约定服务期。劳动者违反服务期约定的，应按约定向用人单位支付违约金；违约金数额不得超过用人单位提供的培训费用，且不得超过服务期尚未履行部分所应分摊的培训费用。培训费用包括有凭证的培训费、差旅费、因培训产生的其他直接费用；用人单位内部常规入职培训、岗前培训不属于「专项培训费用」，不得据此约定服务期。约定服务期不影响按正常工资调整机制提高服务期期间的劳动报酬。参考广东高院2026年典型案例「公费出国进修后服务期未满辞职案」：判令按未履行比例折算返还培训费并退回进修期间部分工资福利。',
+    ref: '《劳动合同法》第22条｜《劳动合同法实施条例》第16-17条｜广东高院2026典型案例',
+    url: 'https://www.mohrss.gov.cn/wap/zc/fgwj/202011/t20201102_394622.html',
+    category: '培训与开发',
+    modules: ['train','comp'],
+    chapters: '核心：专项培训费用才服务期 / 违约金≤培训费且按未履行比例递减 / 常规岗前培训不得约定 / 服务期不影响正常调薪'
+  },
+  {
+    title: '不胜任工作解除与绩效考核合规规则（劳动合同法第40条）',
+    desc: '「不能胜任工作」解除须同时满足三步：①有明确、公示、可量化的绩效考核标准且已履行民主程序；②经考核确属不能胜任；③经过培训或者调整工作岗位，仍不能胜任工作的，方可提前30日书面通知或额外支付1个月工资（代通知金）解除，并依法支付经济补偿N。单次考核不合格、仅凭笔试成绩、末位淘汰均不能直接认定为「不能胜任」；调岗须具备合理性（岗位性质相近、薪酬调整合理）。单方解除还须事先将理由通知工会（第43条），程序违法同样构成违法解除（2N）。参考：新疆伊犁州分院2026年二审「考试不合格即认定不胜任解除违法案」、上海「不胜任调岗降薪后解除合同案」、北京三中院「工作量饱和拒绝加班被违法解除案」。',
+    ref: '《劳动合同法》第40条第(二)项、第43条、第46条、第87条｜最高法及各地高院典型案例',
+    url: 'https://www.mohrss.gov.cn/wap/zc/fgwj/202011/t20201102_394622.html',
+    category: '绩效管理',
+    modules: ['perf','er'],
+    chapters: '核心：考核标准明确→确属不胜任→培训或调岗后仍不胜任→N+1或提前30日→通知工会｜末位淘汰不等于不胜任｜违法解除2N'
   }
 ];
 
@@ -3068,6 +3215,49 @@ const cityData = {
   chengdu: { name:'成都', minWage:'2,330', minWageDate:'2026年（四川第一档）', socAvg:'7,831', socAvgDate:'2026年度（2026.09.07公布）', pensionEmp:'8%', pensionCom:'16%', medicalEmp:'2%', medicalCom:'9.4%', unemploymentEmp:'0.4%', unemploymentCom:'0.6%', injuryCom:'0.1%-1.425%', maternityCom:'0.8%', housingFundEmp:'5%-12%', housingFundCom:'5%-12%', housingFundMin:'2,330', housingFundMax:'22,938', socBaseMin:'4,699', socBaseMax:'23,493', econCompAvg:'10,990', econCompCap:'32,969', econCompBasis:{text:'成都市统计局 2025年非私营就业人员年平均131,874元÷12｜注：在岗职工数据可能略高｜《劳动合同法》第四十七条',url:'https://cdstats.chengdu.gov.cn/cdstjj/c154738/2026-07/06/content_01a397f363af49aa974213b93aa17e2e.shtml'}, policies:[{title:'四川省2026年度社保缴费基数调整',desc:'2026年9月7日公布，职工基本养老、失业、工伤保险缴费基数上限调整为每月23,493元，下限调整为每月4,699元。',ref:'四川省人社厅、财政厅｜2026.09.07',url:'https://rst.sc.gov.cn/'},{title:'成都市劳动用工和社会保险管理暂行规定',desc:'统一规范用工管理和社保缴纳的综合性地方法规',ref:'成都市人民政府令第193号',url:'https://cdhrss.chengdu.gov.cn/'},{title:'四川省企业工资集体协商办法',desc:'工资集体协商制度及最低工资保障',ref:'四川省人民政府令第279号',url:'https://www.sc.gov.cn/10462/c108923/2012/11/28/96924ebc23174961a1de6f4c03f0be5b.shtml'},{title:'成都市工伤保险实施办法',desc:'工伤预防、认定、待遇和康复服务',ref:'成都市人民政府',url:'https://cdhrss.chengdu.gov.cn/'},{title:'成都市城镇职工基本医疗保险办法',desc:'职工基本医保的门诊、住院待遇标准',ref:'成都市人民政府',url:'https://cdhrss.chengdu.gov.cn/'},{title:'四川省失业保险条例',desc:'失业保险待遇申领条件和促进就业措施',ref:'四川省人大常委会',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/2d14f0f0c0d84beeb74b4e454ecf94f3.pdf'},{title:'成都市人才安居资格认定办法',desc:'人才公寓、产业园区配套住房等安居政策',ref:'成都市住建局',url:'https://cdzj.chengdu.gov.cn/cdzj/c150804/2021-12/21/content_e80a42efe11046848567cc74dfd476e0.shtml'},{title:'四川省工伤保险条例',desc:'2021年施行，省级工伤保险专项立法，扩大覆盖范围',ref:'四川省人大常委会 2021年',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/44dba5d4ac2d496c9adac3cb54d0119b.pdf'},{title:'四川省失业保险条例实施办法',desc:'失业保险金标准和申领程序的省级细化',ref:'四川省人民政府',url:'https://rst.sc.gov.cn/'},{title:'成都市生育保险和职工基本医疗保险合并实施办法',desc:'生育保险与医疗保险合并后的待遇标准',ref:'成都市人民政府',url:'https://cdyb.chengdu.gov.cn/ylbzj/c128998/2019-12/31/e4319003cfe483d88f2f1f465329e4e/files/7cce239ae40a479c9246fc8b90693249.pdf'},{title:'成都市劳动争议仲裁委员会办案细则',desc:'劳动争议案件的受理、审理和裁决程序',ref:'成都市人社局',url:'https://cdhrss.chengdu.gov.cn/'},{title:'四川省人口与计划生育条例（假期规定）',desc:'婚假20天（婚检25天）；产假188天（98+90），三孩可再+30天=218天；陪产假（护理假）30天；育儿假每方10个工作日/年（子女3岁前）。假期视为出勤，工资照发。',ref:'四川省人大常委会 2025年修订',url:'https://rst.sc.gov.cn/rst/zcfaguidfxfg/2026/4/14/48ecca0b22a843468877d9a6887f448e.shtml'},{title:'四川省老年人权益保障条例（护理假）',desc:'老年人患病住院不能自理的，独生子女≤15天/年，非独生子女≤7天/年护理照料。护理期间工资福利不变。',ref:'四川省人大常委会 2018年',url:'https://mzt.sc.gov.cn/scmzt/wsxx/wsxx_detail.shtml?id=ed602a3bad6d496b9526bf75d15d8632'},{title:'四川省超龄等从业人员参加工伤保险办法',desc:'2024年3月1日起，从业单位可为65周岁以下超龄从业人员（含已领取城镇职工养老保险者）、16周岁以上实习学生、规培生、见习人员等单险种参加工伤保险。单位自愿参保，个人不缴费。有效期5年。',ref:'川人社规〔2024〕1号',url:'https://chinajob.mohrss.gov.cn/c/2024-03-01/398399.shtml'},{title:'成都个人所得税住房租金专项附加扣除标准与年度汇算',desc:'纳税人本人或配偶在主要工作城市没有自有住房而发生的住房租金支出，在本市可按每月1,500元的标准定额扣除（成都属省会城市，适用该档标准）；纳税人及其配偶在一个纳税年度内不得同时分别享受住房贷款利息和住房租金两项扣除，只能二选一。全年一次性奖金在2027年12月31日前可选择不并入当年综合所得、单独计税（奖金收入÷12后按月度税率表确定税率），一个纳税年度内每人仅限采用一次。综合所得年度汇算清缴期为次年3月1日至6月30日，通过个人所得税APP办理；专项附加扣除信息须在每年12月1日至31日确认下一年度信息，信息无变化可「一键带入」。',ref:'国发〔2023〕13号｜财政部 税务总局公告2023年第30号｜《个人所得税法》第11条',url:'https://www.chinatax.gov.cn/'},{title:'成都残疾人就业保障金（残保金）申报缴纳',desc:'本市用人单位安排残疾人就业比例未达到本单位在职职工总数1.5%的，应当缴纳残保金。年缴纳额 =（上年用人单位在职职工人数 × 1.5% − 上年用人单位实际安排的残疾人就业人数）× 上年用人单位在职职工年平均工资，年平均工资上限按当地社会平均工资的2倍执行。2023年1月1日至2027年12月31日延续两项优惠：在职职工总数30人（含）以下的企业暂免征收；安排残疾人就业比例达到1%（含）但未达1.5%的按应缴费额的50%缴纳，比例在1%以下的按应缴费额的90%缴纳；安排1名1—2级残疾人证或1—3级残疾军人证人员就业的按安排2名计算。安排残疾人就业人数以残疾人联合会「联网认证」审核数据为准（全国联网认证期一般为每年3月1日至10月31日），未在规定时限申报的视为未安排残疾人就业。保障金由用人单位向所在地税务机关自行申报缴纳，逾期不缴纳的除补缴欠缴数额外，按日加收5‰滞纳金。',ref:'财税〔2015〕72号｜财政部公告2019年第98号｜《残疾人就业条例》（国务院令第488号）',url:'https://www.chinatax.gov.cn/'},{title:'成都退休办理、延迟退休执行与养老金领取资格认证',desc:'本市自2025年1月1日起执行国家渐进式延迟法定退休年龄政策：男职工由60周岁逐步延迟至63周岁（每4个月延迟1个月），原法定55周岁的女职工（管理岗/干部）延迟至58周岁（每4个月延迟1个月），原法定50周岁的女职工（工人岗）延迟至55周岁（每2个月延迟1个月）。同步执行《实施弹性退休制度暂行办法》（人社部发〔2024〕94号）：达到国家规定最低缴费年限的职工可自愿选择弹性提前退休，提前时间距法定退休年龄最长不超过3年且不得低于原法定退休年龄，须至少提前3个月书面告知所在单位；达到法定退休年龄后与所在单位协商一致的，可弹性延迟退休，最长不超过3年，须提前1个月书面明确，延迟期间劳动关系延续并继续缴纳社会保险费。最低缴费年限：2029年12月31日前退休的仍为15年，2030年1月1日起每年提高6个月至2039年及以后统一为20年。本人法定退休年龄可通过国家社会保险公共服务平台、全国人社政务服务平台、电子社保卡「法定退休年龄计算器」、掌上12333 APP 查询。可通过「天府通办」、成都市人力资源和社会保障局网上服务平台及社保经办机构办理退休手续与查询。养老金领取资格认证实行递延认证（一般每365天内完成一次），可通过电子社保卡人脸识别、上述政务平台或社保经办窗口办理，逾期未认证将按规定暂停发放基本养老金，完成认证后恢复并补发。弹性提前退休从审核通过的退休时间次月起领取基本养老金，养老待遇不扣减。',ref:'全国人大常委会关于实施渐进式延迟法定退休年龄的决定（2024.09.13）｜人社部发〔2024〕94号｜12333人社服务热线',url:'https://www.mohrss.gov.cn/'}] },
   suzhou: { name:'苏州', minWage:'2,660', minWageDate:'2026年（江苏第一档）', socAvg:'约8,253', socAvgDate:'2026年度（暂按2025标准）', pensionEmp:'8%', pensionCom:'16%', medicalEmp:'2%+5元', medicalCom:'7%+1%', unemploymentEmp:'0.5%', unemploymentCom:'0.5%', injuryCom:'0.2%-1.9%', maternityCom:'0.8%', housingFundEmp:'5%-12%', housingFundCom:'5%-12%', housingFundMin:'2,660', housingFundMax:'24,762', socBaseMin:'4,952', socBaseMax:'24,762', econCompAvg:'12,364', econCompCap:'37,091', econCompBasis:{text:'苏州市统计局 2025年非私营在岗职工年平均148,364元÷12｜《劳动合同法》第四十七条',url:'https://tjj.suzhou.gov.cn/sztjj/rdwd/202606/5c41527977254069a812a7f991ea2447.shtml'}, policies:[{title:'江苏省劳动合同条例',desc:'省级劳动合同管理的详细规范，含电子合同法律效力',ref:'江苏省人大常委会',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/8e3e34e0e1e0454281f2b98bbb96c8ad.pdf'},{title:'苏州市工资支付条例',desc:'工资发放、加班费、假期工资的具体标准',ref:'苏州市人社局',url:'https://hrss.suzhou.com.cn/'},{title:'江苏省实施《工伤保险条例》办法',desc:'工伤认定、待遇标准和争议处理机制',ref:'江苏省人民政府令第103号',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/12be10b2a92f499ea94e6e266eb65c3e.pdf'},{title:'苏州市社会基本医疗保险管理办法',desc:'职工医保待遇、个人账户和门诊统筹',ref:'苏州市人民政府令第155号',url:'https://www.suzhou.gov.cn/szsrmzf/szfzfgz/201608/8619c8dafd7f4bec98ffa9f38b5072f2/files/f42705d5f30d406ca4a6b78cc3587388.pdf'},{title:'江苏省女职工劳动保护特别规定',desc:'女职工特殊保护、产假延长至158天',ref:'江苏省人民政府令第122号',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/7e0c35e89f854ad99a2e8fba1ca26c95.pdf'},{title:'苏州市人才乐居工程实施意见',desc:'人才购房贴、租房贴、直通车等乐居政策',ref:'苏州市人民政府',url:'https://rcsz.hrss.suzhou.com.cn/download/pdf/%E8%8B%8F%E5%B7%9E%E5%B8%82%E4%BA%BA%E6%89%8D%E4%B9%90%E5%B1%85%E5%B7%A5%E7%A8%8B%E5%AE%9E%E6%96%BD%E6%84%8F%E8%A7%81.pdf'},{title:'江苏省工资支付条例',desc:'省级工资支付的详细规范，明确加班费和假期工资计算规则',ref:'江苏省人大常委会',url:'https://www.jsrd.gov.cn/qwfb/sjfg/202606/t20260603_1335323.shtml'},{title:'江苏省劳动保护条例',desc:'省级安全生产和劳动保护综合法规',ref:'江苏省人大常委会',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/ed3b307bc36a49f29dee3b48c63bbfd0.pdf'},{title:'江苏省实施《工伤保险条例》办法（2024修正）',desc:'2024年修正版，调整工伤保险待遇标准和程序',ref:'江苏省人民政府令第103号（2024修正）',url:'https://wb.flk.npc.gov.cn/dfxfg/PDF/12be10b2a92f499ea94e6e266eb65c3e.pdf'},{title:'苏州市就业和失业登记管理办法',desc:'就业登记、失业登记和就业援助的操作规程',ref:'苏州市人社局',url:'https://hrss.suzhou.com.cn/'},{title:'江苏省人口与计划生育条例（假期规定）',desc:'婚假13天（3+10）；产假≥158天（98+≥60）；陪产假≥15天；育儿假每方≥5天/年（鼓励）。假期视为出勤，工资照发。',ref:'江苏省人大常委会 2024年修订',url:'https://www.jsrd.gov.cn/qwfb/sjfg/202606/t20260603_1335323.shtml'},{title:'江苏省养老服务条例（护理假）',desc:'独生子女父母≥60岁患病住院期间，独生子女每年≥5天带薪护理假。假期视同正常劳动并支付工资。',ref:'江苏省人大常委会 2022年',url:'https://mzt.jiangsu.gov.cn/art/2025/7/18/art_78628_11603689.html'},{title:'江苏省超过法定退休年龄人员和实习生参加工伤保险办法',desc:'用工单位可为65周岁以下、未办理退休手续的超龄就业人员单险种参加工伤保险。参保缴费、认定鉴定、待遇标准参照《工伤保险条例》执行。截至2024年底，江苏全省已有14.2万名超龄人员单独参加工伤保险。',ref:'苏人社规〔2020〕',url:'https://jshrss.jiangsu.gov.cn/art/2025/7/14/art_77353_11616701.html'},{title:'苏州个人所得税住房租金专项附加扣除标准与年度汇算',desc:'纳税人本人或配偶在主要工作城市没有自有住房而发生的住房租金支出，在本市可按每月1,100元的标准定额扣除（苏州属市辖区户籍人口超过100万的城市，适用该档标准）；纳税人及其配偶在一个纳税年度内不得同时分别享受住房贷款利息和住房租金两项扣除，只能二选一。全年一次性奖金在2027年12月31日前可选择不并入当年综合所得、单独计税（奖金收入÷12后按月度税率表确定税率），一个纳税年度内每人仅限采用一次。综合所得年度汇算清缴期为次年3月1日至6月30日，通过个人所得税APP办理；专项附加扣除信息须在每年12月1日至31日确认下一年度信息，信息无变化可「一键带入」。',ref:'国发〔2023〕13号｜财政部 税务总局公告2023年第30号｜《个人所得税法》第11条',url:'https://www.chinatax.gov.cn/'},{title:'苏州残疾人就业保障金（残保金）申报缴纳',desc:'本市用人单位安排残疾人就业比例未达到本单位在职职工总数1.5%的，应当缴纳残保金。年缴纳额 =（上年用人单位在职职工人数 × 1.5% − 上年用人单位实际安排的残疾人就业人数）× 上年用人单位在职职工年平均工资，年平均工资上限按当地社会平均工资的2倍执行。2023年1月1日至2027年12月31日延续两项优惠：在职职工总数30人（含）以下的企业暂免征收；安排残疾人就业比例达到1%（含）但未达1.5%的按应缴费额的50%缴纳，比例在1%以下的按应缴费额的90%缴纳；安排1名1—2级残疾人证或1—3级残疾军人证人员就业的按安排2名计算。安排残疾人就业人数以残疾人联合会「联网认证」审核数据为准（全国联网认证期一般为每年3月1日至10月31日），未在规定时限申报的视为未安排残疾人就业。保障金由用人单位向所在地税务机关自行申报缴纳，逾期不缴纳的除补缴欠缴数额外，按日加收5‰滞纳金。',ref:'财税〔2015〕72号｜财政部公告2019年第98号｜《残疾人就业条例》（国务院令第488号）',url:'https://www.chinatax.gov.cn/'},{title:'苏州退休办理、延迟退休执行与养老金领取资格认证',desc:'本市自2025年1月1日起执行国家渐进式延迟法定退休年龄政策：男职工由60周岁逐步延迟至63周岁（每4个月延迟1个月），原法定55周岁的女职工（管理岗/干部）延迟至58周岁（每4个月延迟1个月），原法定50周岁的女职工（工人岗）延迟至55周岁（每2个月延迟1个月）。同步执行《实施弹性退休制度暂行办法》（人社部发〔2024〕94号）：达到国家规定最低缴费年限的职工可自愿选择弹性提前退休，提前时间距法定退休年龄最长不超过3年且不得低于原法定退休年龄，须至少提前3个月书面告知所在单位；达到法定退休年龄后与所在单位协商一致的，可弹性延迟退休，最长不超过3年，须提前1个月书面明确，延迟期间劳动关系延续并继续缴纳社会保险费。最低缴费年限：2029年12月31日前退休的仍为15年，2030年1月1日起每年提高6个月至2039年及以后统一为20年。本人法定退休年龄可通过国家社会保险公共服务平台、全国人社政务服务平台、电子社保卡「法定退休年龄计算器」、掌上12333 APP 查询。可通过「苏周到」、江苏智慧人社及苏州市社会保险经办机构办理退休手续与查询。养老金领取资格认证实行递延认证（一般每365天内完成一次），可通过电子社保卡人脸识别、上述政务平台或社保经办窗口办理，逾期未认证将按规定暂停发放基本养老金，完成认证后恢复并补发。弹性提前退休从审核通过的退休时间次月起领取基本养老金，养老待遇不扣减。',ref:'全国人大常委会关于实施渐进式延迟法定退休年龄的决定（2024.09.13）｜人社部发〔2024〕94号｜12333人社服务热线',url:'https://www.mohrss.gov.cn/'}] }
 };
+
+// ==================== 2026 年度各地最新法令核验更新（2026-11-10） ====================
+// 数据来源：人社部《全国各省最低工资标准情况（截至2026.10.1）》及浙/苏/鄂三省人社厅官方公告。
+// 只做「增量注入」，不改写上方 cityData 原始数据行，便于后续逐月维护。
+var LEGAL_2026_BASE = {
+  hangzhou: { socAvg:'8,537', socAvgDate:'2026年度（浙人社 2026.10.08 公布）', socBaseMin:'5,122', socBaseMax:'25,611' },
+  suzhou:   { socAvg:'8,376', socAvgDate:'2026年度（苏人社发〔2026〕30号，2026.10.08 公布）', socBaseMin:'5,025', socBaseMax:'25,127' },
+  wuhan:    { socAvg:'7,587', socAvgDate:'2026社保年度（鄂人社发〔2026〕29号，2026.08.12）', socBaseMin:'4,552', socBaseMax:'22,761' }
+};
+var LEGAL_2026_NEWS = {
+  hangzhou: [
+    { title:'浙江省2026年度社会保险缴费基数调整（最新）', desc:'2025年度全省非私营与私营单位就业人员加权平均工资 102,446 元/年（8,537 元/月）。2026年度缴费基数上限 25,611 元/月（较上年 +312 元）、下限 5,122 元/月（较上年 +136 元）。自2026年1月1日起，下限恢复按上一年度加权平均工资的60%执行，不再沿用上上年度口径。2026年度新退休人员养老金及医保、工伤待遇计发基数同步按 8,537 元/月计算。', ref:'浙江省人社厅等5部门《关于公布2026年度社会保险有关基数的通知》｜2026.10.08', url:'https://www.zj.gov.cn/col/col1229093916/art/2026/art_b76f671b3fb6e12b167a34754047e2bd.html', modules:['comp'] }
+  ],
+  suzhou: [
+    { title:'江苏省2026年度社会保险缴费基数调整（最新）', desc:'苏人社发〔2026〕30号：2026年1月1日至12月31日，全省职工基本养老保险缴费工资基数上限 25,127 元、下限 5,025 元；职工基本医疗保险、失业保险、工伤保险、生育保险缴费工资基数上下限同步按此执行。因基数调整产生的补差部分，参保单位及职工可在2026年12月31日前分次或一次性缴清，期间不加收滞纳金和利息。灵活就业人员医保缴费基数为 5,025 元、月缴 407 元（含5元大额医疗费用社会共济基金）。', ref:'江苏省人社厅、财政厅、医保局、税务局｜苏人社发〔2026〕30号｜2026.10.08', url:'https://www.suzhou.gov.cn/szsrmzf/mszx/202610/66f00381bed6498b9fbb9493287bd6fb.shtml', modules:['comp'] }
+  ],
+  wuhan: [
+    { title:'湖北省2026社保年度社会保险缴费基数调整（最新）', desc:'鄂人社发〔2026〕29号（2026.8.12）：2026社保年度（2026.7.1—2027.6.30）全省社会保险缴费基数月标准 7,587 元，个人缴费基数上限 22,761 元、下限 4,552 元。职工基本医保单位按缴费基数 8%（其中基本医疗8%、生育0.7%口径按当地执行）、个人 2% 另缴大额医保 7 元/月。注：2026年1—6月曾按鄂人社发〔2026〕8号执行月标准 7,504 元／上限 22,512 元／下限 4,502 元，本页已更新为最新社保年度标准。', ref:'湖北省人社厅、省医保局、省税务局｜鄂人社发〔2026〕29号｜2026.08.12', url:'https://rst.hubei.gov.cn/zfxxgk/zc/qtzdgkwj/202610/t20261008_6027858.shtml', modules:['comp'] }
+  ],
+  beijing: [
+    { title:'北京市女职工劳动保护与三期保护规定（现行依据汇总）', desc:'国家层面依据《妇女权益保障法》第43-48条（禁止招聘询问婚育／三期不得降薪辞退／合同期满自动顺延至三期结束）与《女职工劳动保护特别规定》（附录禁忌劳动范围、每日1小时哺乳时间、怀孕7个月以上及哺乳未满1周岁不得加班或夜班）。北京本地假期依据《北京市人口与计划生育条例》：婚假10天、产假158天（98+60）、陪产假15天、育儿假每方5个工作日/年/孩（子女3周岁前），假期视同出勤；独生子女父母护理假每年累计≤10个工作日。', ref:'《妇女权益保障法》+ 国务院令619号 +《北京市人口与计划生育条例》｜核验至2026.11.10', url:'https://www.beijing.gov.cn/', modules:['er','comp','staff'] }
+  ],
+  shenzhen: [
+    { title:'广东省女职工劳动保护与三期保护规定（现行依据汇总）', desc:'国家层面依据《妇女权益保障法》第43-48条与《女职工劳动保护特别规定》；广东省依据《广东省实施〈女职工劳动保护特别规定〉办法》及《广东省人口与计划生育条例》：婚假3天、产假178天（98+80）、陪产假15天、育儿假每方10天/年（子女3周岁前）。三期不得降薪、不得变相调岗、合同期满自动顺延；孕期不能适应原劳动的须凭医疗机构证明减轻劳动量或调整岗位；用人单位应书面告知禁忌岗位、按规定设置孕妇休息室与哺乳室。深圳福田区总工会2026年劳动法律监督提示函再次明确上述义务。', ref:'《妇女权益保障法》+ 国务院令619号 +《广东省人口与计划生育条例》｜核验至2026.11.10', url:'https://www.szft.gov.cn/bmxx_qt/qzgh/ztzl/flfwdxm/flfwxm/content/post_12685151.html', modules:['er','comp','staff'] }
+  ],
+  qingdao: [
+    { title:'山东省女职工劳动保护办法与三期保护规定（现行依据汇总）', desc:'国家层面依据《妇女权益保障法》第43-48条与《女职工劳动保护特别规定》；山东省依据《山东省女职工劳动保护办法》及《山东省人口与计划生育条例》（2025年修订）：婚假15天（参加婚检18天）、产假158天（98+60）、陪产假不少于15天、育儿假每方不少于10天/年（子女3周岁前），假期工资照发、福利不变。三期不得降薪辞退、合同期满自动顺延至三期结束；每日1小时哺乳时间；不得安排经期／孕期／哺乳期禁忌劳动。', ref:'《妇女权益保障法》+ 国务院令619号 +《山东省女职工劳动保护办法》+《山东省人口与计划生育条例》｜核验至2026.11.10', url:'https://hrss.shandong.gov.cn/', modules:['er','comp','staff'] }
+  ],
+  chengdu: [
+    { title:'四川省女职工三期保护与生育假期规定（现行依据汇总）', desc:'国家层面依据《妇女权益保障法》第43-48条与《女职工劳动保护特别规定》；四川省依据《四川省人口与计划生育条例》及生育保险与职工基本医保合并实施办法。三期保护刚性要求：不得因怀孕、生育、哺乳降低工资福利或单方解除；孕期不能适应原劳动的凭医疗机构证明减轻劳动量或调岗；怀孕7个月以上、哺乳未满1周岁不得延长工时或安排夜班；产检时间计入劳动时间；每日1小时哺乳时间（多胞胎每多1个+1小时）；合同期满顺延至三期结束。生育津贴按用人单位上年度职工月平均工资计发。', ref:'《妇女权益保障法》+ 国务院令619号 +《四川省人口与计划生育条例》｜核验至2026.11.10', url:'https://rst.sc.gov.cn/', modules:['er','comp','staff'] }
+  ]
+};
+(function applyLegal2026(){
+  Object.keys(LEGAL_2026_BASE).forEach(function(k){ if(cityData[k]) Object.assign(cityData[k], LEGAL_2026_BASE[k]); });
+  var mwUrl = 'https://www.mohrss.gov.cn/SYrlzyhshbzb/laodongguanxi_/fwyd/202610/t20261008_585187.html';
+  Object.keys(cityData).forEach(function(k){
+    var d = cityData[k];
+    var add = (LEGAL_2026_NEWS[k] || []).slice();
+    add.push({ title: d.name + '2026年最低工资标准核验（人社部截至2026.10.1）', desc:'人社部《全国各省、自治区、直辖市最低工资标准情况（截至2026年10月1日）》：' + d.name + '适用第一档月最低工资 ' + d.minWage + ' 元/月。该标准同时影响：病假工资下限、停工期间工资、竞业限制补偿金下限、一裁终局金额上限（当地月最低工资×12个月）、非全日制小时最低工资。', ref:'人力资源和社会保障部劳动关系司｜2026.10.08发布｜核验至2026.11.10', url:mwUrl, modules:['comp'] });
+    d.policies = add.concat(d.policies);
+    d.asOf2026 = '2026-11-10';
+  });
+})();
 
 const caseData = [
   { id:1,type:'termination',typeName:'解除合同',city:'上海',title:'试用期不合格解除劳动合同案',summary:'公司以"试用期不符合录用条件"单方解除合同，但未提供明确的录用条件和考核标准',law:'《劳动合同法》第39条',ruling:'用人单位需举证录用条件已明确告知且考核标准客观，否则构成违法解除，应支付赔偿金2N',date:'2024.03.15',detail:'员工张某入职某科技公司担任产品经理，试用期6个月。试用期第5个月末，公司以"不符合录用条件"为由解除劳动合同。张某申请劳动仲裁，认为公司从未明确告知录用条件，也未进行过任何绩效考核。仲裁庭查明：公司无法提供经张某签字确认的岗位录用条件；试用期考核系领导主观评价，无量化标准。最终裁决公司违法解除，支付赔偿金（2倍经济补偿）共计86,000元。' },
@@ -3120,13 +3310,20 @@ const caseData = [
 // ==================== 全国法规渲染 ====================
 function renderNationalLaws() {
   const container = document.getElementById('legalContent');
-  const categories = [...new Set(nationalLaws.map(l => l.category))];
+  const shown = nationalLaws.filter(hr6Pass);
+  const categories = [...new Set(shown.map(l => l.category))]
+    .sort(function(a,b){ return (a==='女职工与三期保护'?-1:0) - (b==='女职工与三期保护'?-1:0); });
+  hr6Stat(shown.length, nationalLaws.length);
+  if (!shown.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>所选 HR 模块下暂无全国法规</p><p style="font-size:13px;color:var(--text-secondary);">可点击「✕ 清除」返回全部，或改选其他模块（可复选）</p></div>';
+    return;
+  }
   
   let html = `<div class="legal-grid" style="margin-bottom:20px">`;
   
   // 按分类分组展示
   categories.forEach(cat => {
-    const laws = nationalLaws.filter(l => l.category === cat);
+    const laws = shown.filter(l => l.category === cat);
     html += `
       <div class="legal-card">
         <h4><span class="dot"></span>📜 ${cat}</h4>
@@ -3159,14 +3356,14 @@ function searchLegal() {
   // 搜索全国法规
   nationalLaws.forEach(l => {
     if (l.title.toLowerCase().includes(keyword) || l.desc.toLowerCase().includes(keyword) || l.category.toLowerCase().includes(keyword)) {
-      allPolicies.push({ title: l.title, desc: l.desc + '——' + l.chapters, ref: l.ref, city: '全国', url: l.url || '' });
+      allPolicies.push({ title: l.title, desc: l.desc + '——' + l.chapters, ref: l.ref, city: '全国', url: l.url || '', modules: l.modules || lawModulesOf(l) });
     }
   });
   // 搜索地方法规
   Object.entries(cityData).forEach(([key, data]) => {
     data.policies.forEach(p => {
       if (p.title.toLowerCase().includes(keyword) || p.desc.toLowerCase().includes(keyword)) {
-        allPolicies.push({ ...p, city: data.name });
+        allPolicies.push({ ...p, city: data.name, modules: p.modules || lawModulesOf(p) });
       }
     });
   });
@@ -3179,13 +3376,15 @@ function searchLegal() {
   });
 
   const container = document.getElementById('legalContent');
-  if (allPolicies.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>未找到与"${keyword}"相关的法规政策</p><p style="font-size:13px;color:var(--text-secondary);">请尝试其他关键词，如：劳动合同、工资、工伤、社保、公积金等</p></div>`;
+  const matched = allPolicies.filter(hr6Pass);
+  hr6Stat(matched.length, allPolicies.length);
+  if (matched.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>未找到与"${keyword}"相关且符合当前 HR 模块的法规政策</p><p style="font-size:13px;color:var(--text-secondary);">请更换关键词，或点击「✕ 清除」取消 HR 模块筛选后重试</p></div>`;
   } else {
     container.innerHTML = `
-      <p style="margin-bottom:16px;color:var(--text-secondary);">找到 <strong>${allPolicies.length}</strong> 条与"<strong>${keyword}</strong>"相关的法规：</p>
+      <p style="margin-bottom:16px;color:var(--text-secondary);">找到 <strong>${matched.length}</strong> 条与"<strong>${keyword}</strong>"相关的法规：</p>
       <div class="policy-list">
-        ${allPolicies.map(p => `
+        ${matched.map(p => `
           <div class="policy-item" onclick="showPolicyDetail('${p.title.replace(/'/g, "\\'")}', '${p.desc.replace(/'/g, "\\'")}', '${p.ref.replace(/'/g, "\\'")}', '${p.city}', '${(p.url || '').replace(/'/g, "\\'")}')">
             <div class="policy-title">${p.title}</div>
             <div class="policy-desc">${p.desc}</div>
@@ -3246,6 +3445,7 @@ function closeModal(event) {
 // ==================== 重置 & 返回主页 ====================
 function resetLegal() {
   document.getElementById('legalSearchInput').value = '';
+  HR6_SEL.clear(); hr6RenderChips();
   const activeTab = document.querySelector('.city-tab.active');
   const city = activeTab ? activeTab.dataset.city : 'national';
   if (!activeTab) {
@@ -6428,7 +6628,7 @@ var currentModule = 'all'; // 'all' = 显示全部
 function switchModule(target) {
   currentModule = target;
   // 外部报告是独立页面，直接跳转
-  if (target === 'report') { location.href = 'report.html'; return; }
+  if (target === 'report') { location.href = 'report.html?v=21'; return; }
   var sidebar = document.getElementById('appSidebar');
   var main = document.getElementById('appMain');
   if (!main) return;
