@@ -562,6 +562,9 @@ function wpgInitGroupFilter(){
   root.querySelectorAll('[data-wpggrp],[data-wpgnarr]').forEach(function(el){
     el.removeAttribute('data-wpggrp'); el.removeAttribute('data-wpgnarr'); el.style.display='';
   });
+  root.querySelectorAll('[data-wpgdup],[data-wpgsec],[data-wpgsecid],[data-wpgsecof],[data-wpgsecline]').forEach(function(el){
+    ['data-wpgdup','data-wpgsec','data-wpgsecid','data-wpgsecof','data-wpgsecline'].forEach(function(a){ el.removeAttribute(a); });
+  });
   root.querySelectorAll('h3,h4').forEach(function(el){ el.style.display=''; });
   if(!wrap) return;
 
@@ -611,7 +614,32 @@ function wpgInitGroupFilter(){
     if(!/集团/.test(head)) tb.setAttribute('data-wpgnarr','1');
   });
 
-  // ⑤ 生成筛选 chips
+  // ⑥ 章节边界：蓝色 sec-hd 后紧跟的 h2#sN 是重复标题；整节无可见内容时连标题一起收起
+  var body = wrap.querySelector('.wrap') || wrap;
+  var kids = Array.prototype.slice.call(body.children);
+  var secStarts = [];
+  kids.forEach(function(el, i){ if(el.classList && el.classList.contains('sec-hd')) secStarts.push(i); });
+  // 第一节 h2#s1 没有蓝色 sec-hd，单独作为一个章节
+  var firstSec = secStarts.length ? secStarts[0] : kids.length;
+  var h1 = body.querySelector('h2#s1');
+  if(h1){
+    h1.setAttribute('data-wpgsec','pre');
+    for(var p0=0; p0<firstSec; p0++) kids[p0].setAttribute('data-wpgsecof','pre');
+  }
+  secStarts.forEach(function(st, si){
+    var en=(si+1<secStarts.length)?secStarts[si+1]:kids.length;
+    var hd=kids[st], nxt=hd.nextElementSibling;
+    hd.setAttribute('data-wpgsec',String(si));
+    if(nxt && nxt.tagName==='H2' && /^s\d+$/.test(nxt.id||'')){
+      hd.setAttribute('data-wpgsecid',nxt.id);
+      nxt.setAttribute('data-wpgdup','1');   // 与蓝色标题重复，筛选集团时收起
+    }
+    for(var q=st+1;q<en;q++) kids[q].setAttribute('data-wpgsecof',String(si));
+    var prev=hd.previousElementSibling;
+    if(prev && prev.classList && prev.classList.contains('divider')) prev.setAttribute('data-wpgsecline',String(si));
+  });
+
+  // ⑦ 生成筛选 chips
   var box=document.getElementById('wpgGroupChips');
   if(box){
     box.innerHTML=WPG_GROUPS.map(function(g){
@@ -643,6 +671,30 @@ function wpgApplyGroup(g, keepNarr){
   root.querySelectorAll('h3,h4').forEach(function(el){
     if(el.hasAttribute('data-wpggrp')) return;
     el.style.display=(isAll || WPG_NARR_OPEN)?'':'none';
+  });
+  // ⑧ 与蓝色 sec-hd 重复的章节标题（h2#sN）：筛选集团时收起，避免只剩一个空标题
+  root.querySelectorAll('[data-wpgdup]').forEach(function(el){ el.style.display=isAll?'':'none'; });
+  // ⑨ 整节无任何真实可见内容时，连蓝色标题 / 目录链接 / 分隔线一起收起
+  var secHas={};
+  root.querySelectorAll('[data-wpgsecof]').forEach(function(el){
+    if(el.hasAttribute('data-wpgdup')) return;
+    if(el.classList && (el.classList.contains('sec-hd') || el.classList.contains('divider'))) return;
+    if(/^H[1-6]$/.test(el.tagName)) return;              // 纯标题不算内容
+    if(el.getClientRects().length>0) secHas[el.getAttribute('data-wpgsecof')]=true;
+  });
+  root.querySelectorAll('[data-wpgsec]').forEach(function(hd){
+    var si=hd.getAttribute('data-wpgsec');
+    var show=isAll || WPG_NARR_OPEN || !!secHas[si];
+    hd.style.display=show?'':'none';
+    var sid=hd.getAttribute('data-wpgsecid');
+    if(sid){
+      var a=root.querySelector('.nav a[href="#'+sid+'"]');
+      if(a) a.style.display=show?'':'none';
+    }
+  });
+  root.querySelectorAll('[data-wpgsecline]').forEach(function(d){
+    var si=d.getAttribute('data-wpgsecline');
+    d.style.display=(isAll || WPG_NARR_OPEN || !!secHas[si])?'':'none';
   });
   var box=document.getElementById('wpgGroupChips');
   if(box) box.querySelectorAll('.wpg-chip').forEach(function(c,i){
