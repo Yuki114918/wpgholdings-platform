@@ -5091,15 +5091,24 @@ async function wpgLoadRecruitment() {
           if (!res.ok) throw new Error('http' + res.status);
           var js = await res.text();
           var sc = document.createElement('script'); sc.textContent = js; document.head.appendChild(sc);
-          if (validate && !validate()) continue;
+          if (validate && !validate()) { window.RECRUIT_V2 = null; throw new Error('STALE_DATA'); }
           return true;
-        } catch (e) { console.warn('招聘v2数据从 ' + DATA_BASES[b] + ' 尝试' + (attempt + 1) + '失败:', e.message || e); }
+        } catch (e) {
+          console.warn('招聘v2数据从 ' + DATA_BASES[b] + ' 尝试' + (attempt + 1) + '失败:', e.message || e);
+          if (e && e.message === 'STALE_DATA') break;   // 口径过期：不再重试该源，直接换下一个
+        }
       }
     }
     return false;
   }
   var ok = await tryLoad('recruit-v2.js', function () {
-    return !!(window.RECRUIT_V2 && window.RECRUIT_V2.slots && window.RECRUIT_V2.meta && window.RECRUIT_V2.meta.counts);
+    var r = window.RECRUIT_V2;
+    if (!(r && r.slots && r.offers && r.meta && r.meta.counts)) return false;
+    var f = r.meta.filters || {};
+    // 2026-11-10 口径守卫：职缺侧不再单列「待入职」，Offer 判定须含「已发 Offer」。
+    // jsDelivr @main 常滞后于 GitHub Pages，命中旧快照时立即降级到下一数据源（最终 github.io）。
+    if (!f.status || f.status.indexOf('待入职') >= 0) return false;
+    return r.offers.some(function (o) { return /已发 Offer/.test(o.entryBasis || ''); });
   });
   if (ok) { rcInit(); }
   else if (loading) { loading.textContent = '⚠️ 招聘数据加载失败（请检查网络或稍后重试）'; }
