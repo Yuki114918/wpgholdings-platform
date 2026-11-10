@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261109c';
+var DATA_VER = '20261110b';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -2121,6 +2121,11 @@ function mergeEmployeeData() {
       .r-card h3{margin:0 0 8px;font-size:14.5px;color:#E31937;}
       .r-table-note{font-size:12px;color:var(--text-secondary);margin-bottom:8px;}
       .r-foot{font-size:12px;color:var(--text-secondary);margin-top:14px;line-height:1.7;background:#fff5f6;border:1px solid #f3d6da;border-radius:8px;padding:10px 14px;}
+      .r-subhead{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700;color:var(--wpg-blue-d,#003366);margin:18px 0 10px;padding-left:10px;border-left:4px solid #004E8C;}
+      .r-subhead .r-subhint{font-size:11.5px;font-weight:500;color:var(--text-secondary);}
+      .r-unified{border:1px solid var(--border);border-left:4px solid #E31937;border-radius:12px;padding:14px 16px;background:#fff;}
+      .r-unified > h3{margin:0 0 4px;font-size:15px;color:#E31937;}
+      .r-unified .r-badge{display:inline-block;background:#e8f0f8;color:#004E8C;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:600;margin-left:8px;}
       table.r-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:760px;}
       table.r-tbl th{background:#E31937;color:#fff;padding:8px 10px;text-align:left;white-space:nowrap;position:sticky;top:0;}
       table.r-tbl td{padding:7px 10px;border-bottom:1px solid #eef2f6;white-space:nowrap;}
@@ -2130,7 +2135,7 @@ function mergeEmployeeData() {
     <div class="r-asof" id="recruitAsOf"></div>
     <div class="m-bi-filter">
       <div class="m-bi-filter-head">
-        <div class="m-bi-inspect"><span class="m-bi-inspect-btn">選擇檢視</span><span class="m-bi-inspect-tag">招聘窗口</span></div>
+        <div class="m-bi-inspect"><span class="m-bi-inspect-btn">選擇檢視</span><span class="m-bi-inspect-tag">招聘 + Offer 统一窗口</span></div>
         <div class="m-bi-ctrl-actions">
           <span class="m-bi-count" id="rFilterCount"></span>
           <button class="m-bi-clear" id="rFilterClear" style="display:none;" onclick="recruitClearFilter()">✕ 清除筛选</button>
@@ -2138,38 +2143,37 @@ function mergeEmployeeData() {
       </div>
       <div class="m-bi-controls">
         <div class="m-bi-ctrl"><label class="m-bi-lbl">区域</label><select class="m-bi-sel" id="rFRegion" onchange="recruitApplyFilter()"></select></div>
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">子区域</label><select class="m-bi-sel" id="rFSubRegion" onchange="recruitApplyFilter()"></select></div>
         <div class="m-bi-ctrl"><label class="m-bi-lbl">归属集团(BU)</label><select class="m-bi-sel" id="rFBU" onchange="recruitApplyFilter()"></select></div>
         <div class="m-bi-ctrl"><label class="m-bi-lbl">职系</label><select class="m-bi-sel" id="rFZhiXi" onchange="recruitApplyFilter()"></select></div>
-        <div class="m-bi-ctrl"><label class="m-bi-lbl">申请月份</label><select class="m-bi-sel" id="rFMonth" onchange="recruitApplyFilter()"></select></div>
+        <div class="m-bi-ctrl"><label class="m-bi-lbl">申请 / 入职月份</label><select class="m-bi-sel" id="rFMonth" onchange="recruitApplyFilter()"></select></div>
       </div>
     </div>
     <div class="m-bi-note" id="recruitFilterNote"></div>
     <div class="m-bi-divider"></div>
     <div id="recruitLoading" style="padding:18px;text-align:center;color:var(--text-secondary);">⏳ 招聘数据加载中…</div>
     <div id="recruitBody" style="display:none;">
-      <div class="r-kpi-strip" id="rKpis"></div>
-      <div class="r-grid">
-        <div class="r-card"><h3>状态分布（所选月份）</h3><div class="m-svg" id="rStatusDonut"></div></div>
-        <div class="r-card"><h3>逐月申请趋势（2024 / 2025 / 2026）</h3><div class="m-legend" id="rTrendLegend"></div><div class="m-svg" id="rTrend"></div></div>
-      </div>
-      <div class="r-card" style="margin-top:16px;">
-        <h3>职缺明细（按筛选）</h3>
+      <!-- 合并后的单一模块：职缺 + Offer 共用上方一套筛选器 -->
+      <div class="r-unified">
+        <h3>📋 CN 招聘职缺 ＋ 📨 北森 Offer / 待入职<span class="r-badge">统一筛选 · 同一模块</span></h3>
+        <div class="r-asof" id="offerAsOf" style="padding:0;margin-bottom:10px;"></div>
+
+        <div class="r-subhead">① 核心指标 <span class="r-subhint">红色＝招聘职缺口径｜蓝色＝Offer / 待入职口径，均随上方筛选器联动</span></div>
+        <div class="r-kpi-strip" id="rKpis"></div>
+
+        <div class="r-subhead">② 分布与趋势 <span class="r-subhint">上排＝职缺申请，下排＝Offer 计划入职</span></div>
+        <div class="r-grid">
+          <div class="r-card" style="border:none;padding:0;box-shadow:none;"><h3>职缺状态分布（所选月份）</h3><div class="m-svg" id="rStatusDonut"></div></div>
+          <div class="r-card" style="border:none;padding:0;box-shadow:none;"><h3>逐月申请趋势（2024 / 2025 / 2026）</h3><div class="m-legend" id="rTrendLegend"></div><div class="m-svg" id="rTrend"></div></div>
+          <div class="r-card" style="border:none;padding:0;box-shadow:none;"><h3>Offer 录用状态分布</h3><div class="m-svg" id="oStatusDonut"></div></div>
+          <div class="r-card" style="border:none;padding:0;box-shadow:none;"><h3>逐月计划入职趋势</h3><div class="m-svg" id="oTrend"></div></div>
+        </div>
+
+        <div class="r-subhead">③ 职缺明细（按筛选）</div>
         <div class="r-table-note" id="rTableNote"></div>
         <div class="m-table-wrap" id="rTable"></div>
-      </div>
-      <div class="r-card" style="margin-top:16px;border-left:4px solid #004E8C;">
-        <h3>📨 北森 Offer / 待入职（补充视角）</h3>
-        <div class="r-asof" id="offerAsOf" style="padding:0;margin-bottom:10px;"></div>
-        <div class="m-bi-controls" style="margin-bottom:10px;">
-          <div class="m-bi-ctrl"><label class="m-bi-lbl">归属集团(BU)</label><select class="m-bi-sel" id="oFBU" onchange="offerApplyFilter()"></select></div>
-          <div class="m-bi-ctrl"><label class="m-bi-lbl">区域</label><select class="m-bi-sel" id="oFRegion" onchange="offerApplyFilter()"></select></div>
-          <div class="m-bi-ctrl"><label class="m-bi-lbl">计划入职月份</label><select class="m-bi-sel" id="oFMonth" onchange="offerApplyFilter()"></select></div>
-        </div>
-        <div class="r-kpi-strip" id="oKpis"></div>
-        <div class="r-grid" style="grid-template-columns:repeat(2,1fr);">
-          <div class="r-card" style="border:none;padding:0;"><h3>录用状态分布</h3><div class="m-svg" id="oStatusDonut"></div></div>
-          <div class="r-card" style="border:none;padding:0;"><h3>逐月计划入职趋势</h3><div class="m-svg" id="oTrend"></div></div>
-        </div>
+
+        <div class="r-subhead" style="border-left-color:#004E8C;">④ Offer / 待入职明细（同一筛选）</div>
         <div class="r-table-note" id="oTableNote"></div>
         <div class="m-table-wrap" id="oTable"></div>
       </div>
@@ -2301,7 +2305,7 @@ function mergeEmployeeData() {
   </div><!-- /link-viewer-modal -->
   <!-- 考勤分析：iframe 嵌入独立页，隔离样式避免与主平台冲突；懒加载避免首发拉取大 JSON -->
   <section class="section" data-module="attendance" id="mod-attendance">
-    <iframe id="attendanceFrame" data-src="attendance.html?v=20261110a" title="考勤分析"
+    <iframe id="attendanceFrame" data-src="attendance.html?v=20261110b" title="考勤分析"
       style="width:100%;height:calc(100vh - 64px);border:none;display:block;background:#f4f6fa;"></iframe>
   </section>
     </main><!-- /app-main -->
@@ -4756,9 +4760,44 @@ function applyEduTags(e) {
 }
 
 // ==================== CN招聘情况一览（#390） ====================
-var RECRUIT_FILTER = { region: 'all', bu: 'all', zhiXi: 'all', month: 'all' };
+var RECRUIT_FILTER = { region: 'all', subRegion: 'all', bu: 'all', zhiXi: 'all', month: 'all' };
 var RECRUIT_MONTHS = [];
 var RECRUIT_READY = false;
+/* 子区域（CN-A / CN-B / CN-C）按「工作城市」推断，与月度人力月报 / 考勤「工作子区域」同口径。
+   依据 HR 主档实测：深圳 / 广州 / 东莞 / 珠海 / 长沙等华南城市→CN-B；其余大陆城市→CN-A；香港→CN-C。
+   招聘阶段候选人尚无工号，无法直接取 HR 主档，故按城市推断；跨多个且跨区城市者标 N/A。 */
+var WPG_SUB_B_CITIES = ['深圳', '东莞', '广州', '珠海', '惠州', '中山', '佛山', '南宁', '长沙', '南山区', '宝安', '龙岗', '龙华', '福田', '广东省', '廣東'];
+function wpgSubRegionOf(city) {
+  var c = String(city || '').trim();
+  if (!c) return 'N/A';
+  if (/香港|Hongkong|Hong Kong|HK/i.test(c)) return 'CN-C';
+  var parts = c.split(/[,，、\/]/).map(function (x) { return x.trim(); }).filter(Boolean);
+  if (!parts.length) return 'N/A';
+  var set = {};
+  parts.forEach(function (p) { set[WPG_SUB_B_CITIES.some(function (k) { return p.indexOf(k) >= 0; }) ? 'CN-B' : 'CN-A'] = 1; });
+  var ks = Object.keys(set);
+  return ks.length === 1 ? ks[0] : 'N/A';
+}
+function wpgAttachSubRegion(arr) { (arr || []).forEach(function (x) { if (!x.subRegion) x.subRegion = wpgSubRegionOf(x.city); }); }
+function wpgSubRegionOptions() {
+  var set = {};
+  (window.RECRUIT ? window.RECRUIT.slots : []).forEach(function (s) { if (s.subRegion) set[s.subRegion] = 1; });
+  (window.OFFER ? window.OFFER.offers : []).forEach(function (o) { if (o.subRegion) set[o.subRegion] = 1; });
+  var order = ['CN-A', 'CN-B', 'CN-C', 'N/A'], out = [];
+  order.forEach(function (k) { if (set[k]) out.push(k); });
+  Object.keys(set).forEach(function (k) { if (out.indexOf(k) < 0) out.push(k); });
+  return out;
+}
+/* 月份下拉＝招聘申请月份 ∪ Offer 计划入职月份，保证一套筛选器对两边都有效 */
+function wpgFillMonthOptions() {
+  var e = document.getElementById('rFMonth'); if (!e) return;
+  var prev = e.value || 'all', set = {};
+  (RECRUIT_MONTHS || []).forEach(function (k) { set[k] = 1; });
+  if (window.OFFER && window.OFFER.meta && window.OFFER.meta.byMonth) Object.keys(window.OFFER.meta.byMonth).forEach(function (k) { set[k] = 1; });
+  var ks = Object.keys(set).sort();
+  e.innerHTML = '<option value="all">全部月份</option>' + ks.map(function (k) { return '<option value="' + k + '">' + k.slice(0, 4) + '-' + k.slice(4) + '</option>'; }).join('');
+  e.value = (prev !== 'all' && ks.indexOf(prev) >= 0) ? prev : 'all';
+}
 
 async function wpgLoadRecruitment() {
   async function tryLoad(name, validate) {
@@ -4791,50 +4830,56 @@ async function wpgLoadRecruitment() {
 function recruitInit() {
   if (!window.RECRUIT) return;
   RECRUIT_MONTHS = Object.keys(window.RECRUIT.meta.byMonth).sort();
-  RECRUIT_FILTER = { region: 'all', bu: 'all', zhiXi: 'all', month: RECRUIT_MONTHS.length ? 'all' : 'all' };
+  wpgAttachSubRegion(window.RECRUIT.slots);
+  RECRUIT_FILTER = { region: 'all', subRegion: 'all', bu: 'all', zhiXi: 'all', month: 'all' };
   RECRUIT_READY = true;
   var loading = document.getElementById('recruitLoading'); if (loading) loading.style.display = 'none';
   var body = document.getElementById('recruitBody'); if (body) body.style.display = 'block';
   var asof = document.getElementById('recruitAsOf');
-  if (asof) asof.innerHTML = '📅 数据来源：增補人員需求表（测试档）。口径：以「申請日期」为招聘月份基准；职缺数按「需求人数」逐单展开槽位（一张单可有多个职缺）；BU 按增補人員所屬BU 归一；区域由工作地點城市映射；状态＝表單狀態＋結案＋新人名字（待入职暂留空）。数据结算日 ' + (window.RECRUIT.meta.settleDate || '');
+  if (asof) asof.innerHTML = '📅 数据来源：增補人員需求表（测试档）+ 北森 Offer 信息汇总，<b>已合并为单一模块、共用上方一套筛选器</b>。口径：以「申請日期」为招聘月份基准；职缺数按「需求人数」逐单展开槽位（一张单可有多个职缺）；BU 按增補人員所屬BU 归一；区域由工作地點城市映射；新增「子区域」按工作城市推断为 CN-A / CN-B / CN-C（与月报、考勤同口径）；状态＝表單狀態＋結案＋新人名字（待入职暂留空）。数据结算日 ' + (window.RECRUIT.meta.settleDate || '');
   recruitPopulateFilters();
   recruitApplyFilter();
 }
 
 function recruitPopulateFilters() {
-  if (!window.RECRUIT) return;
-  var meta = window.RECRUIT.meta;
+  var meta = (window.RECRUIT && window.RECRUIT.meta) || { byRegion: {}, byBu: {}, byZhiXi: {} };
   function fill(id, opts, allLabel) {
     var e = document.getElementById(id); if (!e) return;
+    var prev = e.value || 'all';
     function opt(o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '">' + l + '</option>'; }
     e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(opt).join('');
+    var vals = opts.map(function (o) { return Array.isArray(o) ? o[0] : o; });
+    e.value = (prev !== 'all' && vals.indexOf(prev) >= 0) ? prev : 'all';
   }
-  fill('rFRegion', Object.keys(meta.byRegion), '全部区域');
-  fill('rFBU', Object.keys(meta.byBu), '全部集团');
-  fill('rFZhiXi', Object.keys(meta.byZhiXi), '全部职系');
-  fill('rFMonth', RECRUIT_MONTHS.map(function (k) { return [k, k.slice(0, 4) + '-' + k.slice(4)]; }), '全部月份');
-  var rm = document.getElementById('rFMonth'); if (rm && RECRUIT_MONTHS.length) rm.value = 'all';
+  fill('rFRegion', Object.keys(meta.byRegion || {}), '全部区域');
+  fill('rFSubRegion', wpgSubRegionOptions(), '全部子区域');
+  fill('rFBU', Object.keys(meta.byBu || {}), '全部集团');
+  fill('rFZhiXi', Object.keys(meta.byZhiXi || {}), '全部职系');
+  wpgFillMonthOptions();
 }
 
 function recruitApplyFilter() {
-  var rg = document.getElementById('rFRegion'), bu = document.getElementById('rFBU'), zx = document.getElementById('rFZhiXi'), mo = document.getElementById('rFMonth');
+  var rg = document.getElementById('rFRegion'), sr = document.getElementById('rFSubRegion'),
+      bu = document.getElementById('rFBU'), zx = document.getElementById('rFZhiXi'), mo = document.getElementById('rFMonth');
   if (rg) RECRUIT_FILTER.region = rg.value;
+  if (sr) RECRUIT_FILTER.subRegion = sr.value;
   if (bu) RECRUIT_FILTER.bu = bu.value;
   if (zx) RECRUIT_FILTER.zhiXi = zx.value;
   if (mo) RECRUIT_FILTER.month = mo.value;
   recruitFilterUi();
   recruitRender();
+  if (typeof OFFER_READY !== 'undefined' && OFFER_READY) offerRender();   // 同一套筛选器同时驱动 Offer 区块
 }
 function recruitFilterUi() {
-  var ids = ['rFRegion', 'rFBU', 'rFZhiXi', 'rFMonth'], n = 0;
+  var ids = ['rFRegion', 'rFSubRegion', 'rFBU', 'rFZhiXi', 'rFMonth'], n = 0;
   ids.forEach(function (id) { var e = document.getElementById(id); if (!e) return; var on = !!e.value && e.value !== 'all'; e.classList.toggle('is-filtered', on); if (on) n++; });
   var cnt = document.getElementById('rFilterCount'); if (cnt) cnt.textContent = n ? ('🔎 已筛选 ' + n + ' 项') : '';
   var clr = document.getElementById('rFilterClear'); if (clr) clr.style.display = n ? 'inline-block' : 'none';
   var note = document.getElementById('recruitFilterNote');
-  if (note) { var f = RECRUIT_FILTER, parts = []; if (f.region !== 'all') parts.push('区域=' + f.region); if (f.bu !== 'all') parts.push('集团=' + f.bu); if (f.zhiXi !== 'all') parts.push('职系=' + f.zhiXi); if (f.month !== 'all') parts.push('月份=' + f.month); note.textContent = parts.length ? ('已筛选：' + parts.join(' · ')) : ''; }
+  if (note) { var f = RECRUIT_FILTER, parts = []; if (f.region !== 'all') parts.push('区域=' + f.region); if (f.subRegion !== 'all') parts.push('子区域=' + f.subRegion); if (f.bu !== 'all') parts.push('集团=' + f.bu); if (f.zhiXi !== 'all') parts.push('职系=' + f.zhiXi); if (f.month !== 'all') parts.push('月份=' + f.month); note.textContent = parts.length ? ('已筛选（职缺 + Offer 同步生效）：' + parts.join(' · ')) : ''; }
 }
 function recruitClearFilter() {
-  ['rFRegion', 'rFBU', 'rFZhiXi'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = 'all'; });
+  ['rFRegion', 'rFSubRegion', 'rFBU', 'rFZhiXi'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = 'all'; });
   var mo = document.getElementById('rFMonth'); if (mo && RECRUIT_MONTHS.length) mo.value = 'all';
   recruitApplyFilter();
 }
@@ -4843,6 +4888,7 @@ function recruitBaseFiltered() {
   var f = RECRUIT_FILTER, slots = window.RECRUIT.slots;
   return slots.filter(function (s) {
     if (f.region !== 'all' && s.region !== f.region) return false;
+    if (f.subRegion !== 'all' && s.subRegion !== f.subRegion) return false;
     if (f.bu !== 'all' && s.bu !== f.bu) return false;
     if (f.zhiXi !== 'all' && s.zhiXi !== f.zhiXi) return false;
     return true;
@@ -4939,6 +4985,7 @@ function recruitTable(slots, isAll) {
   var rows = arr.map(function (s) {
     return '<tr>' +
       '<td>' + s.region + '</td>' +
+      '<td>' + (s.subRegion || '—') + '</td>' +
       '<td>' + s.bu + '</td>' +
       '<td>' + s.city + '</td>' +
       '<td>' + s.zhiXi + '</td>' +
@@ -4950,50 +4997,32 @@ function recruitTable(slots, isAll) {
       '<td>' + sbadge(s) + '</td>' +
       '</tr>';
   }).join('');
-  el.innerHTML = '<table class="r-tbl"><thead><tr><th>区域</th><th>集团</th><th>城市</th><th>职系</th><th>职缺增补</th><th>内外</th><th>招聘天数</th><th>申请主管</th><th>预计报到</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table class="r-tbl"><thead><tr><th>区域</th><th>子区域</th><th>集团</th><th>城市</th><th>职系</th><th>职缺增补</th><th>内外</th><th>招聘天数</th><th>申请主管</th><th>预计报到</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>';
   var foot = document.getElementById('recruitFoot');
-  if (foot) foot.innerHTML = 'ℹ️ 职缺数按「需求人数」逐单展开（一张单可含多个槽位）；招聘天数＝申請日期至报到日（未报到则至结算日）。状态判定：表單狀態＝駁回→暂停招聘；有新人名且已报到/结案→已完成；仅有名未报到→待入职（暂留空）；处理中且无名→本月在招。BU 归一（用户确认口径）：鑫衡廣→AIT；世平偉業(含「偉」字样)→TGBC；含「控股」字样→WPGH；SAC / Yosun / 富威→AIT；WPG SA→其他。';
+  if (foot) foot.innerHTML = 'ℹ️ 职缺数按「需求人数」逐单展开（一张单可含多个槽位）；招聘天数＝申請日期至报到日（未报到则至结算日）。状态判定：表單狀態＝駁回→暂停招聘；有新人名且已报到/结案→已完成；仅有名未报到→待入职（暂留空）；处理中且无名→本月在招。BU 归一（用户确认口径）：鑫衡廣→AIT；世平偉業(含「偉」字样)→TGBC；含「控股」字样→WPGH；SAC / Yosun / 富威→AIT；WPG SA→其他。<br>🆕 <b>子区域挂靠说明：</b>招聘 / Offer 的「区域」原为地理大区（华东 / 华南…），与月报「工作子区域」CN-A / CN-B / CN-C 并非同一维度。现按工作城市推断出子区域供筛选：华南城市（深圳 / 广州 / 东莞 / 珠海 / 长沙等）→CN-B，其余大陆城市→CN-A，香港→CN-C，跨区多城市→N/A。该推断与 HR 主档实测分布一致（主档中约 99% 吻合），但招聘阶段人员尚无工号，少数跨区派驻者无法精确识别，故此字段为「推断值」，仅供分析参考。';
 }
 
-// ==================== 北森 Offer / 待入职（#396 补充视角） ====================
-var OFFER_FILTER = { bu: 'all', region: 'all', month: 'all' };
+// ==================== 北森 Offer / 待入职（#405：已合并进主招聘模块，共用 RECRUIT_FILTER） ====================
 var OFFER_MONTHS = [];
 var OFFER_READY = false;
 
 function offerInit() {
   if (!window.OFFER) return;
   OFFER_MONTHS = Object.keys(window.OFFER.meta.byMonth).sort();
-  OFFER_FILTER = { bu: 'all', region: 'all', month: 'all' };
+  wpgAttachSubRegion(window.OFFER.offers);
   OFFER_READY = true;
   var asof = document.getElementById('offerAsOf');
-  if (asof) asof.innerHTML = '📅 数据来源：北森 Offer 信息汇总（2025 / 2026）。BU 经「增补单号(MRQ)」关联招聘职缺取归一集团；未关联者按录用部门兜底。月份＝计划入职日期（缺则用发送Offer时间）。总 Offer ' + window.OFFER.meta.total + ' 笔。';
-  offerPopulateFilters();
-  offerApplyFilter();
-}
-function offerPopulateFilters() {
-  if (!window.OFFER) return;
-  var meta = window.OFFER.meta;
-  function fill(id, opts, allLabel) {
-    var e = document.getElementById(id); if (!e) return;
-    function opt(o) { var v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '">' + l + '</option>'; }
-    e.innerHTML = '<option value="all">' + allLabel + '</option>' + opts.map(opt).join('');
-  }
-  fill('oFBU', Object.keys(meta.byBu), '全部集团');
-  fill('oFRegion', Object.keys(meta.byRegion), '全部区域');
-  fill('oFMonth', OFFER_MONTHS.map(function (k) { return [k, k.slice(0, 4) + '-' + k.slice(4)]; }), '全部月份');
-}
-function offerApplyFilter() {
-  var bu = document.getElementById('oFBU'), rg = document.getElementById('oFRegion'), mo = document.getElementById('oFMonth');
-  if (bu) OFFER_FILTER.bu = bu.value;
-  if (rg) OFFER_FILTER.region = rg.value;
-  if (mo) OFFER_FILTER.month = mo.value;
-  offerRender();
+  if (asof) asof.innerHTML = '📅 Offer 数据来源：北森 Offer 信息汇总（2025 / 2026），共 ' + window.OFFER.meta.total + ' 笔。BU 经「增补单号(MRQ)」关联招聘职缺取归一集团，未关联者按录用部门兜底；月份＝计划入职日期（缺则用发送 Offer 时间）；子区域由工作城市推断，与月报 CN-A / CN-B / CN-C 同口径。';
+  // Offer 加载完成后重建统一筛选器（月份并集、子区域选项），再统一刷新两个数据区块
+  recruitPopulateFilters();
+  recruitApplyFilter();
 }
 function offerBaseFiltered() {
-  var f = OFFER_FILTER, arr = window.OFFER.offers;
+  var f = RECRUIT_FILTER, arr = window.OFFER.offers;
   return arr.filter(function (o) {
     if (f.bu !== 'all' && o.bu !== f.bu) return false;
     if (f.region !== 'all' && o.region !== f.region) return false;
+    if (f.subRegion !== 'all' && o.subRegion !== f.subRegion) return false;
     if (f.month !== 'all' && o.ym !== f.month) return false;
     return true;
   });
@@ -5004,13 +5033,18 @@ function offerRender() {
   var buckets = { '已到岗': 0, '已录用未到岗': 0, '进行中': 0, '其他': 0 };
   base.forEach(function (o) { buckets[o.bucket] = (buckets[o.bucket] || 0) + 1; });
   var kpis = [
-    { l: '总 Offer', v: base.length, s: '当前筛选' },
-    { l: '已到岗', v: buckets['已到岗'] || 0, s: '已报到' },
-    { l: '已录用未到岗', v: buckets['已录用未到岗'] || 0, s: '待入职' },
-    { l: '进行中', v: buckets['进行中'] || 0, s: '流程中' }
+    { l: 'Offer · 总数', v: base.length, s: '当前筛选' },
+    { l: 'Offer · 已到岗', v: buckets['已到岗'] || 0, s: '已报到' },
+    { l: 'Offer · 待入职', v: buckets['已录用未到岗'] || 0, s: '已录用未到岗' },
+    { l: 'Offer · 进行中', v: buckets['进行中'] || 0, s: '流程中' }
   ];
-  var kc = document.getElementById('oKpis');
-  if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="r-kpi" style="border-left-color:#004E8C;"><div class="r-kpi-label">' + k.l + '</div><div class="r-kpi-val" style="color:#004E8C;">' + k.v + '</div><div class="r-kpi-sub">' + k.s + '</div></div>'; }).join('');
+  // 合并到主招聘模块的同一条 KPI 条（先移除旧的 Offer 卡片，保证幂等）
+  var kc = document.getElementById('rKpis');
+  if (kc) {
+    var old = kc.querySelectorAll('.r-kpi-offer');
+    for (var oi = 0; oi < old.length; oi++) old[oi].remove();
+    kc.insertAdjacentHTML('beforeend', kpis.map(function (k) { return '<div class="r-kpi r-kpi-offer" style="border-left-color:#004E8C;"><div class="r-kpi-label">' + k.l + '</div><div class="r-kpi-val" style="color:#004E8C;">' + k.v + '</div><div class="r-kpi-sub">' + k.s + '</div></div>'; }).join(''));
+  }
   offerStatusDonut(base);
   offerTrend(base);
   offerTable(base);
@@ -5060,7 +5094,7 @@ function offerTable(arr) {
   var el = document.getElementById('oTable'); if (!el) return;
   var note = document.getElementById('oTableNote');
   var sorted = arr.slice().sort(function (a, b) { return (b.ym || '').localeCompare(a.ym || '') || (a.bu || '').localeCompare(b.bu || ''); });
-  if (note) note.innerHTML = '共 ' + sorted.length + ' 笔 Offer（BU 经 MRQ 关联招聘职缺归一）';
+  if (note) note.innerHTML = '共 ' + sorted.length + ' 笔 Offer（与上方统一筛选器同步；BU 经 MRQ 关联招聘职缺归一）';
   if (!sorted.length) { el.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;">无匹配 Offer</div>'; return; }
   var bucketColor = { '已到岗': '#1a9c5b', '已录用未到岗': '#E31937', '进行中': '#f59e0b', '其他': '#94a3b8' };
   var rows = sorted.map(function (o) {
@@ -5069,6 +5103,7 @@ function offerTable(arr) {
       '<td>' + o.name + '</td>' +
       '<td>' + o.bu + '</td>' +
       '<td>' + o.region + '</td>' +
+      '<td>' + (o.subRegion || '—') + '</td>' +
       '<td>' + (o.city || '—') + '</td>' +
       '<td>' + (o.dept || '—') + '</td>' +
       '<td>' + o.offerType + '</td>' +
@@ -5079,7 +5114,7 @@ function offerTable(arr) {
       '<td>' + (o.channel || '—') + '</td>' +
       '</tr>';
   }).join('');
-  el.innerHTML = '<table class="r-tbl"><thead><tr><th>姓名</th><th>集团</th><th>区域</th><th>城市</th><th>录用部门</th><th>Offer类型</th><th>当前状态</th><th>发送Offer</th><th>计划入职</th><th>增补单号</th><th>渠道</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table class="r-tbl"><thead><tr><th>姓名</th><th>集团</th><th>区域</th><th>子区域</th><th>城市</th><th>录用部门</th><th>Offer类型</th><th>当前状态</th><th>发送Offer</th><th>计划入职</th><th>增补单号</th><th>渠道</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ==================== 员工查询（简洁版：关键字搜索 + 分页） ====================

@@ -69,6 +69,13 @@
   .rank-row .rk{color:#9aa;font-weight:700;width:24px;}
   .rank-row .nm{flex:1;color:#33445a;}
   .rank-row .vv{font-weight:700;color:var(--wpg-blue-d);}
+  /* 个人请假明细 TOP：显示假别构成，可点击下钻 */
+  .rank-row.lv-rank-row{align-items:flex-start;cursor:pointer;border-bottom:1px dashed #eef;}
+  .rank-row.lv-rank-row:hover{background:#fff7e8;}
+  .rank-row .lv-sub{color:#9aa;font-size:11px;margin-left:6px;}
+  .rank-row .lv-chips{display:block;margin:3px 0 0 0;line-height:1.55;}
+  .lv-chip{display:inline-block;background:#eef6ff;color:#004E8C;border:1px solid #cfe0f3;border-radius:10px;padding:1px 7px;font-size:11px;margin:0 4px 3px 0;white-space:nowrap;}
+  .lv-chip.more{background:#f3f4f6;color:#64748b;border-color:#e5e7eb;}
   /* 两栏布局(筛选+表) */
   .two-col{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start;}
   .side-filter{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;position:sticky;top:14px;}
@@ -199,7 +206,8 @@
     <div class="card">
       <div class="sec-title">每月 出差 · 外出 · 在家办公 情况</div>
       <div class="note">口径：出差 = 考勤日结「出差假-最新_天」；外出 / 在家办公 = 补卡记录「外出 / 在家上班」记录数。三者均以「应出勤人天」为分母折算为占比（%）。
-      <br><b style="color:var(--wpg-orange-d)">数据缺口提示：</b>补卡记录源文件仅覆盖至 2025-08，2025-09~2025-12 缺月，故图中外出 / 在家办公两线在 2025-10~2025-12 为断点（不影响 2026 年各月）。</div>
+      <br><b style="color:var(--wpg-blue)">排行榜口径：</b>下方三张排行榜按上方筛选器的「年 / 月」及 BU / 区域 / 子区域 / 职务 / 部门 / 姓名 <b>实时重算当期数据</b>（不再是全期累计）。
+      <br><b style="color:var(--wpg-orange-d)">数据缺口提示：</b>补卡记录源文件 2025-09~2025-12 缺月，故图中外出 / 在家办公两线在该区间为断点（不影响 2026 年各月）。</div>
       <div class="chart-box"><canvas id="bukaChart"></canvas></div>
     </div>
     <div class="rank-grid">
@@ -310,7 +318,7 @@
 
 <script>
 /* ===== 全局数据 ===== */
-var APP_VER='20261110a';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
+var APP_VER='20261110b';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
 var _cv=function(u){ return u + (u.indexOf('?')>=0?'&':'?') + 'v=' + APP_VER; };  // 追加版本缓存破坏
 var SUMMARY=null, DAILY=null, BUKA=null;
 var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
@@ -330,6 +338,21 @@ var LEAVE_META=[
   {name:'54青年假_小时',unit:'小时'},{name:'外训_小时',unit:'小时'},{name:'指定假_小时',unit:'小时'},
   {name:'公假_小时',unit:'小时'},{name:'38妇女假_小时',unit:'小时'},{name:'出差假-最新_天',unit:'天'}
 ];
+/* 所属部门在源数据是完整组织路径（以 | 分隔），显示时取最末级部门，避免所有行都显示「大聯大控股董事長(for webflow)…」 */
+function deptShort(v){
+  if(!v) return '';
+  var s=String(v), p=s.split('|');
+  var last=(p[p.length-1]||'').trim();
+  return last || s;
+}
+/* datalist 部门候选：同样只给末级部门名（去重），筛选时仍能对完整路径做包含匹配 */
+function optDept(arr){
+  var seen={}, out=[];
+  (arr||[]).forEach(function(v){
+    var d=deptShort(v); if(!d||seen[d]) return; seen[d]=1; out.push({v:d,t:d});
+  });
+  return out.sort(function(a,b){return a.v.localeCompare(b.v,'zh-Hans-CN');});
+}
 function ensurePerson(ym){
   if(!ym) return Promise.reject(new Error('未选择年月'));
   if(PERSON_CACHE[ym]) return Promise.resolve(PERSON_CACHE[ym]);
@@ -438,7 +461,8 @@ function initAll(){
   fillDatalist('list_f_bu', opt(FL.bu||[])); fillDatalist('list_d_bu', opt(FL.bu||[])); fillDatalist('list_p_bu', opt(FL.bu||[]));
   fillDatalist('list_f_area', opt(FL.area||[])); fillDatalist('list_d_area', opt(FL.area||[])); fillDatalist('list_p_area', opt(FL.area||[]));
   fillDatalist('list_f_sub', opt(FL.sub||[])); fillDatalist('list_d_sub', opt(FL.sub||[])); fillDatalist('list_p_sub', opt(FL.sub||[]));
-  fillDatalist('list_f_dept', opt(FL.dept||[])); fillDatalist('list_d_dept', opt(FL.dept||[])); fillDatalist('list_p_dept', opt(FL.dept||[]));
+  var deptOpts = optDept(FL.dept||[]);
+  fillDatalist('list_f_dept', deptOpts); fillDatalist('list_d_dept', deptOpts); fillDatalist('list_p_dept', deptOpts);
   fillDatalist('list_f_title', opt(FL.title||[])); fillDatalist('list_p_title', opt(FL.title||[]));
   currentDashYm = latest; currentPersYm = latest; currentDailyYm = latest;
   // 关键：清除浏览器自动恢复（或上次遗留）的、与当前年月冲突的日期值，
@@ -545,10 +569,10 @@ function buildDashboard(){
   _renderDashKpis(det.sep_kpi, null, det.leave_total);
   document.getElementById('lateRank').innerHTML = rankRows(det.late_rank, '迟到次数');
   document.getElementById('earlyRank').innerHTML = rankRows(det.early_rank, '早退次数');
-  document.getElementById('outRank').innerHTML = rankRows(BUKA.top_out.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
-  document.getElementById('homeRank').innerHTML = rankRows(BUKA.top_home.map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
+  var bk = bukaRankRows(currentDashYm, null);
+  renderBukaRanks(bk);
   document.getElementById('absentRank').innerHTML = rankRows(det.absent_rank.map(function(d){return {nm:d.bu, v:d.缺勤天数, sub:d.人数+'人'};}), '缺勤天数');
-  _setRankTitles(null);
+  _setRankTitles(null, bk.tag);
   if(DASH_PM) renderLeaveFromPm(DASH_PM, '（'+per+' 当期）');
 }
 function _renderDashKpis(k, f, leaveTotal){
@@ -596,10 +620,38 @@ function renderLeaveFromPm(pm, tag){
   } else {
     document.getElementById('leaveBreak').innerHTML = '<div class="note">当前筛选无休假记录</div>';
   }
-  var rank=pm.slice().sort(function(a,b){return (b.请假总时长_小时||0)-(a.请假总时长_小时||0);}).slice(0,15);
-  document.getElementById('leaveRank').innerHTML = rankRows(rank.map(function(e){return {姓名:e.姓名, v:e.请假总时长_小时, sub:(e.bu||'')+'·'+(e.工作子区域||'')};}), '请假总时长_小时');
   var lt=document.getElementById('leaveBreakTitle'); if(lt) lt.textContent='各类假别拆分'+t;
-  var lrt=document.getElementById('leaveRankTitle'); if(lrt) lrt.textContent='个人请假时长 TOP 15'+t;
+  renderLeaveRank(pm, t);
+}
+/* 个人请假明细 TOP15：每行列出假别构成（如 产假 31天 / 年假 8小时），不再只显示一个笼统的合计小时数 */
+function leaveBreakdown(e){
+  var out=[];
+  LEAVE_META.forEach(function(m){
+    var v=+e[m.name]||0;
+    if(v>0) out.push({name:m.name.replace(/_小时|_天/g,'').replace(/-最新/g,''), v:v, unit:m.unit});
+  });
+  return out.sort(function(a,b){return b.v-a.v;});
+}
+function renderLeaveRank(pm, tag){
+  var el=document.getElementById('leaveRank'); if(!el) return;
+  var lrt=document.getElementById('leaveRankTitle'); if(lrt) lrt.textContent='个人请假明细 TOP 15'+(tag||'');
+  var arr=pm.filter(function(e){return (+e.请假总时长_小时||0)>0;})
+    .sort(function(a,b){return (+b.请假总时长_小时||0)-(+a.请假总时长_小时||0);}).slice(0,15);
+  if(!arr.length){ el.innerHTML='<div class="rank-row"><span class="nm">当前筛选无请假记录</span></div>'; return; }
+  var hint='<div class="leave-hint">每行列出「假别 + 原始申报时长」；右侧数值＝单一假别时显示原始时长，多假别时显示折算合计小时。点击任一行可查看该员工全部假别明细。</div>';
+  el.innerHTML = hint + arr.map(function(e,i){
+    var bd=leaveBreakdown(e);
+    var chips=bd.slice(0,3).map(function(x){return '<span class="lv-chip">'+x.name.replace(/-最新/g,'')+' '+fmt(x.v,1)+x.unit+'</span>';}).join('');
+    if(bd.length>3) chips+='<span class="lv-chip more">另有 '+(bd.length-3)+' 类</span>';
+    if(!chips) chips='<span class="lv-chip more">源表仅提供合计小时</span>';
+    var mainVal = bd.length===1 ? (fmt(bd[0].v,1)+bd[0].unit) : (fmt(+e.请假总时长_小时||0,0)+'h');
+    var eno=String(e.工号||'').replace(/[^\w\-]/g,'');
+    return '<div class="rank-row lv-rank-row" onclick="openPersonLeave(\''+eno+'\')" title="点击查看该员工全部假别明细">'
+      +'<span class="rk">'+(i+1)+'</span>'
+      +'<span class="nm">'+e.姓名+'<span class="lv-sub">'+(e.bu||'')+'·'+(e.工作子区域||'')+'</span>'
+      +'<span class="lv-chips">'+chips+'</span></span>'
+      +'<span class="vv">'+mainVal+'</span></div>';
+  }).join('');
 }
 function recomputeKpi(pm){
   var n=pm.length, sumShould=0, actPersons=0, absDays=0, lateCnt=0, earlyCnt=0, absPersons=0, latePersons=0, earlyPersons=0, tripDays=0;
@@ -622,12 +674,47 @@ function recomputeKpi(pm){
     迟到率: sumShould? round2(lateCnt/sumShould*100):0,
     早退率: sumShould? round2(earlyCnt/sumShould*100):0};
 }
-function _setRankTitles(f){
+function _setRankTitles(f, bukaTag){
   var per = currentDashYm ? (currentDashYm.slice(0,4)+'-'+currentDashYm.slice(4)) : '';
   var t = f? '（筛选后）':'（'+per+' 当期）';
+  var bt = bukaTag || t;
   var lt=document.querySelector('#lateRank'); if(lt&&lt.parentElement){var h=lt.parentElement.querySelector('h4'); if(h) h.textContent='迟到次数 TOP 10'+t;}
   var et=document.querySelector('#earlyRank'); if(et&&et.parentElement){var h2=et.parentElement.querySelector('h4'); if(h2) h2.textContent='早退次数 TOP 10'+t;}
   var at=document.querySelector('#absentRank'); if(at&&at.parentElement){var h3=at.parentElement.querySelector('h4'); if(h3) h3.textContent='各 BU 缺勤天数排行'+t;}
+  var ot=document.querySelector('#outRank'); if(ot&&ot.parentElement){var h4=ot.parentElement.querySelector('h4'); if(h4) h4.textContent='外出天数 TOP（补卡记录）'+bt;}
+  var ht=document.querySelector('#homeRank'); if(ht&&ht.parentElement){var h5=ht.parentElement.querySelector('h4'); if(h5) h5.textContent='在家办公天数 TOP（补卡记录）'+bt;}
+}
+function renderBukaRanks(bk){
+  var o=document.getElementById('outRank'), h=document.getElementById('homeRank');
+  if(o) o.innerHTML = bk.out.length ? rankRows(bk.out, 'v') : '<div class="rank-row"><span class="nm">该月无「外出」补卡记录</span></div>';
+  if(h) h.innerHTML = bk.home.length ? rankRows(bk.home, 'v') : '<div class="rank-row"><span class="nm">该月无「在家上班」补卡记录</span></div>';
+}
+/* 补卡排行：按「所选年月」取 BUKA.byMonth[ym] 的逐人逐月统计，再套用当前仪表盘筛选条件 */
+function bukaRankRows(ym, f){
+  var key = ym ? (ym.slice(0,4)+'-'+ym.slice(4)) : '';
+  var tag = f ? ('（筛选后 · '+key+'）') : ('（'+key+' 当期）');
+  var d = (BUKA && BUKA.byMonth) ? BUKA.byMonth[key] : null;
+  if(!d) return {out:[], home:[], tag:tag};
+  function pass(r){
+    if(!f) return true;
+    var m=EMPMAP[r.工号]||{};
+    if(f.bu && (m.bu||'').indexOf(f.bu)<0 && (r.bu||'').indexOf(f.bu)<0) return false;
+    if(f.area && (m.工作地点||'')!==f.area) return false;
+    if(f.sub && (m.工作子区域||r.sub||'')!==f.sub) return false;
+    if(f.title && (m.职称||'')!==f.title) return false;
+    if(f.dept && (m.所属部门||'').indexOf(f.dept)<0) return false;
+    if(f.name && (m.姓名||r.姓名||'').indexOf(f.name)<0) return false;
+    return true;
+  }
+  function mk(list, keyName){
+    return list.filter(pass).sort(function(a,b){return (+b[keyName]||0)-(+a[keyName]||0);}).slice(0,10)
+      .map(function(r){
+        var m=EMPMAP[r.工号]||{};
+        return {nm:(m.姓名||r.姓名||r.工号), v:(+r[keyName]||0),
+                sub:(m.bu||r.bu||'')+'·'+(m.工作子区域||r.sub||'')};
+      });
+  }
+  return {out:mk(d.top_out||[], '外出'), home:mk(d.top_home||[], '在家上班'), tag:tag};
 }
 function rankRows(arr, key){
   if(!arr||!arr.length) return '<div class="rank-row"><span class="nm">暂无数据</span></div>';
@@ -718,13 +805,10 @@ function applyDashFilter(){
     var absentS = Object.keys(byBu).map(function(b){return {bu:b, 缺勤天数:byBu[b], sub:(fp.filter(function(x){return x.bu===b;}).length)+'人'};}).sort(function(a,b){return b.缺勤天数-a.缺勤天数;}).slice(0,10);
     document.getElementById('lateRank').innerHTML = rankRows(lateS, '迟到次数');
     document.getElementById('earlyRank').innerHTML = rankRows(earlyS, '早退次数');
-    var outAll = BUKA.top_out||[], homeAll = BUKA.top_home||[];
-    var outS = bu ? outAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : outAll;
-    var homeS = bu ? homeAll.filter(function(d){ var m=EMPMAP[d.工号]; return m && m.bu===bu; }) : homeAll;
-    document.getElementById('outRank').innerHTML = rankRows(outS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.外出};}), '外出天数');
-    document.getElementById('homeRank').innerHTML = rankRows(homeS.slice(0,10).map(function(d){var m=EMPMAP[d.工号]; return {nm:(m&&m.姓名)||d.工号, v:d.在家上班};}), '在家天数');
+    var bk = bukaRankRows(selYm, f);
+    renderBukaRanks(bk);
     document.getElementById('absentRank').innerHTML = rankRows(absentS, '缺勤天数');
-    _setRankTitles(f);
+    _setRankTitles(f, bk.tag);
     renderLeaveFromPm(fp, '（筛选后）');
   });
 }
@@ -870,7 +954,7 @@ function renderPersonal(){
   var slice=persView.slice(persPg*persSz,(persPg+1)*persSz);
   var b=document.getElementById('persBody'); b.innerHTML='';
   slice.forEach(function(r){
-    b.innerHTML+='<tr><td>'+r.工号+'</td><td>'+r.姓名+'</td><td>'+r.员工状态+'</td><td><span class="cell-dept" title="'+r.所属部门+'">'+r.所属部门+'</span></td><td>'+r.职称+'</td><td>'+(r.所属岗位||'')+'</td>'+
+    b.innerHTML+='<tr><td>'+r.工号+'</td><td>'+r.姓名+'</td><td>'+r.员工状态+'</td><td><span class="cell-dept" title="'+String(r.所属部门||'').replace(/"/g,'&quot;')+'">'+deptShort(r.所属部门)+'</span></td><td>'+r.职称+'</td><td>'+(r.所属岗位||'')+'</td>'+
       '<td>'+fmt(r.迟到次数,0)+'</td><td>'+fmt(r.迟到时长_分钟,0)+'</td><td>'+fmt(r.早退次数,0)+'</td><td>'+fmt(r.早退时长_分钟,0)+'</td>'+
       '<td>'+fmt(r.缺勤天数,1)+'</td><td>'+fmt(r.出差天数,1)+'</td><td>'+fmt(r.应出勤天数,1)+'</td><td>'+fmt(r.实际出勤天数,1)+'</td>'+
       '<td>'+fmt(r.出勤率,1)+'%</td><td>'+fmt(r.补卡次数,0)+'</td></tr>';
@@ -930,12 +1014,28 @@ function openLeaveDetail(name){
     +'</tr></thead><tbody>';
   var rowsHtml = list.length ? list.map(function(e){
       return '<tr><td>'+e.工号+'</td><td class="lv-name">'+e.姓名+'</td>'
-        +'<td class="cell-dept">'+(e.所属部门||'')+'</td><td>'+(e.工作地点||'')+'</td>'
+        +'<td class="cell-dept" title="'+String(e.所属部门||'').replace(/"/g,'&quot;')+'">'+deptShort(e.所属部门)+'</td><td>'+(e.工作地点||'')+'</td>'
         +'<td>'+(e.工作子区域||'')+'</td><td>'+(e.bu||'')+'</td><td>'+(e.职称||'')+'</td>'
         +'<td>'+fmt(e.v,1)+'</td></tr>';
     }).join('') : '<tr><td colspan="8" style="text-align:center;color:#8a98a8;padding:20px">当前筛选条件下无该假别记录</td></tr>';
   document.getElementById('leaveModalBody').innerHTML = head + rowsHtml + '</tbody></table>';
   document.getElementById('leaveModalFoot').innerHTML = '明细取自当前考勤月与上方筛选（年 / 月 / BU / 区域 / 子区域 / 职务 / 部门 / 姓名）下的人员月考勤记录；时长单位：'+meta.unit+'。点击明细行外区域或「关闭」可退出。';
+  document.getElementById('leaveModal').classList.add('open');
+  var box=document.querySelector('.leave-modal-box'); if(box) box.scrollTop=0;
+}
+/* 点击「个人请假明细 TOP15」任一行 → 展开该员工全部假别与时长 */
+function openPersonLeave(empNo){
+  var e=(window.LEAVE_PM||[]).filter(function(x){return String(x.工号)===String(empNo);})[0];
+  if(!e) return;
+  var bd=leaveBreakdown(e);
+  document.getElementById('leaveModalTitle').textContent='【'+e.姓名+'】请假明细';
+  document.getElementById('leaveModalSub').textContent='工号 '+e.工号+' · '+(e.bu||'')+'·'+(e.工作子区域||'')+' · '+deptShort(e.所属部门)+' · 共 '+bd.length+' 类假别 · 合计 '+fmt(+e.请假总时长_小时||0,1)+' 小时'+(window.LEAVE_TAG?(' · '+window.LEAVE_TAG):'');
+  var head='<table class="datatbl" style="font-size:12.5px"><thead><tr><th>假别</th><th>时长 / 天数</th><th>单位</th></tr></thead><tbody>';
+  var rowsHtml=bd.length ? bd.map(function(x){
+      return '<tr><td>'+x.name+'</td><td>'+fmt(x.v,1)+'</td><td>'+x.unit+'</td></tr>';
+    }).join('') : '<tr><td colspan="3" style="text-align:center;color:#8a98a8;padding:20px">源表未提供该员工的假别拆分</td></tr>';
+  document.getElementById('leaveModalBody').innerHTML=head+rowsHtml+'</tbody></table>';
+  document.getElementById('leaveModalFoot').innerHTML='右侧「合计小时」来自考勤日结「请假总时长_小时」，按工作日折算（如整月产假 = 22 工作日 × 8h = 176h）；假别明细为原始申报单位（小时 / 天），两者单位口径不同，不可直接相加核对。';
   document.getElementById('leaveModal').classList.add('open');
   var box=document.querySelector('.leave-modal-box'); if(box) box.scrollTop=0;
 }
