@@ -153,7 +153,7 @@
 <!-- ============ 屏幕2：考勤分析仪表盘 ============ -->
 <section class="screen" id="screen-dashboard">
   <div class="filterbar" id="dashFilter">
-    <div class="fld"><label>年</label><select id="f_year" onchange="applyDashFilter()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+    <div class="fld"><label>年</label><select id="f_year" onchange="onDashYearChange()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
     <div class="fld"><label>月</label><select id="f_month" onchange="applyDashFilter()"></select></div>
     <div class="fld"><label>归属事业部</label><input id="f_bu" list="list_f_bu" placeholder="全部" oninput="applyDashFilter()"></div>
     <div class="fld"><label>工作区域</label><input id="f_area" list="list_f_area" placeholder="全部" oninput="applyDashFilter()"></div>
@@ -216,22 +216,24 @@
     <div class="side-filter">
       <div class="sec-title" style="font-size:14px">筛选条件</div>
       <div class="fld"><label>归属事业体</label><input id="d_bu" list="list_d_bu" placeholder="全部" oninput="renderDaily()"></div>
-      <div class="fld"><label>年</label><select id="d_year" onchange="renderDaily()"><option>2026</option><option>2025</option></select></div>
-      <div class="fld"><label>年月</label><select id="d_ym" onchange="renderDaily()"></select></div>
-      <div class="fld"><label>日期</label><input id="d_date" type="date" onchange="renderDaily()"></div>
+      <div class="fld"><label>年</label><select id="d_year" onchange="onDailyYearChange()"></select></div>
+      <div class="fld"><label>年月</label><select id="d_ym" onchange="onDailyYmChange()"></select></div>
+      <div class="fld"><label>日期</label><input id="d_date" type="date" onchange="onDailyDateChange()"></div>
       <div class="fld"><label>工作区域</label><input id="d_area" list="list_d_area" placeholder="全部" oninput="renderDaily()"></div>
       <div class="fld"><label>工作子区域</label><input id="d_sub" list="list_d_sub" placeholder="全部" oninput="renderDaily()"></div>
       <div class="fld"><label>部门</label><input id="d_dept" list="list_d_dept" placeholder="全部" oninput="renderDaily()"></div>
-      <div class="fld"><label>在职状态</label><select id="d_status" onchange="renderDaily()"><option value="">全部</option><option>在职</option></select></div>
-      <div class="fld"><label>是否主管</label><select id="d_mgr" onchange="renderDaily()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>在职状态</label><select id="d_status" onchange="renderDaily()"><option value="">全部</option><option>在职</option><option>离职</option></select></div>
+      <div class="fld"><label>是否主管</label><select id="d_mgr" title="口径：以职称为准，含 主管/经理/副理/协理/总监/处长/课长/组长/主任 等管理职" onchange="renderDaily()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
       <div class="fld"><label>工号</label><input id="d_eid" placeholder="输入工号" oninput="renderDaily()"></div>
       <div class="fld"><label>姓名</label><input id="d_name" placeholder="输入姓名" oninput="renderDaily()"></div>
       <button class="btn" onclick="renderDaily()">查询</button>
+      <button class="btn ghost" onclick="resetDaily()">重置筛选</button>
       <button class="btn ghost" onclick="resetDaily()" style="margin-top:8px">重置</button>
     </div>
     <div>
       <div class="card" style="padding:12px 14px;margin-bottom:14px">
         <span class="sec-title" style="margin:0">每日出勤明细 <span class="pill" id="dailyCount"></span></span>
+        <div id="dailyHint" style="display:none;margin-top:8px;font-size:12.5px;line-height:1.6;padding:8px 12px;border-radius:7px"></div>
       </div>
       <div class="tbl-wrap">
         <table class="datatbl" id="dailyTbl">
@@ -266,13 +268,13 @@
     <div class="side-filter">
       <div class="sec-title" style="font-size:14px">筛选条件</div>
       <div class="fld"><label>归属事业体</label><input id="p_bu" list="list_p_bu" placeholder="全部" oninput="renderPersonal()"></div>
-      <div class="fld"><label>年</label><select id="p_year" onchange="renderPersonal()"><option>2026</option><option>2025</option></select></div>
+      <div class="fld"><label>年</label><select id="p_year" onchange="onPersYearChange()"></select></div>
       <div class="fld"><label>月</label><select id="p_month" onchange="renderPersonal()"></select></div>
       <div class="fld"><label>工作区域</label><input id="p_area" list="list_p_area" placeholder="全部" oninput="renderPersonal()"></div>
       <div class="fld"><label>工作子区域</label><input id="p_sub" list="list_p_sub" placeholder="全部" oninput="renderPersonal()"></div>
       <div class="fld"><label>部门</label><input id="p_dept" list="list_p_dept" placeholder="全部" oninput="renderPersonal()"></div>
       <div class="fld"><label>职务</label><input id="p_title" list="list_p_title" placeholder="全部" oninput="renderPersonal()"></div>
-      <div class="fld"><label>是否主管</label><select id="p_mgr" onchange="renderPersonal()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
+      <div class="fld"><label>是否主管</label><select id="p_mgr" title="口径：以职称为准，含 主管/经理/副理/协理/总监/处长/课长/组长/主任 等管理职" onchange="renderPersonal()"><option value="">全部</option><option value="主管">主管</option><option value="非主管">非主管</option></select></div>
       <div class="fld"><label>工号</label><input id="p_eid" placeholder="输入工号" oninput="renderPersonal()"></div>
       <div class="fld"><label>姓名</label><input id="p_name" placeholder="输入姓名" oninput="renderPersonal()"></div>
       <button class="btn" onclick="renderPersonal()">查询</button>
@@ -308,7 +310,7 @@
 
 <script>
 /* ===== 全局数据 ===== */
-var APP_VER='20261109c';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
+var APP_VER='20261110a';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
 var _cv=function(u){ return u + (u.indexOf('?')>=0?'&':'?') + 'v=' + APP_VER; };  // 追加版本缓存破坏
 var SUMMARY=null, DAILY=null, BUKA=null;
 var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
@@ -329,16 +331,50 @@ var LEAVE_META=[
   {name:'公假_小时',unit:'小时'},{name:'38妇女假_小时',unit:'小时'},{name:'出差假-最新_天',unit:'天'}
 ];
 function ensurePerson(ym){
+  if(!ym) return Promise.reject(new Error('未选择年月'));
   if(PERSON_CACHE[ym]) return Promise.resolve(PERSON_CACHE[ym]);
-  return fetch(_cv('./attendance-person-'+ym+'.json')).then(function(r){return r.json();}).then(function(pm){
+  return fetch(_cv('./attendance-person-'+ym+'.json')).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(pm){
+    if(!Array.isArray(pm)) throw new Error('人员数据格式异常');
     PERSON_CACHE[ym]=pm;
-    pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu,工作子区域:e.工作子区域}; });
+    pm.forEach(function(e){ EMPMAP[e.工号]={姓名:e.姓名,职称:e.职称,所属岗位:e.所属岗位,员工状态:e.员工状态,
+      所属部门:e.所属部门,工作地点:e.工作地点,bu:e.bu,工作子区域:e.工作子区域}; });
     return pm;
   });
 }
 function ensureDaily(ym){
+  if(!ym) return Promise.reject(new Error('未选择年月'));
   if(DAILY_CACHE[ym]) return Promise.resolve(DAILY_CACHE[ym]);
-  return fetch(_cv('./attendance-daily-'+ym+'.json')).then(function(r){return r.json();}).then(function(dl){ DAILY_CACHE[ym]=dl; return dl; });
+  return fetch(_cv('./attendance-daily-'+ym+'.json')).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(dl){
+    if(!Array.isArray(dl)) throw new Error('每日明细数据格式异常');
+    DAILY_CACHE[ym]=dl; return dl;
+  });
+}
+/* 管理职判定（用于「是否主管」筛选）：以职称为口径 */
+function isMgr(title){ return /主管|经理|副理|协理|总监|总经理|副总|处长|课长|组长|主任|首席|负责人/.test(title||''); }
+/* 每月天数（用于日期输入 min/max） */
+function monthRange(ym){
+  var y=+ym.slice(0,4), m=+ym.slice(4);
+  var last=new Date(y,m,0).getDate();
+  return {min:ym.slice(0,4)+'-'+ym.slice(4)+'-01', max:ym.slice(0,4)+'-'+ym.slice(4)+'-'+String(last).padStart(2,'0')};
+}
+/* 日期筛选器限定在所选年月内；若残留值越界则自动清空并提示 */
+function syncDailyDateRange(showMsg){
+  var d=document.getElementById('d_date'), ym=val('d_ym');
+  if(!d || !ym) return false;
+  var rg=monthRange(ym);
+  d.min=rg.min; d.max=rg.max;
+  if(d.value && (d.value.slice(0,7)!==ym.slice(0,4)+'-'+ym.slice(4))){
+    var old=d.value; d.value='';
+    if(showMsg!==false) showDailyHint('⚠️ 原筛选日期 '+old+' 不属于 '+ym.slice(0,4)+'-'+ym.slice(4)+'，已自动清除，避免与「年月」冲突造成 0 条。', 'warn', true);
+    return true;
+  }
+  return false;
 }
 
 function fmt(n,d){ d=(d==null?0:d); if(n==null||isNaN(n)) return '0'; return Number(n).toLocaleString('zh-CN',{maximumFractionDigits:d}); }
@@ -349,7 +385,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); document.getElementById('screen-'+t.dataset.screen).classList.add('active');
     if(t.dataset.screen==='dashboard' && window._bukaChart) window._bukaChart.resize();
-    if(t.dataset.screen==='daily' && DAILY) renderDaily();
+    if(t.dataset.screen==='daily') renderDaily();
     if(t.dataset.screen==='personal' && SUMMARY) renderPersonal();
   };
 });
@@ -385,17 +421,18 @@ function initAll(){
   var years = [...new Set(MONTHS.map(function(m){return m.slice(0,4);}))].sort();
   // 年月下拉（必选，默认最新月）
   fillSelect('f_year', years.map(function(y){return {v:y,t:y};}), false);
-  fillSelect('f_month', MONTHS.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), false);
-  var _ye=document.getElementById('f_year'), _me=document.getElementById('f_month');
+  var _ye=document.getElementById('f_year');
   if(_ye) _ye.value = latest.slice(0,4);
-  if(_me) _me.value = latest.slice(4);
+  fillDashMonthOptions(latest.slice(0,4), latest.slice(4));
   var _dpLabel = latest.slice(0,4)+'-'+latest.slice(4);
   var _lt=document.getElementById('leaveTitle'); if(_lt) _lt.textContent='休假概况（'+_dpLabel+' 当期）';
   fillSelect('p_year', years.map(function(y){return {v:y,t:y};}), false);
-  fillSelect('p_month', MONTHS.map(function(m){return {v:m.slice(4),t:m.slice(4)+'月'};}), false);
-  fillSelect('d_ym', MONTHS.map(function(m){return {v:m,t:m.slice(0,4)+'-'+m.slice(4)};}), false);
-  var _dym=document.getElementById('d_ym'); if(_dym) _dym.value=latest;
-  var _pm=document.getElementById('p_month'); if(_pm) _pm.value=latest.slice(4);
+  var _pye=document.getElementById('p_year'); if(_pye) _pye.value=latest.slice(0,4);
+  fillPersonalMonthOptions(latest.slice(0,4), latest.slice(4));
+  // 每日明细：年 → 年月 联动，年月下拉只列该年已有数据的月份
+  fillSelect('d_year', years.map(function(y){return {v:y,t:y};}), false);
+  var _dye=document.getElementById('d_year'); if(_dye) _dye.value=latest.slice(0,4);
+  fillDailyYmOptions(latest.slice(0,4), latest);
   // 筛选项来自 meta.filters（跨月并集，切月后选项稳定不缺失）
   var FL = SUMMARY.meta.filters||{};
   fillDatalist('list_f_bu', opt(FL.bu||[])); fillDatalist('list_d_bu', opt(FL.bu||[])); fillDatalist('list_p_bu', opt(FL.bu||[]));
@@ -404,13 +441,76 @@ function initAll(){
   fillDatalist('list_f_dept', opt(FL.dept||[])); fillDatalist('list_d_dept', opt(FL.dept||[])); fillDatalist('list_p_dept', opt(FL.dept||[]));
   fillDatalist('list_f_title', opt(FL.title||[])); fillDatalist('list_p_title', opt(FL.title||[]));
   currentDashYm = latest; currentPersYm = latest; currentDailyYm = latest;
+  // 关键：清除浏览器自动恢复（或上次遗留）的、与当前年月冲突的日期值，
+  // 否则「年月」与「日期」两个条件 AND 后恒为 0 条，用户会看到「一直无法显示明细」。
+  syncDailyDateRange(true);
   // 先确保最新月 person（建立 EMPMAP），再渲染各屏
   ensurePerson(latest).then(function(pm){
     DASH_PM = pm;
     buildDashboard();
     buildBukaChart();
     renderDaily(); renderPersonal();
-  });
+  }).catch(function(e){ console.error('初始化人员数据失败', e); });
+}
+/* 仪表盘「月」下拉：仅列该年有数据的月份 */
+function fillDashMonthOptions(year, preferMo){
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return !year || m.slice(0,4)===year;}).map(function(m){return m.slice(4);});
+  var s=document.getElementById('f_month'); if(!s) return;
+  s.innerHTML=months.map(function(m){return '<option value="'+m+'">'+m+'月</option>';}).join('');
+  if(preferMo && months.indexOf(preferMo)>=0) s.value=preferMo;
+  else if(months.length) s.value=months[months.length-1];
+}
+function onDashYearChange(){
+  var y=val('f_year');
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return m.slice(0,4)===y;});
+  fillDashMonthOptions(y, months.length?months[months.length-1].slice(4):'');
+  applyDashFilter();
+}
+/* 个人月度「月」下拉：仅列该年有数据的月份，避免选到不存在的月份文件 */
+function fillPersonalMonthOptions(year, preferMo){
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return !year || m.slice(0,4)===year;}).map(function(m){return m.slice(4);});
+  var s=document.getElementById('p_month'); if(!s) return;
+  s.innerHTML=months.map(function(m){return '<option value="'+m+'">'+m+'月</option>';}).join('');
+  if(preferMo && months.indexOf(preferMo)>=0) s.value=preferMo;
+  else if(months.length) s.value=months[months.length-1];
+}
+function onPersYearChange(){
+  var y=val('p_year');
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return m.slice(0,4)===y;});
+  fillPersonalMonthOptions(y, months.length?months[months.length-1].slice(4):'');
+  persPg=0; renderPersonal();
+}
+/* 每日明细「年月」下拉：仅列该年有数据的月份 */
+function fillDailyYmOptions(year, preferYm){
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return !year || m.slice(0,4)===year;});
+  var s=document.getElementById('d_ym'); if(!s) return;
+  s.innerHTML=months.map(function(m){return '<option value="'+m+'">'+m.slice(0,4)+'-'+m.slice(4)+'</option>';}).join('');
+  if(preferYm && months.indexOf(preferYm)>=0) s.value=preferYm;
+  else if(months.length) s.value=months[months.length-1];
+}
+/* 年切换 → 重建年月下拉并选中该年最新月 */
+function onDailyYearChange(){
+  var y=val('d_year');
+  var months=(SUMMARY.meta.趋势月份||[]).filter(function(m){return m.slice(0,4)===y;});
+  fillDailyYmOptions(y, months.length?months[months.length-1]:'');
+  syncDailyDateRange(true);
+  dailyPg=0; renderDaily();
+}
+/* 年月切换 → 同步年下拉、清空越界日期、重置页码 */
+function onDailyYmChange(){
+  var ym=val('d_ym');
+  if(ym){ var dy=document.getElementById('d_year'); if(dy) dy.value=ym.slice(0,4); }
+  syncDailyDateRange(true);
+  dailyPg=0; renderDaily();
+}
+/* 日期切换 → 校验必须属于当前年月 */
+function onDailyDateChange(){
+  var d=val('d_date'), ym=val('d_ym');
+  if(d && ym && d.slice(0,7)!==ym.slice(0,4)+'-'+ym.slice(4)){
+    var el=document.getElementById('d_date'); if(el) el.value='';
+    showDailyHint('⚠️ 所选日期 '+d+' 不属于 '+ym.slice(0,4)+'-'+ym.slice(4)+'，已清除；请在该月范围内选择日期。', 'warn', true);
+  }
+  dailyPg=0; renderDaily();
 }
 
 function opt(arr){ return arr.map(function(v){return {v:v,t:v};}); }
@@ -628,33 +728,67 @@ function applyDashFilter(){
     renderLeaveFromPm(fp, '（筛选后）');
   });
 }
-function resetDashFilter(){ ['f_year','f_month','f_bu','f_area','f_sub','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';}); applyDashFilter(); }
+function resetDashFilter(){
+  ['f_bu','f_area','f_sub','f_title','f_dept','f_name'].forEach(function(id){var e=document.getElementById(id); if(e) e.value='';});
+  var MONTHS=SUMMARY.meta.趋势月份||[], latest=MONTHS[MONTHS.length-1];
+  var fy=document.getElementById('f_year'); if(fy) fy.value=latest.slice(0,4);
+  fillDashMonthOptions(latest.slice(0,4), latest.slice(4));
+  applyDashFilter();
+}
 
 /* ===== 每日出勤明细 ===== */
+/* 统一提示条 */
+function showDailyHint(msg, type, persist){
+  var el=document.getElementById('dailyHint'); if(!el) return;
+  if(!msg){ el.style.display='none'; el.innerHTML=''; return; }
+  var warn = type==='warn';
+  el.style.display='block';
+  el.style.background = warn? '#fff7e8' : '#eef6ff';
+  el.style.color = warn? '#a35b00' : '#004E8C';
+  el.style.border = '1px solid '+(warn? '#f3c674' : '#bcd7f2');
+  el.innerHTML = msg;
+  if(persist) window.DAILY_NOTICE=msg;   // 跨异步渲染保留，待下次 _renderDailyCore 消费
+}
 function getDailyFiltered(){
   var bu=val('d_bu'), ym=val('d_ym'), date=val('d_date'), area=val('d_area'), sub=val('d_sub'),
-      dept=val('d_dept'), eid=val('d_eid').trim(), name=val('d_name').trim(), status=val('d_status'), mgr=val('d_mgr');
+      dept=val('d_dept'), eid=val('d_eid').trim(), name=val('d_name').trim(),
+      status=val('d_status'), mgr=val('d_mgr'), year=val('d_year');
+  // 防御：日期若与年月冲突则忽略该条件，避免两条件 AND 后恒为 0 条
+  var dateActive = date && (!ym || date.slice(0,7)===ym.slice(0,4)+'-'+ym.slice(4));
   return DAILY.filter(function(r){
     var e=EMPMAP[r[IDX.eid]]||{};
+    var d=r[IDX.date]||'';
     if(bu && e.bu!==bu) return false;
-    if(ym){ var m=(r[IDX.date]||'').replace(/-/g,'').slice(0,6); if(m!==ym) return false; }
-    if(date && (r[IDX.date]||'').indexOf(date)<0) return false;
+    if(ym){ if(d.replace(/-/g,'').slice(0,6)!==ym) return false; }
+    else if(year && d.slice(0,4)!==year) return false;
+    if(dateActive && d.indexOf(date)<0) return false;
     if(area && e.工作地点!==area) return false;
     if(sub && e.工作子区域!==sub) return false;
-    if(dept && e.所属部门!==dept) return false;
+    if(dept && (e.所属部门||'').indexOf(dept)<0) return false;          // 与仪表盘一致：部门路径模糊匹配
+    if(status && (e.员工状态||'在职')!==status) return false;
+    if(mgr){ if((mgr==='主管')!==isMgr(e.职称)) return false; }
     if(eid && (r[IDX.eid]||'').indexOf(eid)<0) return false;
     if(name && (e.姓名||'').indexOf(name)<0) return false;
     return true;
   });
 }
+var dailySeq=0;   // 异步竞态序号：快速切月时只接受最后一次请求的结果
 function renderDaily(){
   markFiltered(['d_bu','d_area','d_sub','d_dept','d_status','d_mgr','d_date','d_eid','d_name']);
   var ym=val('d_ym')||currentDailyYm; currentDailyYm=ym;
-  ensureDaily(ym).then(function(daily){
-    ensurePerson(ym).then(function(){
-      DAILY=daily;
-      _renderDailyCore();
-    });
+  var seq=++dailySeq;
+  Promise.all([ensureDaily(ym), ensurePerson(ym)]).then(function(res){
+    if(seq!==dailySeq) return;                 // 已有更新的请求，丢弃本次结果
+    DAILY=res[0];
+    window.DAILY_ERR=null;
+    _renderDailyCore();
+  }).catch(function(e){
+    if(seq!==dailySeq) return;
+    DAILY=null; window.DAILY_ERR=e.message||String(e);
+    var b=document.getElementById('dailyBody'); if(b) b.innerHTML='';
+    document.getElementById('dailyCount').textContent='0 条';
+    showDailyHint('⚠️ 无法加载 '+ym.slice(0,4)+'-'+ym.slice(4)+' 的每日出勤明细（'+window.DAILY_ERR+'）。请确认该月数据文件已生成，或切换其他年月。', 'warn');
+    console.error('[renderDaily] 加载失败', ym, e);
   });
 }
 function _renderDailyCore(){
@@ -667,9 +801,11 @@ function _renderDailyCore(){
     var e=EMPMAP[r[IDX.eid]]||{};
     var st=r[IDX.res]||'';
     var cls = st.indexOf('旷工')>=0?'tag-bad':(st==='考勤正常'?'tag-ok':'');
-    b.innerHTML+='<tr><td>'+r[IDX.eid]+'</td><td>'+(e.姓名||'')+'</td><td>在职</td><td><span class="cell-dept" title="'+(e.职称||'')+'">'+(e.职称||'')+'</span></td><td><span class="cell-dept" title="'+(e.职称||'')+'">'+(e.职称||'')+'</span></td><td>'+r[IDX.date]+'</td>'+
-      '<td class="'+cls+'">'+st+'</td><td>'+(r[IDX.in]||'')+'</td><td>'+(r[IDX.out]||'')+'</td>'+
-      '<td>'+fmt(r[IDX.late],0)+'</td><td>'+fmt(r[IDX.early],0)+'</td><td>'+fmt(r[IDX.abs],0)+'</td><td>'+fmt(r[IDX.act],1)+'</td></tr>';
+    b.innerHTML+='<tr><td>'+r[IDX.eid]+'</td><td>'+(e.姓名||'')+'</td><td>'+(e.员工状态||'在职')+'</td>'
+      +'<td><span class="cell-dept" title="'+(e.职称||'')+'">'+(e.职称||'')+'</span></td>'
+      +'<td><span class="cell-dept" title="'+(e.所属岗位||'')+'">'+(e.所属岗位||'')+'</span></td><td>'+r[IDX.date]+'</td>'
+      +'<td class="'+cls+'">'+st+'</td><td>'+(r[IDX.in]||'')+'</td><td>'+(r[IDX.out]||'')+'</td>'
+      +'<td>'+fmt(r[IDX.late],0)+'</td><td>'+fmt(r[IDX.early],0)+'</td><td>'+fmt(r[IDX.abs],0)+'</td><td>'+fmt(r[IDX.act],1)+'</td></tr>';
   });
   var sLate=dailyView.reduce((a,r)=>a+(+r[IDX.late]||0),0), sEarly=dailyView.reduce((a,r)=>a+(+r[IDX.early]||0),0),
       sAbs=dailyView.reduce((a,r)=>a+(+r[IDX.abs]||0),0), sAct=dailyView.reduce((a,r)=>a+(+r[IDX.act]||0),0);
@@ -680,24 +816,51 @@ function _renderDailyCore(){
   document.getElementById('dailyCount').textContent=dailyView.length+' 条';
   document.getElementById('dPageInfo').textContent='第 '+(dailyPg+1)+' / '+totPages+' 页';
   document.getElementById('dPrev').disabled=dailyPg<=0; document.getElementById('dNext').disabled=dailyPg>=totPages-1;
+  // 提示优先级：自动清除日期的通知 > 0 条诊断 > 隐藏
+  var notice=window.DAILY_NOTICE; window.DAILY_NOTICE=null;
+  if(notice){ showDailyHint(notice, 'warn'); }
+  else if(dailyView.length===0){
+    var parts=[];
+    [['d_bu','归属事业体'],['d_date','日期'],['d_area','工作区域'],['d_sub','工作子区域'],
+     ['d_dept','部门'],['d_status','在职状态'],['d_mgr','是否主管'],['d_eid','工号'],['d_name','姓名']]
+      .forEach(function(p){ var v=val(p[0]); if(v) parts.push(p[1]+'=<b>'+v+'</b>'); });
+    showDailyHint('当前筛选 <b>0 条</b>。数据月份：<b>'+(val('d_ym')||'未选')+'</b>（该月共 '+DAILY.length+' 条原始记录）；'
+      +'其他条件：'+(parts.length?parts.join('、'):'无')
+      +'。<button class="btn ghost" style="padding:3px 10px;margin-left:8px;font-size:12px" onclick="resetDaily()">重置筛选</button>', 'warn');
+  } else { showDailyHint(null); }
 }
 function dailyPage(d){ dailyPg+=d; renderDaily(); }
-function resetDaily(){ ['d_bu','d_year','d_ym','d_date','d_area','d_sub','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderDaily(); }
+/* 重置：年月/年恢复到最新月（不可清空，否则会去请求不存在的空月份文件） */
+function resetDaily(){
+  ['d_bu','d_date','d_area','d_sub','d_dept','d_status','d_mgr','d_eid','d_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';});
+  var MONTHS=SUMMARY.meta.趋势月份||[], latest=MONTHS[MONTHS.length-1];
+  var dy=document.getElementById('d_year'); if(dy) dy.value=latest.slice(0,4);
+  fillDailyYmOptions(latest.slice(0,4), latest);
+  window.DAILY_NOTICE=null;
+  syncDailyDateRange(false);
+  dailyPg=0; renderDaily();
+}
 
 /* ===== 个人月度出勤明细 ===== */
+var persSeq=0;
 function renderPersonal(){
   markFiltered(['p_bu','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name']);
   if(!SUMMARY) return;
-  var ym = (val('p_year')||'') + (val('p_month')||''); currentPersYm = ym;
+  var MONTHS=SUMMARY.meta.趋势月份||[], latest=MONTHS[MONTHS.length-1];
+  var yr=val('p_year')||latest.slice(0,4), mo=val('p_month')||latest.slice(4);
+  var ym=yr+mo; currentPersYm=ym;
+  var seq=++persSeq;
   ensurePerson(ym).then(function(pm){
+    if(seq!==persSeq) return;
     var bu=val('p_bu'), area=val('p_area'), sub=val('p_sub'),
         dept=val('p_dept'), title=val('p_title'), eid=val('p_eid').trim(), name=val('p_name').trim(), mgr=val('p_mgr');
     var view = pm.filter(function(r){
       if(bu && r.bu!==bu) return false;
       if(area && r.工作地点!==area) return false;
       if(sub && r.工作子区域!==sub) return false;
-      if(dept && r.所属部门!==dept) return false;
+      if(dept && (r.所属部门||'').indexOf(dept)<0) return false;
       if(title && r.职称!==title) return false;
+      if(mgr){ if((mgr==='主管')!==isMgr(r.职称)) return false; }
       if(eid && (r.工号||'').indexOf(eid)<0) return false;
       if(name && (r.姓名||'').indexOf(name)<0) return false;
       return true;
@@ -707,7 +870,7 @@ function renderPersonal(){
   var slice=persView.slice(persPg*persSz,(persPg+1)*persSz);
   var b=document.getElementById('persBody'); b.innerHTML='';
   slice.forEach(function(r){
-    b.innerHTML+='<tr><td>'+r.工号+'</td><td>'+r.姓名+'</td><td>'+r.员工状态+'</td><td><span class="cell-dept" title="'+r.所属部门+'">'+r.所属部门+'</span></td><td>'+r.职称+'</td><td>'+r.职称+'</td>'+
+    b.innerHTML+='<tr><td>'+r.工号+'</td><td>'+r.姓名+'</td><td>'+r.员工状态+'</td><td><span class="cell-dept" title="'+r.所属部门+'">'+r.所属部门+'</span></td><td>'+r.职称+'</td><td>'+(r.所属岗位||'')+'</td>'+
       '<td>'+fmt(r.迟到次数,0)+'</td><td>'+fmt(r.迟到时长_分钟,0)+'</td><td>'+fmt(r.早退次数,0)+'</td><td>'+fmt(r.早退时长_分钟,0)+'</td>'+
       '<td>'+fmt(r.缺勤天数,1)+'</td><td>'+fmt(r.出差天数,1)+'</td><td>'+fmt(r.应出勤天数,1)+'</td><td>'+fmt(r.实际出勤天数,1)+'</td>'+
       '<td>'+fmt(r.出勤率,1)+'%</td><td>'+fmt(r.补卡次数,0)+'</td></tr>';
@@ -731,10 +894,22 @@ function renderPersonal(){
   document.getElementById('persCount').textContent=persView.length+' 人';
   document.getElementById('pPageInfo').textContent='第 '+(persPg+1)+' / '+totPages+' 页';
   document.getElementById('pPrev').disabled=persPg<=0; document.getElementById('pNext').disabled=persPg>=totPages-1;
+  }).catch(function(e){
+    if(seq!==persSeq) return;
+    var b=document.getElementById('persBody'); if(b) b.innerHTML='';
+    document.getElementById('persCount').textContent='0 人';
+    console.error('[renderPersonal] 加载失败', ym, e);
   });
 }
 function persPage(d){ persPg+=d; renderPersonal(); }
-function resetPersonal(){ ['p_bu','p_year','p_month','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';}); renderPersonal(); }
+/* 重置：年/月恢复到最新月（不可清空，否则会请求不存在的月份文件） */
+function resetPersonal(){
+  ['p_bu','p_area','p_sub','p_dept','p_title','p_mgr','p_eid','p_name'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';});
+  var MONTHS=SUMMARY.meta.趋势月份||[], latest=MONTHS[MONTHS.length-1];
+  var py=document.getElementById('p_year'); if(py) py.value=latest.slice(0,4);
+  fillPersonalMonthOptions(latest.slice(0,4), latest.slice(4));
+  persPg=0; renderPersonal();
+}
 
 function val(id){ var e=document.getElementById(id); return e?e.value:''; }
 
