@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261110e';
+var DATA_VER = '20261111a';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -2114,7 +2114,7 @@ function mergeEmployeeData() {
   </section>
 
 
-  <!-- ===== 人才获取与招聘效能分析 v2（4 组数据源 · 202501 至今） ===== -->
+  <!-- ===== 人才获取与招聘效能分析 v2（4 组数据源 · 202401 至今，含 2024 主口径） ===== -->
   <section class="section module-visible" data-module="recruit" id="mod-recruit">
     <style>
       .rc-asof{font-size:12.5px;color:var(--text-secondary);margin:2px 0 12px;line-height:1.7;padding:0 4px;}
@@ -2223,7 +2223,7 @@ function mergeEmployeeData() {
     </div>
     <div class="rc-note" id="rcFilterNote"></div>
 
-    <div id="rcLoading" class="rc-loading">⏳ 正在加载 4 组招聘数据源（2025-01 至今）…</div>
+    <div id="rcLoading" class="rc-loading">⏳ 正在加载 4 组招聘数据源（2024-01 至今，含 2024 全年）…</div>
     <div id="rcBody" style="display:none;">
 
       <div class="rc-sub" data-rcsub="home">
@@ -5044,14 +5044,15 @@ function applyEduTags(e) {
   e._eduType = et;
 }
 
-// ==================== 人才获取与招聘效能分析 v2（4 组数据源 · 202501 至今） ====================
+// ==================== 人才获取与招聘效能分析 v2（4 组数据源 · 202401 至今，含 2024 主口径） ====================
 var RC = null, RC_READY = false, RC_SUB = 'home', RC_OFFER_OPEN = false;
 var RC_KEYS = ['geo', 'sub', 'bu', 'zhiXi', 'hr', 'status', 'inout', 'month', 'entryPhase'];
 var RC_LABEL = { geo: '工作范围', sub: '区域(子区域)', bu: '归属集团(BU)', zhiXi: '职系', hr: '招聘 HR', status: '职缺状态', inout: '内外渠道', month: '月份', entryPhase: 'Offer 判定' };
 var RC_OPTLABEL = {
   geo: { CN: 'CN区(A/B/C)', TW: '台湾', OVERSEA: '海外', UNKNOWN: '未识别' },
   sub: { 'CN-A': 'A区', 'CN-B': 'B区', 'CN-C': 'C区', 'N/A': 'N/A' },
-  month: null, entryPhase: { '待入职': '待入职(已发Offer)', '已入职': '已入职', '进行中': '在招(流程中)' }
+  month: null, entryPhase: { '待入职': '待入职(已发Offer)', '已入职': '已入职', '进行中': '在招(流程中)' },
+  status: { '本月在招': '在招(目前仍在处理中)', '已完成': '已完成', '暂停招聘': '暂停招聘', '其他': '其他' }
 };
 var RC_FIELD = {
   slots:   { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'hr', status: 'status', inout: 'inout', month: 'applyKey', entryPhase: null },
@@ -5104,8 +5105,10 @@ async function wpgLoadRecruitment() {
     if (!(r && r.slots && r.offers && r.meta && r.meta.counts)) return false;
     var f = r.meta.filters || {};
     // 2026-11-10 口径守卫：职缺侧不再单列「待入职」，Offer 判定须含「已发 Offer」。
+    // 2026-11-11 口径守卫：2024 起计入主口径（meta.dataScope / meta.from）。
     // jsDelivr @main 常滞后于 GitHub Pages，命中旧快照时立即降级到下一数据源（最终 github.io）。
     if (!f.status || f.status.indexOf('待入职') >= 0) return false;
+    if (r.meta.dataScope !== '2024-01+' || r.meta.from !== '2024-01') return false;
     return r.offers.some(function (o) { return /已发 Offer/.test(o.entryBasis || ''); });
   });
   if (ok) { rcInit(); }
@@ -5125,7 +5128,7 @@ function rcInit() {
 /* ---------- 多选筛选器 ---------- */
 function rcMsOpts(k) {
   var arr = (RC.meta.filters && RC.meta.filters[k]) || [];
-  if (k === 'month') arr = arr.filter(function (v) { return v >= '202501'; });
+  if (k === 'month') arr = arr.filter(function (v) { return v >= '202401'; });
   if (k === 'hr') arr = arr.filter(function (v) { return v && v !== '系统'; });
   return arr;
 }
@@ -5201,7 +5204,7 @@ function rcFilterUi() {
 }
 
 /* ---------- 过滤 ---------- */
-function rcInScope(x) { return x.scope ? x.scope === 'main' : !!(x.ym && x.ym >= '202501'); }
+function rcInScope(x) { return x.scope ? x.scope === 'main' : !!(x.ym && x.ym >= '202401'); }
 function rcFiltered(kind) {
   if (!RC) return [];
   var fmap = RC_FIELD[kind];
@@ -5216,7 +5219,7 @@ function rcFiltered(kind) {
     return true;
   });
 }
-/* 趋势线：对指定年份应用「除月份外」的当前筛选条件，保证 2024 对比线与 2025/2026 同口径 */
+/* 趋势线：对指定年份应用「除月份外」的当前筛选条件，2024/2025/2026 三年均为全量主口径 */
 function rcByYear(kind, year) {
   var arr = RC[kind].filter(function (x) {
     var ym = kind === 'slots' ? x.applyKey : x.ym;
@@ -5231,6 +5234,26 @@ function rcByYear(kind, year) {
   return arr;
 }
 function rcCount(arr, fld, val) { return arr.filter(function (x) { return x[fld] === val; }).length; }
+/* 目前总计在招：截至结算日仍在处理中的职缺累计（含 2024 起所有年份）。
+   固定 status=本月在招(前端显示「在招」)，忽略「月份 / 职缺状态 / Offer 判定」三项筛选，
+   其余维度（工作范围 / 区域 / BU / 职系 / 招聘 HR / 内外渠道）按当前筛选生效。 */
+function rcOpenTotal() {
+  if (!RC) return 0;
+  var fmap = RC_FIELD.slots, n = 0;
+  RC.slots.forEach(function (x) {
+    if (!rcInScope(x)) return;
+    if (x.status !== '本月在招' && x.status !== '待入职') return;
+    for (var i = 0; i < RC_KEYS.length; i++) {
+      var k = RC_KEYS[i];
+      if (k === 'month' || k === 'status' || k === 'entryPhase') continue;
+      var sel = RC_SEL[k]; if (!sel || !sel.size) continue;
+      var fld = fmap[k]; if (!fld) continue;
+      if (!sel.has(String(x[fld] == null ? '' : x[fld]))) return;
+    }
+    n++;
+  });
+  return n;
+}
 function rcAsOfMonth() { return (RC.meta.asOf || '').slice(0, 7).replace('-', ''); }
 function rcPrevMonth(ym) { var y = +ym.slice(0, 4), m = +ym.slice(4) - 1; if (m === 0) { y--; m = 12; } return String(y) + (m < 10 ? '0' : '') + m; }
 
@@ -5246,8 +5269,8 @@ function rcRender() {
 }
 function rcRenderAsOf() {
   var el = document.getElementById('rcAsOf'); if (!el) return;
-  el.innerHTML = '📅 <b>数据结算日 ' + rcEsc(RC.meta.asOf) + '</b> ｜ 主口径：<b>2025-01 至今</b>（2024 全年仅作趋势对比线）｜ 数据源：① WPG CN区入离职名册(期间) ② 职缺统计表-增补单 ③ 北森 Offer 信息汇总 ④ 北森 职位情况分析 ｜ 生成 ' + rcEsc(RC.meta.generatedAt)
-    + '<br>版面：「职缺进度一览表 / 外招-过程分析 / 内招-过程分析」，子页可收起展开；所有筛选器<b>可复选</b>；Offer 与职缺已合并为同一模块，待入职仅统计已发 Offer 且计划入职日未到者。';
+  el.innerHTML = '📅 <b>数据结算日 ' + rcEsc(RC.meta.asOf) + '</b> ｜ 主口径：<b>2024-01 至今</b>（含 2024 全年，已计入 KPI / 明细 / 趋势）｜ 数据源：① WPG CN区入离职名册(期间) ② 职缺统计表-增补单 ③ 北森 Offer 信息汇总 ④ 北森 职位情况分析 ｜ 生成 ' + rcEsc(RC.meta.generatedAt)
+    + '<br>版面：「职缺进度一览表 / 外招-过程分析 / 内招-过程分析」，子页可收起展开；所有筛选器<b>可复选</b>；Offer 与职缺已合并为同一模块，待入职仅统计已发 Offer 且计划入职日未到者；<b>「目前总计在招」为截至结算日累计，不受月份筛选影响</b>。';
 }
 
 /* ---------- 说明页 ---------- */
@@ -5259,9 +5282,9 @@ function rcRenderHome() {
   }
   var files = function (s) { return s.files.map(function (f) { return f.year + ' (' + f.rows.toLocaleString() + ' 行)'; }).join(' · '); };
   var html = '<div class="rc-src-grid">'
-    + card('① WPG CN区 入离职名册(期间)', src[0].totalRows.toLocaleString(), '行事件', [files(src[0]), '2025+ 雇用明细 ' + c.rosterHires + ' 条（用于实际到职核验）', '提供「工作城市 ↔ CN-A/B/C」真实映射 ' + Object.keys(RC.meta.citySubMap).length + ' 组'])
-    + card('② 职缺统计表-增补单', c.slots.toLocaleString(), '个职缺槽位', [files(src[1]), '主口径(2025+) ' + c.slotsMain + ' 个；其中 CN 区 ' + c.slotsCN + ' 个', '按「需求人数」逐单展开，最多 3 槽位/单'])
-    + card('③ 北森 Offer 信息汇总', c.offers.toLocaleString(), '笔 Offer', [files(src[2]), '主口径(2025+) ' + c.offersMain + ' 笔；其中 CN 区 ' + c.offersCN + ' 笔', '含「需求负责人」= 招聘 HR、计划入职日期'])
+    + card('① WPG CN区 入离职名册(期间)', src[0].totalRows.toLocaleString(), '行事件', [files(src[0]), '2024+ 雇用明细 ' + c.rosterHires + ' 条（用于实际到职核验）', '提供「工作城市 ↔ CN-A/B/C」真实映射 ' + Object.keys(RC.meta.citySubMap).length + ' 组'])
+    + card('② 职缺统计表-增补单', c.slots.toLocaleString(), '个职缺槽位', [files(src[1]), '主口径(2024+) ' + c.slotsMain + ' 个；其中 CN 区 ' + c.slotsCN + ' 个', '按「需求人数」逐单展开，最多 3 槽位/单'])
+    + card('③ 北森 Offer 信息汇总', c.offers.toLocaleString(), '笔 Offer', [files(src[2]), '主口径(2024+) ' + c.offersMain + ' 笔；其中 CN 区 ' + c.offersCN + ' 笔', '含「需求负责人」= 招聘 HR、计划入职日期'])
     + card('④ 北森 职位情况分析', c.positionRows.toLocaleString(), '行投递记录', [files(src[3]), '聚合为 ' + c.funnelGroups + ' 组（职位×渠道×月）', '提供 HR发起筛选 / 主动·被动简历 / 部门通过 / 面试漏斗'])
     + '</div>';
   html += '<div class="rc-entry-note" style="margin-top:14px;background:#eef6ff;border-color:#bcd7f2;color:#003b66;">'
@@ -5270,7 +5293,7 @@ function rcRenderHome() {
     + '· <b>待入职 / 已入职 / 在招 三分法</b>：以结算日 ' + rcEsc(RC.meta.asOf) + ' 为基准。<b>待入职</b>＝已发 Offer 且计划入职日 &gt; 结算日（唯一计入待入职 KPI）；<b>已入职</b>＝计划入职日 ≤ 结算日或北森标记「已到岗」，入职了就是入职了；<b>在招</b>＝Offer 流程中或职缺仍在处理中，在招的就是在招的。职缺侧不再单列「待入职」。另与入离职名册「雇用」事件按姓名做实际到职核验（见 Offer 明细末列）。<br>'
     + '· <b>区域挂靠</b>：已实现。子区域由名册真实「工作城市 ↔ 工作子区域」映射（深圳→B区、上海→A区、香港→C区…），与月度人力月报 / 考勤同口径；版面标题「CN ABC 区」故默认筛选 <b>工作范围=CN区</b>，可在筛选器加选台湾 / 海外。<br>'
     + '· <b>内外招</b>：增补单「管道」含外找→外招、内调→内招，其余「皆可」；过程分析页另按有效投递渠道区分（内部推荐 / 大联大控股招聘 / 人才库 视为内招渠道）。<b>② 外招页只含非内招渠道、③ 内招页只含内招渠道</b>，两页 KPI / 趋势 / 明细同源同口径。<br>'
-    + '· <b>2024</b>：仅用于 3 条逐月趋势对比线，不计入 KPI 与明细（主口径 2025-01 起）。'
+    + '· <b>2024 起计入主口径</b>：依 2026-11-11 用户口径，2024 全年 4 组源数据（名册 / 增补单 / Offer / 职位情况分析）已计入全部 KPI、明细与趋势，三年趋势线均为全量主口径，不再区分「对比线」。<b>「目前总计在招」</b>＝截至结算日仍在处理中的职缺累计，<b>不受月份筛选影响</b>（月份只影响「本月新增 / 上月职缺」与明细），其余维度筛选照常生效。'
     + '</div>';
   el.innerHTML = html;
 }
@@ -5280,35 +5303,36 @@ function rcRenderProgress() {
   var slots = rcFiltered('slots'), offers = rcFiltered('offers');
   var curM = rcAsOfMonth(), prevM = rcPrevMonth(curM);
   var done = rcCount(slots, 'status', '已完成');
-  var run = rcCount(slots, 'status', '本月在招'), stop = rcCount(slots, 'status', '暂停招聘');
+  var run = rcOpenTotal(), stop = rcCount(slots, 'status', '暂停招聘');
   var waitOffer = rcCount(offers, 'entryPhase', '待入职');
   var onboarded = rcCount(offers, 'entryPhase', '已入职');
   var doing = rcCount(offers, 'entryPhase', '进行中');
   var arrived = offers.filter(function (o) { return o.curStatus === '已到岗' || o.curStatus === '已報到'; }).length;
   var passed = offers.filter(function (o) { return o.entryBasis && o.entryBasis.indexOf('已过结算日') >= 0; }).length;
   var kpis = [
-    { l: '总职缺数', v: slots.length, s: '当前筛选 · 2025-01 起累计' },
+    { l: '总职缺数', v: slots.length, s: '当前筛选 · 2024-01 起累计' },
     { l: '上月职缺', v: slots.filter(function (x) { return x.applyKey === prevM; }).length, s: prevM.slice(0, 4) + '-' + prevM.slice(4) + ' 新增' },
     { l: '本月新增', v: slots.filter(function (x) { return x.applyKey === curM; }).length, s: curM.slice(0, 4) + '-' + curM.slice(4) + ' 新增' },
     { l: '已完成', v: done, s: '表单结案' },
     { l: '待入职', v: waitOffer, s: '已发 Offer · 计划入职日晚于结算日', blue: true },
     { l: '暂停招聘', v: stop, s: '表单驳回' },
-    { l: '本月在招', v: run, s: '处理中且未补人' }
+    { l: '目前总计在招', v: run, s: '截至结算日累计 · 不含月份/状态筛选' }
   ];
   var kc = document.getElementById('rcKpis');
   if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="rc-kpi' + (k.blue ? ' blue' : '') + '"><div class="l">' + k.l + '</div><div class="v">' + k.v + '</div><div class="s">' + rcEsc(k.s) + '</div></div>'; }).join('');
   var en = document.getElementById('rcEntryNote');
-  if (en) en.innerHTML = '📌 <b>待入职 / 已入职 / 在招 三分法</b>（基准日 ' + rcEsc(RC.meta.asOf) + '）：<b>待入职 ' + waitOffer + '</b> 笔＝<b>已发 Offer 且计划入职日未到结算日</b>，唯一计入待入职 KPI；<b>已入职 ' + onboarded + '</b> 笔（计划入职日已过 ' + passed + ' 笔 + 北森标记已到岗 ' + arrived + ' 笔），入职了就是入职了；<b>在招</b>＝Offer 流程中 ' + doing + ' 笔 + 本月在招 ' + run + ' 个职缺，在招的就是在招的。职缺侧不再单列「待入职」。下方「Offer / 待入职明细」可展开逐笔核对（含名册实际到职核验）。';
+  if (en) en.innerHTML = '📌 <b>待入职 / 已入职 / 在招 三分法</b>（基准日 ' + rcEsc(RC.meta.asOf) + '）：<b>待入职 ' + waitOffer + '</b> 笔＝<b>已发 Offer 且计划入职日未到结算日</b>，唯一计入待入职 KPI；<b>已入职 ' + onboarded + '</b> 笔（计划入职日已过 ' + passed + ' 笔 + 北森标记已到岗 ' + arrived + ' 笔），入职了就是入职了；<b>在招</b>＝Offer 流程中 ' + doing + ' 笔 + 目前总计在招 ' + run + ' 个职缺（截至结算日累计，不受月份筛选影响），在招的就是在招的。职缺侧不再单列「待入职」。下方「Offer / 待入职明细」可展开逐笔核对（含名册实际到职核验）。';
 
   // 状态分布条形（职缺侧不再有「待入职」；旧数据残留一律并入本月在招）
   var stOrder = ['已完成', '本月在招', '暂停招聘', '其他'];
+  var stLabel = { '已完成': '已完成', '本月在招': '在招（目前总计）', '暂停招聘': '暂停招聘', '其他': '其他' };
   var stColor = { '已完成': '#1a9c5b', '本月在招': '#E31937', '暂停招聘': '#94a3b8', '其他': '#cbd5e1' };
-  var stData = stOrder.map(function (s) { return { name: s, v: rcCount(slots, 'status', s), color: stColor[s] }; });
+  var stData = stOrder.map(function (s) { return { name: stLabel[s] || s, key: s, v: rcCount(slots, 'status', s), color: stColor[s] }; });
   var legacyWait = rcCount(slots, 'status', '待入职');
-  if (legacyWait) stData.forEach(function (d) { if (d.name === '本月在招') d.v += legacyWait; });
+  if (legacyWait) stData.forEach(function (d) { if (d.key === '本月在招') d.v += legacyWait; });
   stData = stData.filter(function (d) { return d.v > 0; });
   rcBars('rcStatusChart', stData);
-  // 逐月趋势（2024 对比线 + 2025/2026 按当前筛选重算）
+  // 逐月趋势（2024/2025/2026 三年均为全量主口径，除月份外按当前筛选重算）
   var years = ['2024', '2025', '2026'], colors = { '2024': '#f0b429', '2025': '#E31937', '2026': '#004E8C' };
   var series = years.map(function (y) {
     var arr = rcByYear('slots', y), data = [];
@@ -5356,7 +5380,7 @@ function rcRenderExternal() {
     { l: '已完成', v: rcCount(slots, 'status', '已完成'), s: '表单结案' },
     { l: '待入职', v: rcCount(offers, 'entryPhase', '待入职'), s: '已发 Offer · 计划入职日未到', blue: true },
     { l: '暂停招聘', v: rcCount(slots, 'status', '暂停招聘'), s: '表单驳回' },
-    { l: '本月在招', v: rcCount(slots, 'status', '本月在招'), s: '处理中' },
+    { l: '目前总计在招', v: rcOpenTotal(), s: '截至结算日累计 · 不含月份/状态筛选' },
     { l: '外招投递记录', v: funnel.reduce(function (a, f) { return a + f.rows; }, 0), s: '职位×渠道×月 聚合 ' + funnel.length + ' 组', blue: true }
   ];
   var kc = document.getElementById('rcExKpis');
@@ -5402,7 +5426,7 @@ function rcRenderInternal() {
   if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="rc-kpi' + (k.blue ? ' blue' : '') + '"><div class="l">' + k.l + '</div><div class="v">' + k.v + '</div><div class="s">' + rcEsc(k.s) + '</div></div>'; }).join('');
   var inNote = document.getElementById('rcInNote');
   if (inNote) inNote.textContent = '口径：本页 KPI、趋势线、明细表均只统计内招渠道（内部推荐 / 大联大控股招聘 / 人才库），不含任何外招渠道数据；按 年份×BU×工作城市×职系 聚合。';
-  // 内招渠道投递数月变化（2024 全量对比线，同样只含内招渠道）
+  // 内招渠道投递数月变化（2024/2025/2026 三年全量，同样只含内招渠道）
   var years = ['2024', '2025', '2026'], colors = { '2024': '#f0b429', '2025': '#E31937', '2026': '#7c3aed' };
   var series = years.map(function (y) {
     var arr = rcByYear('funnel', y).filter(function (f) { return INNER_CHANNELS.indexOf(f.channel) >= 0; }), d = [];
@@ -5414,7 +5438,7 @@ function rcRenderInternal() {
   });
   rcLine('rcInTrend', series);
   var lg = document.getElementById('rcInLegend');
-  if (lg) lg.innerHTML = years.map(function (y) { return '<span><i style="background:' + colors[y] + '"></i>' + y + ' 年内招投递数</span>'; }).join('') + '<span>（2024 为全量对比线 · 仅内招渠道）</span>';
+  if (lg) lg.innerHTML = years.map(function (y) { return '<span><i style="background:' + colors[y] + '"></i>' + y + ' 年内招投递数</span>'; }).join('') + '<span>（三年均为全量主口径 · 仅内招渠道）</span>';
   // 年变化表（仅内招渠道）
   var byYear = {};
   innerFunnel.forEach(function (f) {
@@ -5486,9 +5510,10 @@ function rcLine(elId, series) {
 
 function rcRenderFoot() {
   var el = document.getElementById('rcFoot'); if (!el) return;
-  el.innerHTML = 'ℹ️ <b>口径说明</b>：主口径 2025-01 至今；职缺按「需求人数」逐单展开槽位（每单最多 3 槽）；BU 归一沿用用户确认口径（鑫衡廣→AIT、含「偉」→TGBC、含「控股」→WPGH、SAC/Yosun/富威→AIT、WPG SA→其他）；区域＝CN 子区域 A/B/C 区（由名册真实城市映射）；状态＝驳回→暂停招聘 / 结案→已完成 / 其余（含有新人未报到但未发 Offer）→本月在招；招聘天数＝申请日至报到日（未报到则至结算日），绿灯≤60 天、黄灯 60–90 天、红灯&gt;90 天。<br>'
+  el.innerHTML = 'ℹ️ <b>口径说明</b>：主口径 2024-01 至今（含 2024 全年）；职缺按「需求人数」逐单展开槽位（每单最多 3 槽）；BU 归一沿用用户确认口径（鑫衡廣→AIT、含「偉」→TGBC、含「控股」→WPGH、SAC/Yosun/富威→AIT、WPG SA→其他）；区域＝CN 子区域 A/B/C 区（由名册真实城市映射）；状态＝驳回→暂停招聘 / 结案→已完成 / 其余（含有新人未报到但未发 Offer）→在招；招聘天数＝申请日至报到日（未报到则至结算日），绿灯≤60 天、黄灯 60–90 天、红灯&gt;90 天。<br>'
     + '📨 <b>模块已合并</b>：原「北森 Offer / 待入职」独立模块已并入「职缺进度一览表」；<b>待入职 KPI 仅统计已发 Offer 且计划入职日晚于结算日者</b>，已入职归已入职、在招归在招，职缺侧不再单列待入职；明细保留在本页可折叠区块中查看；两套独立筛选器已合并为一组可复选筛选器。<br>'
-    + '🔀 <b>内外招分页</b>：② 外招页排除内招渠道、③ 内招页只含内招渠道（内部推荐 / 大联大控股招聘 / 人才库），两页 KPI / 趋势 / 明细同源同口径。';
+    + '🔀 <b>内外招分页</b>：② 外招页排除内招渠道、③ 内招页只含内招渠道（内部推荐 / 大联大控股招聘 / 人才库），两页 KPI / 趋势 / 明细同源同口径。<br>'
+    + '🟢 <b>目前总计在招</b>：截至结算日仍在处理中的职缺累计（含 2024 起所有年份），<b>不受「月份 / 职缺状态」筛选影响</b>，其余维度筛选照常生效；月份筛选只作用于「本月新增 / 上月职缺」与明细表。';
 }
 
 /* ---------- 子页 / 折叠交互 ---------- */
