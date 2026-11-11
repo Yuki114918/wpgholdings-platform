@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261111a';
+var DATA_VER = '20261111b';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -2150,6 +2150,15 @@ function mergeEmployeeData() {
       .rc-loading{padding:20px;text-align:center;color:var(--text-secondary);}
       .rc-sub{margin-top:4px;}
       .rc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin:8px 0 14px;}
+      .rc-kpi-block{border:1px solid var(--border);border-radius:11px;background:#fafcff;padding:10px 12px 1px;margin:8px 0 12px;}
+      .rc-kpi-block.month{background:#fffdf6;border-color:#f0dcae;}
+      .rc-kpi-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
+      .rc-kpi-tag{font-size:12px;font-weight:800;padding:3px 10px;border-radius:6px;color:#fff;background:#004E8C;white-space:nowrap;}
+      .rc-kpi-tag.mon{background:#c2870b;}
+      .rc-kpi-sub{font-size:11px;color:var(--text-secondary);flex:1;line-height:1.4;}
+      .rc-kpi-pick{font-size:11.5px;color:#334;display:flex;align-items:center;gap:6px;white-space:nowrap;font-weight:600;}
+      .rc-kpi-pick select{border:1px solid #cfe0ef;background:#fff;border-radius:6px;padding:4px 8px;font-size:12px;color:#004E8C;font-weight:700;cursor:pointer;}
+      .rc-kpi-block .rc-kpis{margin:5px 0 9px;}
       .rc-kpi{border:1px solid var(--border);border-left:4px solid #E31937;border-radius:11px;padding:11px 13px;background:#fff;}
       .rc-kpi.blue{border-left-color:#004E8C;}
       .rc-kpi .l{font-size:12px;color:var(--text-secondary);font-weight:600;}
@@ -2231,7 +2240,22 @@ function mergeEmployeeData() {
       </div>
 
       <div class="rc-sub" data-rcsub="progress" style="display:none;">
-        <div class="rc-kpis" id="rcKpis"></div>
+        <div class="rc-kpi-block">
+          <div class="rc-kpi-head">
+            <span class="rc-kpi-tag">📊 总额 / 全年</span>
+            <span class="rc-kpi-sub" id="rcKpiCumHint"></span>
+            <label class="rc-kpi-pick">期间 <select id="rcPeriodPick" onchange="rcSetPeriod(this.value)"></select></label>
+          </div>
+          <div class="rc-kpis" id="rcKpisCum"></div>
+        </div>
+        <div class="rc-kpi-block month">
+          <div class="rc-kpi-head">
+            <span class="rc-kpi-tag mon">📅 月份</span>
+            <span class="rc-kpi-sub" id="rcKpiMonHint"></span>
+            <label class="rc-kpi-pick">月份 <select id="rcMonthPick" onchange="rcSetMonthPick(this.value)"></select></label>
+          </div>
+          <div class="rc-kpis" id="rcKpisMonth"></div>
+        </div>
         <div class="rc-entry-note" id="rcEntryNote"></div>
         <div class="rc-grid">
           <div class="rc-card"><h3>待入职 / 已完成职缺分布</h3><div class="rc-svg" id="rcStatusChart"></div></div>
@@ -5046,6 +5070,15 @@ function applyEduTags(e) {
 
 // ==================== 人才获取与招聘效能分析 v2（4 组数据源 · 202401 至今，含 2024 主口径） ====================
 var RC = null, RC_READY = false, RC_SUB = 'home', RC_OFFER_OPEN = false;
+/* KPI 双视图：「总额/全年」组期间 + 「月份」组月份（为空＝自动跟随顶部筛选或结算月） */
+var RC_PERIOD = 'all', RC_MONTH_PICK = null;
+var RC_PERIOD_OPTS = [
+  { k: 'all',    n: '全部累计（2024-01 起）' },
+  { k: '2024',   n: '2024 全年' },
+  { k: '2025',   n: '2025 全年' },
+  { k: '2026',   n: '2026 全年（至结算月）' },
+  { k: 'last12', n: '近 12 个月' }
+];
 var RC_KEYS = ['geo', 'sub', 'bu', 'zhiXi', 'hr', 'status', 'inout', 'month', 'entryPhase'];
 var RC_LABEL = { geo: '工作范围', sub: '区域(子区域)', bu: '归属集团(BU)', zhiXi: '职系', hr: '招聘 HR', status: '职缺状态', inout: '内外渠道', month: '月份', entryPhase: 'Offer 判定' };
 var RC_OPTLABEL = {
@@ -5123,6 +5156,7 @@ function rcInit() {
   var b = document.getElementById('rcBody'); if (b) b.style.display = 'block';
   rcMsInit();
   rcRender();
+  rcRenderProgressKpis();   // 预填两组 KPI 与下拉，切到「职缺进度一览表」即已就绪
 }
 
 /* ---------- 多选筛选器 ---------- */
@@ -5236,13 +5270,18 @@ function rcByYear(kind, year) {
 function rcCount(arr, fld, val) { return arr.filter(function (x) { return x[fld] === val; }).length; }
 /* 目前总计在招：截至结算日仍在处理中的职缺累计（含 2024 起所有年份）。
    固定 status=本月在招(前端显示「在招」)，忽略「月份 / 职缺状态 / Offer 判定」三项筛选，
-   其余维度（工作范围 / 区域 / BU / 职系 / 招聘 HR / 内外渠道）按当前筛选生效。 */
-function rcOpenTotal() {
+   其余维度（工作范围 / 区域 / BU / 职系 / 招聘 HR / 内外渠道）按当前筛选生效。
+   opt.period=[起,止] 限定申请月区间；opt.month='YYYYMM' 限定单月申请。无参时保持全局累计口径。 */
+function rcOpenTotal(opt) {
+  opt = opt || {};
   if (!RC) return 0;
   var fmap = RC_FIELD.slots, n = 0;
   RC.slots.forEach(function (x) {
     if (!rcInScope(x)) return;
     if (x.status !== '本月在招' && x.status !== '待入职') return;
+    var ym = String(x.applyKey == null ? '' : x.applyKey);
+    if (opt.month && ym !== opt.month) return;
+    if (opt.period && ym && (ym < opt.period[0] || ym > opt.period[1])) return;
     for (var i = 0; i < RC_KEYS.length; i++) {
       var k = RC_KEYS[i];
       if (k === 'month' || k === 'status' || k === 'entryPhase') continue;
@@ -5253,6 +5292,66 @@ function rcOpenTotal() {
     n++;
   });
   return n;
+}
+/* 两组 KPI 专用取数：一律忽略顶部「月份」筛选（改由期间 / 月份下拉精确限定），
+   其余 8 维筛选照常生效。明细表与图表仍走 rcFiltered()，继续受顶部月份筛选控制。 */
+function rcRows(kind, opt) {
+  opt = opt || {};
+  if (!RC) return [];
+  var fmap = RC_FIELD[kind], dateFld = (kind === 'slots' ? 'applyKey' : 'ym');
+  return RC[kind].filter(function (x) {
+    if (!rcInScope(x)) return false;
+    var ym = String(x[dateFld] == null ? '' : x[dateFld]);
+    if (opt.month && ym !== opt.month) return false;
+    if (opt.period && ym && (ym < opt.period[0] || ym > opt.period[1])) return false;
+    for (var i = 0; i < RC_KEYS.length; i++) {
+      var k = RC_KEYS[i];
+      if (k === 'month') continue;
+      var sel = RC_SEL[k]; if (!sel || !sel.size) continue;
+      var fld = fmap[k]; if (!fld) continue;
+      if (!sel.has(String(x[fld] == null ? '' : x[fld]))) return false;
+    }
+    return true;
+  });
+}
+function rcPeriodRange(p) {
+  var end = rcAsOfMonth();
+  if (p === '2024') return ['202401', '202412'];
+  if (p === '2025') return ['202501', '202512'];
+  if (p === '2026') return ['202601', end];
+  if (p === 'last12') { var a = end; for (var i = 0; i < 11; i++) a = rcPrevMonth(a); return [a, end]; }
+  return ['202401', end];
+}
+function rcPeriodLabel(p) {
+  for (var i = 0; i < RC_PERIOD_OPTS.length; i++) if (RC_PERIOD_OPTS[i].k === p) return RC_PERIOD_OPTS[i].n;
+  return RC_PERIOD_OPTS[0].n;
+}
+function rcMonthPick() {
+  if (RC_MONTH_PICK) return RC_MONTH_PICK;
+  var s = RC_SEL.month;
+  if (s && s.size) return Array.from(s).sort().pop();   // 复选多月时取最新月
+  return rcAsOfMonth();
+}
+function rcSetPeriod(v) { RC_PERIOD = v || 'all'; rcRenderProgressKpis(); }
+function rcSetMonthPick(v) { RC_MONTH_PICK = v || null; rcRenderProgressKpis(); }
+function rcKpiHtml(list) {
+  return list.map(function (k) {
+    return '<div class="rc-kpi' + (k.blue ? ' blue' : '') + '"><div class="l">' + k.l + '</div><div class="v">' + k.v + '</div><div class="s">' + rcEsc(k.s) + '</div></div>';
+  }).join('');
+}
+function rcFillKpiSelects() {
+  var p = document.getElementById('rcPeriodPick');
+  if (p) p.innerHTML = RC_PERIOD_OPTS.map(function (o) {
+    return '<option value="' + o.k + '"' + (o.k === RC_PERIOD ? ' selected' : '') + '>' + rcEsc(o.n) + '</option>';
+  }).join('');
+  var m = document.getElementById('rcMonthPick');
+  if (m) {
+    var opts = rcMsOpts('month').slice().sort().reverse();
+    m.innerHTML = '<option value="">自动（跟随顶部筛选 / 结算月）</option>' + opts.map(function (v) {
+      return '<option value="' + v + '"' + (v === RC_MONTH_PICK ? ' selected' : '') + '>' + v.slice(0, 4) + '-' + v.slice(4) + '</option>';
+    }).join('');
+    m.value = RC_MONTH_PICK || '';
+  }
 }
 function rcAsOfMonth() { return (RC.meta.asOf || '').slice(0, 7).replace('-', ''); }
 function rcPrevMonth(ym) { var y = +ym.slice(0, 4), m = +ym.slice(4) - 1; if (m === 0) { y--; m = 12; } return String(y) + (m < 10 ? '0' : '') + m; }
@@ -5270,7 +5369,8 @@ function rcRender() {
 function rcRenderAsOf() {
   var el = document.getElementById('rcAsOf'); if (!el) return;
   el.innerHTML = '📅 <b>数据结算日 ' + rcEsc(RC.meta.asOf) + '</b> ｜ 主口径：<b>2024-01 至今</b>（含 2024 全年，已计入 KPI / 明细 / 趋势）｜ 数据源：① WPG CN区入离职名册(期间) ② 职缺统计表-增补单 ③ 北森 Offer 信息汇总 ④ 北森 职位情况分析 ｜ 生成 ' + rcEsc(RC.meta.generatedAt)
-    + '<br>版面：「职缺进度一览表 / 外招-过程分析 / 内招-过程分析」，子页可收起展开；所有筛选器<b>可复选</b>；Offer 与职缺已合并为同一模块，待入职仅统计已发 Offer 且计划入职日未到者；<b>「目前总计在招」为截至结算日累计，不受月份筛选影响</b>。';
+    + '<br>版面：「职缺进度一览表 / 外招-过程分析 / 内招-过程分析」，子页可收起展开；所有筛选器<b>可复选</b>；Offer 与职缺已合并为同一模块，待入职仅统计已发 Offer 且计划入职日未到者。<br>'
+    + '📊 <b>KPI 已拆为两组</b>：<b>「总额 / 全年」</b>可用期间下拉切换全部累计 / 各年度 / 近 12 个月，<b>不受顶部「月份」筛选影响</b>；<b>「月份」</b>组可用月份下拉逐月查看，默认自动跟随顶部筛选。两组同屏显示，全年与单月可同时对照；<b>「目前总计在招」为截至结算日累计，不受月份筛选影响</b>。';
 }
 
 /* ---------- 说明页 ---------- */
@@ -5293,35 +5393,59 @@ function rcRenderHome() {
     + '· <b>待入职 / 已入职 / 在招 三分法</b>：以结算日 ' + rcEsc(RC.meta.asOf) + ' 为基准。<b>待入职</b>＝已发 Offer 且计划入职日 &gt; 结算日（唯一计入待入职 KPI）；<b>已入职</b>＝计划入职日 ≤ 结算日或北森标记「已到岗」，入职了就是入职了；<b>在招</b>＝Offer 流程中或职缺仍在处理中，在招的就是在招的。职缺侧不再单列「待入职」。另与入离职名册「雇用」事件按姓名做实际到职核验（见 Offer 明细末列）。<br>'
     + '· <b>区域挂靠</b>：已实现。子区域由名册真实「工作城市 ↔ 工作子区域」映射（深圳→B区、上海→A区、香港→C区…），与月度人力月报 / 考勤同口径；版面标题「CN ABC 区」故默认筛选 <b>工作范围=CN区</b>，可在筛选器加选台湾 / 海外。<br>'
     + '· <b>内外招</b>：增补单「管道」含外找→外招、内调→内招，其余「皆可」；过程分析页另按有效投递渠道区分（内部推荐 / 大联大控股招聘 / 人才库 视为内招渠道）。<b>② 外招页只含非内招渠道、③ 内招页只含内招渠道</b>，两页 KPI / 趋势 / 明细同源同口径。<br>'
-    + '· <b>2024 起计入主口径</b>：依 2026-11-11 用户口径，2024 全年 4 组源数据（名册 / 增补单 / Offer / 职位情况分析）已计入全部 KPI、明细与趋势，三年趋势线均为全量主口径，不再区分「对比线」。<b>「目前总计在招」</b>＝截至结算日仍在处理中的职缺累计，<b>不受月份筛选影响</b>（月份只影响「本月新增 / 上月职缺」与明细），其余维度筛选照常生效。'
+    + '· <b>2024 起计入主口径</b>：依 2026-11-11 用户口径，2024 全年 4 组源数据（名册 / 增补单 / Offer / 职位情况分析）已计入全部 KPI、明细与趋势，三年趋势线均为全量主口径，不再区分「对比线」。<b>「目前总计在招」</b>＝截至结算日仍在处理中的职缺累计，<b>不受月份筛选影响</b>，其余维度筛选照常生效。<br>'
+    + '· <b>KPI 总额 / 月份双视图</b>：依 2026-11-11 用户口径，①「总额 / 全年」组按期累计（期间下拉：全部累计 / 2024 / 2025 / 2026 / 近 12 个月），忽略顶部月份筛选；②「月份」组按单月统计（月份下拉，默认跟随顶部筛选或结算月）。两组同屏，避免选了月份就看不到全年总额；顶部「月份」筛选仍作用于下方状态分布图、逐月趋势与明细表。'
     + '</div>';
   el.innerHTML = html;
 }
 
 /* ---------- ① 职缺进度一览表（图5） ---------- */
-function rcRenderProgress() {
-  var slots = rcFiltered('slots'), offers = rcFiltered('offers');
-  var curM = rcAsOfMonth(), prevM = rcPrevMonth(curM);
-  var done = rcCount(slots, 'status', '已完成');
-  var run = rcOpenTotal(), stop = rcCount(slots, 'status', '暂停招聘');
-  var waitOffer = rcCount(offers, 'entryPhase', '待入职');
-  var onboarded = rcCount(offers, 'entryPhase', '已入职');
-  var doing = rcCount(offers, 'entryPhase', '进行中');
-  var arrived = offers.filter(function (o) { return o.curStatus === '已到岗' || o.curStatus === '已報到'; }).length;
-  var passed = offers.filter(function (o) { return o.entryBasis && o.entryBasis.indexOf('已过结算日') >= 0; }).length;
-  var kpis = [
-    { l: '总职缺数', v: slots.length, s: '当前筛选 · 2024-01 起累计' },
-    { l: '上月职缺', v: slots.filter(function (x) { return x.applyKey === prevM; }).length, s: prevM.slice(0, 4) + '-' + prevM.slice(4) + ' 新增' },
-    { l: '本月新增', v: slots.filter(function (x) { return x.applyKey === curM; }).length, s: curM.slice(0, 4) + '-' + curM.slice(4) + ' 新增' },
-    { l: '已完成', v: done, s: '表单结案' },
-    { l: '待入职', v: waitOffer, s: '已发 Offer · 计划入职日晚于结算日', blue: true },
-    { l: '暂停招聘', v: stop, s: '表单驳回' },
-    { l: '目前总计在招', v: run, s: '截至结算日累计 · 不含月份/状态筛选' }
+/* KPI 双视图：① 总额/全年（期间下拉，不受顶部月份筛选影响） ② 月份（月份下拉，逐月） */
+function rcRenderProgressKpis() {
+  if (!RC_READY || !RC) return;
+  var rg = rcPeriodRange(RC_PERIOD), plab = rcPeriodLabel(RC_PERIOD);
+  var cs = rcRows('slots', { period: rg }), co = rcRows('offers', { period: rg });
+  var ym = rcMonthPick(), ylab = ym.slice(0, 4) + '-' + ym.slice(4);
+  var ms = rcRows('slots', { month: ym }), mo = rcRows('offers', { month: ym });
+  rcFillKpiSelects();
+
+  var cumRun = rcOpenTotal({ period: rg });
+  var cumKpis = [
+    { l: '总职缺数', v: cs.length, s: plab + ' · 累计' },
+    { l: '已完成', v: rcCount(cs, 'status', '已完成'), s: plab + ' · 表单结案' },
+    { l: '待入职', v: rcCount(co, 'entryPhase', '待入职'), s: '已发 Offer · 计划入职日晚于结算日', blue: true },
+    { l: '暂停招聘', v: rcCount(cs, 'status', '暂停招聘'), s: plab + ' · 表单驳回' },
+    { l: '目前总计在招', v: cumRun, s: '截至结算日仍在处理中 · 期间内申请' }
   ];
-  var kc = document.getElementById('rcKpis');
-  if (kc) kc.innerHTML = kpis.map(function (k) { return '<div class="rc-kpi' + (k.blue ? ' blue' : '') + '"><div class="l">' + k.l + '</div><div class="v">' + k.v + '</div><div class="s">' + rcEsc(k.s) + '</div></div>'; }).join('');
+  var prevYm = rcPrevMonth(ym), prevLab = prevYm.slice(0, 4) + '-' + prevYm.slice(4);
+  var ps = rcRows('slots', { month: prevYm });
+  var monKpis = [
+    { l: '该月新增职缺', v: ms.length, s: ylab + ' 新增' },
+    { l: '上月新增职缺', v: ps.length, s: prevLab + ' 新增' },
+    { l: '该月已完成', v: rcCount(ms, 'status', '已完成'), s: ylab + ' 结案' },
+    { l: '该月暂停招聘', v: rcCount(ms, 'status', '暂停招聘'), s: ylab + ' 驳回' },
+    { l: '该月新在招', v: rcOpenTotal({ month: ym }), s: ylab + ' 申请且目前仍在招', blue: true },
+    { l: '该月 Offer 数', v: mo.length, s: ylab + ' 发出 / 在流程', blue: true }
+  ];
+  var a = document.getElementById('rcKpisCum'); if (a) a.innerHTML = rcKpiHtml(cumKpis);
+  var b = document.getElementById('rcKpisMonth'); if (b) b.innerHTML = rcKpiHtml(monKpis);
+  var h1 = document.getElementById('rcKpiCumHint');
+  if (h1) h1.textContent = plab + ' · 不受顶部「月份」筛选影响；其余维度照常生效';
+  var h2 = document.getElementById('rcKpiMonHint');
+  if (h2) h2.textContent = '当前 ' + ylab + (RC_MONTH_PICK ? '（手动选定）' : '（自动跟随顶部筛选 / 结算月）') + ' · 顶部月份筛选仍作用于下方图表与明细表';
+
+  var waitOffer = rcCount(co, 'entryPhase', '待入职');
+  var onboarded = rcCount(co, 'entryPhase', '已入职');
+  var doing = rcCount(co, 'entryPhase', '进行中');
+  var arrived = co.filter(function (o) { return o.curStatus === '已到岗' || o.curStatus === '已報到'; }).length;
+  var passed = co.filter(function (o) { return o.entryBasis && o.entryBasis.indexOf('已过结算日') >= 0; }).length;
   var en = document.getElementById('rcEntryNote');
-  if (en) en.innerHTML = '📌 <b>待入职 / 已入职 / 在招 三分法</b>（基准日 ' + rcEsc(RC.meta.asOf) + '）：<b>待入职 ' + waitOffer + '</b> 笔＝<b>已发 Offer 且计划入职日未到结算日</b>，唯一计入待入职 KPI；<b>已入职 ' + onboarded + '</b> 笔（计划入职日已过 ' + passed + ' 笔 + 北森标记已到岗 ' + arrived + ' 笔），入职了就是入职了；<b>在招</b>＝Offer 流程中 ' + doing + ' 笔 + 目前总计在招 ' + run + ' 个职缺（截至结算日累计，不受月份筛选影响），在招的就是在招的。职缺侧不再单列「待入职」。下方「Offer / 待入职明细」可展开逐笔核对（含名册实际到职核验）。';
+  if (en) en.innerHTML = '📌 <b>待入职 / 已入职 / 在招 三分法</b>（基准日 ' + rcEsc(RC.meta.asOf) + '，口径期间＝上方「总额/全年」组 ' + rcEsc(plab) + '）：<b>待入职 ' + waitOffer + '</b> 笔＝<b>已发 Offer 且计划入职日未到结算日</b>，唯一计入待入职 KPI；<b>已入职 ' + onboarded + '</b> 笔（计划入职日已过 ' + passed + ' 笔 + 北森标记已到岗 ' + arrived + ' 笔），入职了就是入职了；<b>在招</b>＝Offer 流程中 ' + doing + ' 笔 + 目前总计在招 ' + cumRun + ' 个职缺（截至结算日仍在处理中），在招的就是在招的。职缺侧不再单列「待入职」。下方「Offer / 待入职明细」可展开逐笔核对（含名册实际到职核验）。';
+}
+
+function rcRenderProgress() {
+  rcRenderProgressKpis();
+  var slots = rcFiltered('slots'), offers = rcFiltered('offers');
 
   // 状态分布条形（职缺侧不再有「待入职」；旧数据残留一律并入本月在招）
   var stOrder = ['已完成', '本月在招', '暂停招聘', '其他'];
@@ -5513,7 +5637,8 @@ function rcRenderFoot() {
   el.innerHTML = 'ℹ️ <b>口径说明</b>：主口径 2024-01 至今（含 2024 全年）；职缺按「需求人数」逐单展开槽位（每单最多 3 槽）；BU 归一沿用用户确认口径（鑫衡廣→AIT、含「偉」→TGBC、含「控股」→WPGH、SAC/Yosun/富威→AIT、WPG SA→其他）；区域＝CN 子区域 A/B/C 区（由名册真实城市映射）；状态＝驳回→暂停招聘 / 结案→已完成 / 其余（含有新人未报到但未发 Offer）→在招；招聘天数＝申请日至报到日（未报到则至结算日），绿灯≤60 天、黄灯 60–90 天、红灯&gt;90 天。<br>'
     + '📨 <b>模块已合并</b>：原「北森 Offer / 待入职」独立模块已并入「职缺进度一览表」；<b>待入职 KPI 仅统计已发 Offer 且计划入职日晚于结算日者</b>，已入职归已入职、在招归在招，职缺侧不再单列待入职；明细保留在本页可折叠区块中查看；两套独立筛选器已合并为一组可复选筛选器。<br>'
     + '🔀 <b>内外招分页</b>：② 外招页排除内招渠道、③ 内招页只含内招渠道（内部推荐 / 大联大控股招聘 / 人才库），两页 KPI / 趋势 / 明细同源同口径。<br>'
-    + '🟢 <b>目前总计在招</b>：截至结算日仍在处理中的职缺累计（含 2024 起所有年份），<b>不受「月份 / 职缺状态」筛选影响</b>，其余维度筛选照常生效；月份筛选只作用于「本月新增 / 上月职缺」与明细表。';
+    + '🟢 <b>目前总计在招</b>：截至结算日仍在处理中的职缺累计（含 2024 起所有年份），<b>不受「月份 / 职缺状态」筛选影响</b>，其余维度筛选照常生效。<br>'
+    + '📊 <b>KPI 双视图</b>：「总额 / 全年」组与「月份」组同屏显示，各自带下拉；总额组不受顶部月份筛选影响（可看全年累计），月份组逐月查看，顶部月份筛选器仍控制下方图表与明细表。';
 }
 
 /* ---------- 子页 / 折叠交互 ---------- */
