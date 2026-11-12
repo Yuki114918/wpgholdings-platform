@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261112a';
+var DATA_VER = '20261112b';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -5557,7 +5557,8 @@ function rcRenderHome() {
     + '· <b>区域挂靠</b>：已实现。子区域由名册真实「工作城市 ↔ 工作子区域」映射（深圳→B区、上海→A区、香港→C区…），与月度人力月报 / 考勤同口径；版面标题「CN ABC 区」故默认筛选 <b>工作范围=CN区</b>，可在筛选器加选台湾 / 海外。<br>'
     + '· <b>内外招</b>：增补单「管道」含外找→外招、内调→内招，其余「皆可」；过程分析页另按有效投递渠道区分（内部推荐 / 大联大控股招聘 / 人才库 视为内招渠道）。<b>② 外招页只含非内招渠道、③ 内招页只含内招渠道</b>，两页 KPI / 趋势 / 明细同源同口径。<br>'
     + '· <b>2024 起计入主口径</b>：依 2026-11-11 用户口径，2024 全年 4 组源数据（名册 / 增补单 / Offer / 职位情况分析）已计入全部 KPI、明细与趋势，三年趋势线均为全量主口径，不再区分「对比线」。<b>「目前总计在招」</b>＝截至结算日仍在处理中的职缺累计，<b>不受月份筛选影响</b>，其余维度筛选照常生效。<br>'
-    + '· <b>KPI 总额 / 月份双视图（2026-11-12 三页通用）</b>：①「总额 / 全年」组按期累计（期间下拉：全部累计 / 2024 / 2025 / 2026 / 近 12 个月），忽略顶部月份筛选；②「月份」组按所选月份统计（月份下拉<b>可复选多选</b>，默认跟随顶部筛选或结算月，多选时显示合计）。<b>职缺进度一览表 / 外招-过程分析 / 内招-过程分析</b>三页同屏双组、共用同一组期间与月份状态；顶部「月份」筛选仍作用于下方图表与明细表。'
+    + '· <b>KPI 总额 / 月份双视图（2026-11-12 三页通用）</b>：①「总额 / 全年」组按期累计（期间下拉：全部累计 / 2024 / 2025 / 2026 / 近 12 个月），忽略顶部月份筛选；②「月份」组按所选月份统计（月份下拉<b>可复选多选</b>，默认跟随顶部筛选或结算月，多选时显示合计）。<b>职缺进度一览表 / 外招-过程分析 / 内招-过程分析</b>三页同屏双组、共用同一组期间与月份状态；顶部「月份」筛选仍作用于下方图表与明细表。<br>'
+    + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
     + '</div>';
   el.innerHTML = html;
 }
@@ -5677,16 +5678,22 @@ function rcRenderProgress() {
   var lg = document.getElementById('rcTrendLegend');
   if (lg) lg.innerHTML = years.map(function (y) { return '<span><i style="background:' + colors[y] + '"></i>' + y + ' 年</span>'; }).join('');
 
-  // 职缺明细（含招聘 HR）
+  // 职缺明细（含招聘 HR；同一增补单号多人时按名额展开）
+  var slotTotalMap = {};
+  RC.slots.forEach(function (s) { slotTotalMap[s.single] = Math.max(slotTotalMap[s.single] || 0, s.slot || 1); });
+  var seenSingle = {}, uniqSingles = 0;
+  slots.forEach(function (s) { if (!seenSingle[s.single]) { seenSingle[s.single] = 1; uniqSingles++; } });
   var tn = document.getElementById('rcTableNote');
-  if (tn) tn.textContent = '共 ' + slots.length + ' 个职缺槽位（按筛选）；招聘 HR 由 Offer / 职位情况分析关联，空白表示源数据无对应记录。区域＝CN 子区域（与月报同口径）。';
+  if (tn) tn.textContent = '共 ' + slots.length + ' 个职缺槽位 / ' + uniqSingles + ' 张增补单（按筛选）；同一增补单号出现 2~3 行＝该单需求人数 >1 按名额展开，并非重复导入，请看右侧「名额 / 招募对象」两列；「招募对象」空白＝该名额尚未补人。KPI 与图表按人头（槽位）计，按单据计数请对照这里的张数。招聘 HR 由 Offer / 职位情况分析关联，空白表示源数据无对应记录。区域＝CN 子区域（与月报同口径）。';
   var rows = slots.slice().sort(function (a, b) { return (b.applyFull || '').localeCompare(a.applyFull || ''); }).map(function (s) {
     return [rcEsc(s.subLabel), rcEsc(s.bu), rcEsc(s.city), rcEsc(s.zhiXi),
       rcEsc(s.title || s.zhiXiFull), rcEsc(s.inout), (s.recruitDays == null ? '—' : s.recruitDays + ' 天'),
       rcEsc(s.mgr), rcEsc(s.hr || '—'), rcEsc(s.reportDate || '—'),
-      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>', rcEsc(s.single)];
+      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>', rcEsc(s.single),
+      '第 ' + (s.slot || 1) + ' / ' + (slotTotalMap[s.single] || 1) + ' 位',
+      rcEsc(s.name || '—（空名额）')];
   });
-  rcTable('rcTable', ['区域', 'BU', '城市', '职系', '职缺/职称', '内外', '招聘天数', '申请主管', '招聘 HR', '预计报到', '状态', '增补单号'], rows);
+  rcTable('rcTable', ['区域', 'BU', '城市', '职系', '职缺/职称', '内外', '招聘天数', '申请主管', '招聘 HR', '预计报到', '状态', '增补单号', '名额', '招募对象'], rows);
   // Offer 明细（合并视角，默认收起）
   var on = document.getElementById('rcOfferNote');
   if (on) on.textContent = '共 ' + offers.length + ' 笔 Offer（与主 KPI 同一筛选）；「入职判定」按计划入职日期，末列为入离职名册雇用事件的到职核验。';
