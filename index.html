@@ -5597,7 +5597,7 @@ function rcRenderHome() {
     + '· <b>2024 起计入主口径</b>：依 2026-11-11 用户口径，2024 全年 4 组源数据（名册 / 增补单 / Offer / 职位情况分析）已计入全部 KPI、明细与趋势，三年趋势线均为全量主口径，不再区分「对比线」。<b>「目前总计在招」</b>＝截至结算日仍在处理中的职缺累计，<b>不受月份筛选影响</b>，其余维度筛选照常生效。<br>'
     + '· <b>KPI 总额 / 月份双视图（2026-11-12 三页通用）</b>：①「总额 / 全年」组按期累计（期间下拉：全部累计 / 2024 / 2025 / 2026 / 近 12 个月），忽略顶部月份筛选；②「月份」组按所选月份统计（月份下拉<b>可复选多选</b>，默认跟随顶部筛选或结算月，多选时显示合计）。<b>职缺进度一览表 / 外招-过程分析 / 内招-过程分析</b>三页同屏双组、共用同一组期间与月份状态。<br>'
     + '· <b>下拉联动与数额对齐（2026-11-17）</b>：切换「期间」或「月份（可多选）」下拉后，<b>「待入职 / 已完成职缺分布」图与「职缺明细」表同步重算</b>，与对应 KPI 组<b>同源同期、数字一致</b>；未手动选月份时跟随「总额 / 全年」组期间，手动选月份后跟随「月份」组所选月份。顶部「月份」复选筛选仍可再叠加。图表区上方的<b>「🔗 数额对齐核对」条</b>会逐项列出两处数字供核对，三页明细（含外招 / 内招过程数据）一并联动。<b>三年逐月趋势线</b>固定为全量主口径供跨年对比，不随下拉变化（图例已标注）。<br>'
-    + '· <b>跨年延续职缺（前一年未完成延到下一年）</b>：职缺明细新增「跨年标注」列。<b>跨年完成</b>＝申请年早于结案 / 报到年（前一年底未完成、次年才补到人）；<b>跨年未结</b>＝申请年早于结算年、至今无结案日且仍在招（排除駁回作废单）。表头同时统计本筛选下两类槽数，便于把「本期新增」与「前期延续」分开看。<br>'
+    + '· <b>跨年延续职缺（前一年未完成延到下一年）</b>：职缺明细新增「跨年标注」列，并在「状态」列旁加「↳跨年」小角标（横向滚动前也能识别）。<b>跨年完成</b>＝申请年早于结案 / 报到年（前一年底未完成、次年才补到人）；<b>跨年未结</b>＝申请年早于结算年、至今无结案日且仍在招（排除駁回作废单）。表头同时统计本筛选下两类槽数，便于把「本期新增」与「前期延续」分开看。<br>'
     + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
     + '</div>';
   el.innerHTML = html;
@@ -5756,14 +5756,16 @@ function rcRenderProgress() {
 
   var tn = document.getElementById('rcTableNote');
   if (tn) tn.textContent = '共 ' + slots.length + ' 个职缺槽位 / ' + uniqSingles + ' 张增补单（当前范围：' + vlab + '，与上方 KPI 同源同期）；'
-    + '其中跨年延续 ' + carryList.length + ' 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '），见末列「跨年标注」。'
+    + '其中跨年延续 ' + carryList.length + ' 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '）：「状态」列旁有「↳跨年」角标，末列「跨年标注」列出完整流向。'
     + '同一增补单号出现 2~3 行＝该单需求人数 >1 按名额展开，并非重复导入，请看「名额 / 招募对象」两列；「招募对象」空白＝该名额尚未补人。'
     + 'KPI 与图表按人头（槽位）计，按单据计数请对照这里的张数。招聘 HR 由 Offer / 职位情况分析关联，空白表示源数据无对应记录。区域＝CN 子区域（与月报同口径）。';
   var rows = slots.slice().sort(function (a, b) { return (b.applyFull || '').localeCompare(a.applyFull || ''); }).map(function (s) {
+    var cg = rcCarry(s);
+    var carryTag = cg ? ' <span style="display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#fff1e0;color:#b45309;font-size:10px;white-space:nowrap" title="' + rcEsc(cg.text) + '">↳跨年</span>' : '';
     return [rcEsc(s.subLabel), rcEsc(s.bu), rcEsc(s.city), rcEsc(s.zhiXi),
       rcEsc(s.title || s.zhiXiFull), rcEsc(s.inout), (s.recruitDays == null ? '—' : s.recruitDays + ' 天'),
       rcEsc(s.mgr), rcEsc(s.hr || '—'), rcEsc(s.reportDate || '—'),
-      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>', rcEsc(s.single),
+      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>' + carryTag, rcEsc(s.single),
       '第 ' + (s.slot || 1) + ' / ' + (slotTotalMap[s.single] || 1) + ' 位',
       rcEsc(s.name || '—（空名额）'), rcCarryCell(s)];
   });
