@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261117b';
+var DATA_VER = '20261117c';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -2123,6 +2123,11 @@ function mergeEmployeeData() {
       .rc-count{font-size:12px;color:var(--text-secondary);}
       .rc-clear{border:1px solid #e2c7cc;background:#fff5f6;color:#b01b30;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;}
       .rc-clear:hover{background:#fde8eb;}
+      .rc-preset{border:1px solid #a7d8bd;background:#f0faf4;color:#12703f;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;}
+      .rc-preset:hover{background:#dcf3e6;}
+      .rc-preset.on{background:#12703f;color:#fff;border-color:#12703f;font-weight:700;}
+      .ms-search{width:100%;box-sizing:border-box;border:1px solid #cfe0ef;border-radius:6px;padding:5px 8px;font-size:12px;margin-bottom:6px;}
+      .ms-ops label.ms-hide{display:none;}
       .rc-filter.folded .rc-ms-row{display:none;}
       .rc-ms-row{display:flex;flex-wrap:wrap;gap:8px;}
       .ms{position:relative;}
@@ -2214,6 +2219,7 @@ function mergeEmployeeData() {
       <div class="rc-filter-head">
         <span class="rc-filter-title">选择检视 · 全部筛选器可复选</span>
         <span class="rc-count" id="rcFilterCount"></span>
+        <button class="rc-preset" id="rcReportPresetBtn" onclick="rcApplyReportPreset()">📋 报表口径 17 笔（在招 11）</button>
         <button class="rc-clear" onclick="rcClearFilter()">✕ 清除全部筛选</button>
         <button class="rc-clear" id="rcFilterFold" onclick="rcToggleFilter()">▲ 收起</button>
       </div>
@@ -2223,6 +2229,8 @@ function mergeEmployeeData() {
         <div class="ms" id="ms_bu"></div>
         <div class="ms" id="ms_zhiXi"></div>
         <div class="ms" id="ms_hr"></div>
+        <div class="ms" id="ms_mgr"></div>
+        <div class="ms" id="ms_city"></div>
         <div class="ms" id="ms_status"></div>
         <div class="ms" id="ms_inout"></div>
         <div class="ms" id="ms_month"></div>
@@ -5145,8 +5153,8 @@ var RC_PERIOD_OPTS = [
   { k: '2026',   n: '2026 全年（至结算月）' },
   { k: 'last12', n: '近 12 个月' }
 ];
-var RC_KEYS = ['geo', 'sub', 'bu', 'zhiXi', 'hr', 'status', 'inout', 'month', 'entryPhase'];
-var RC_LABEL = { geo: '工作范围', sub: '区域(子区域)', bu: '归属集团(BU)', zhiXi: '职系', hr: '招聘 HR', status: '职缺状态', inout: '内外渠道', month: '月份', entryPhase: 'Offer 判定' };
+var RC_KEYS = ['geo', 'sub', 'bu', 'zhiXi', 'hr', 'mgr', 'city', 'status', 'inout', 'month', 'entryPhase'];
+var RC_LABEL = { geo: '工作范围', sub: '区域(子区域)', bu: '归属集团(BU)', zhiXi: '职系', hr: '招聘 HR', mgr: '申请主管', city: '工作城市', status: '职缺状态', inout: '内外渠道', month: '月份', entryPhase: 'Offer 判定' };
 var RC_OPTLABEL = {
   geo: { CN: 'CN区(A/B/C)', TW: '台湾', OVERSEA: '海外', UNKNOWN: '未识别' },
   sub: { 'CN-A': 'A区', 'CN-B': 'B区', 'CN-C': 'C区', 'N/A': 'N/A' },
@@ -5154,9 +5162,9 @@ var RC_OPTLABEL = {
   status: { '本月在招': '在招(目前仍在处理中)', '已完成': '已完成', '暂停招聘': '暂停招聘', '其他': '其他' }
 };
 var RC_FIELD = {
-  slots:   { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'hr', status: 'status', inout: 'inout', month: 'applyKey', entryPhase: null },
-  offers:  { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'hr', status: null, inout: null, month: 'ym', entryPhase: 'entryPhase' },
-  funnel:  { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'owner', status: null, inout: null, month: 'ym', entryPhase: null }
+  slots:   { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'hr', mgr: 'mgr', city: 'city', status: 'status', inout: 'inout', month: 'applyKey', entryPhase: null },
+  offers:  { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'hr', mgr: 'mgr', city: 'city', status: null, inout: null, month: 'ym', entryPhase: 'entryPhase' },
+  funnel:  { geo: 'geo', sub: 'sub', bu: 'bu', zhiXi: 'zhiXi', hr: 'owner', mgr: 'mgr', city: 'city', status: null, inout: null, month: 'ym', entryPhase: null }
 };
 var INNER_CHANNELS = ['内部推荐', '大联大控股招聘', '人才库'];
 var RC_SEL = {};
@@ -5226,6 +5234,12 @@ function rcInit() {
 
 /* ---------- 多选筛选器 ---------- */
 function rcMsOpts(k) {
+  /* 申请主管 / 工作城市：数据文件 meta.filters 未提供，改为从职缺槽位动态去重生成 */
+  if (k === 'mgr' || k === 'city') {
+    var seen = {};
+    (RC.slots || []).forEach(function (s) { var v = s[k]; if (v) seen[v] = 1; });
+    return Object.keys(seen).sort();
+  }
   var arr = (RC.meta.filters && RC.meta.filters[k]) || [];
   if (k === 'month') arr = arr.filter(function (v) { return v >= '202401'; });
   if (k === 'hr') arr = arr.filter(function (v) { return v && v !== '系统'; });
@@ -5239,8 +5253,9 @@ function rcMsInit() {
       var ck = RC_SEL[k].has(String(v)) ? ' checked' : '';
       return '<label><input type="checkbox" value="' + rcEsc(v) + '"' + ck + ' onchange="rcMsChange(\'' + k + '\')"> ' + rcEsc(rcOptLabel(k, v)) + '</label>';
     }).join('');
+    var search = opts.length > 20 ? '<input class="ms-search" placeholder="搜索 ' + RC_LABEL[k] + '…" oninput="rcMsSearch(\'' + k + '\',this.value)">' : '';
     el.innerHTML = '<button type="button" class="ms-btn" id="ms_' + k + '_btn" onclick="rcMsToggle(\'' + k + '\',event)">' + RC_LABEL[k] + ' <span id="ms_' + k + '_txt"></span></button>'
-      + '<div class="ms-panel" id="ms_' + k + '_panel"><div class="ms-ops">' + (body || '<div class="rc-table-note">暂无选项</div>') + '</div>'
+      + '<div class="ms-panel" id="ms_' + k + '_panel">' + search + '<div class="ms-ops">' + (body || '<div class="rc-table-note">暂无选项</div>') + '</div>'
       + '<div class="ms-act"><button type="button" onclick="rcMsAll(\'' + k + '\')">全选</button><button type="button" onclick="rcMsNone(\'' + k + '\')">清空</button><button type="button" onclick="rcMsToggle(\'' + k + '\',event)">完成</button></div></div>';
   });
   if (!window.__rcMsDocListener) {
@@ -5253,6 +5268,14 @@ function rcMsInit() {
   }
   rcMsSyncUi();
 }
+/* 选项多（申请主管 500+）时按文字过滤显示，不改动勾选状态 */
+function rcMsSearch(k, q) {
+  var p = document.getElementById('ms_' + k + '_panel'); if (!p) return;
+  var s = String(q || '').trim().toLowerCase();
+  p.querySelectorAll('.ms-ops label').forEach(function (l) {
+    l.classList.toggle('ms-hide', !!s && l.textContent.toLowerCase().indexOf(s) < 0);
+  });
+}
 function rcMsToggle(k, ev) {
   if (ev) ev.stopPropagation();
   var p = document.getElementById('ms_' + k + '_panel'); if (!p) return;
@@ -5261,6 +5284,7 @@ function rcMsToggle(k, ev) {
   if (willOpen) p.classList.add('open');
 }
 function rcMsCollect(k) {
+  rcReportOff();
   var p = document.getElementById('ms_' + k + '_panel'); if (!p) return;
   var s = new Set();
   p.querySelectorAll('input[type=checkbox]').forEach(function (c) { if (c.checked) s.add(c.value); });
@@ -5287,7 +5311,36 @@ function rcMsSyncUi() {
     if (txt) txt.innerHTML = n === 0 ? '全部' : '<span class="ms-n">' + n + '</span>';
   });
 }
-function rcClearFilter() { rcDefaultSel(); RC_PERIOD = 'all'; RC_MONTH_PICKS.clear(); rcMsInit(); rcRender(); }
+/* ===== 报表口径 17 笔基准（2026-11-17）=====
+   用户 2026-11-12 锁定 D 口径：截图可见申请主管 + 上海 + 2026/01–202610。
+   实测平台数据内可精确复现：8 位主管 + 上海 + 2026 期间 = 17 槽 / 13 单，
+   在招 11 / 暂停 6（暂停 6 为源表「駁回」作废单，报表排除）。
+   这 3 张「部分完成 1/2·未结案」单的 6 个槽全部仍计在招：整单未结案，
+   已到岗的那个名额不从在招里剔除 —— 这就是 11 而不是 8 的原因。
+   预设只设置筛选条件，不写死 KPI 数字；手动动任一筛选即退出。 */
+var RC_REPORT_ON = false;
+var RC_REPORT_PRESET = {
+  mgrs: ['SamsonYang/楊勝強', 'DanielWang/王巍華', 'YYChen/陳陽明', 'StevenLin/林俊宏',
+         'JackXia/夏宗立', 'LilyWang/王俊俊', 'Ikezhang/張寧勃', 'BoatZhang/張齊'],
+  city: '上海', period: '2026'
+};
+function rcReportOff() {
+  if (!RC_REPORT_ON) return;
+  RC_REPORT_ON = false;
+  var b = document.getElementById('rcReportPresetBtn'); if (b) b.classList.remove('on');
+}
+function rcApplyReportPreset() {
+  if (!RC_READY || !RC) return;
+  rcDefaultSel();
+  RC_PERIOD = RC_REPORT_PRESET.period; RC_MONTH_PICKS.clear();
+  RC_SEL.mgr = new Set(RC_REPORT_PRESET.mgrs);
+  RC_SEL.city = new Set([RC_REPORT_PRESET.city]);
+  RC_REPORT_ON = true;
+  rcMsInit();
+  var b = document.getElementById('rcReportPresetBtn'); if (b) b.classList.add('on');
+  rcSwitchSub('progress');   // 内含 rcRender()
+}
+function rcClearFilter() { rcReportOff(); rcDefaultSel(); RC_PERIOD = 'all'; RC_MONTH_PICKS.clear(); rcMsInit(); rcRender(); }
 function rcFilterUi() {
   var parts = [], n = 0;
   RC_KEYS.forEach(function (k) {
@@ -5299,7 +5352,8 @@ function rcFilterUi() {
   var c = document.getElementById('rcFilterCount');
   if (c) c.textContent = n ? ('已启用 ' + parts.length + ' 组筛选 · ' + n + ' 个条件' + (RC_SEL.geo && RC_SEL.geo.size === 1 && RC_SEL.geo.has('CN') ? '（默认 CN 区）' : '')) : '未筛选（全量）';
   var note = document.getElementById('rcFilterNote');
-  if (note) note.textContent = parts.length ? ('已筛选：' + parts.join(' · ')) : '';
+  if (note) note.textContent = (RC_REPORT_ON ? '【报表口径 17 笔基准 · 在招 11】' : '')
+    + (parts.length ? ('已筛选：' + parts.join(' · ')) : '');
 }
 
 /* ---------- 过滤 ---------- */
@@ -5553,12 +5607,13 @@ function rcMonthPickToggle(ev, key) {
   if (willOpen) p.classList.add('open');
 }
 function rcMonthPickSet(key, mode) {
+  rcReportOff();
   if (mode === 'auto' || mode === 'none') RC_MONTH_PICKS.clear();
   else if (mode === 'all') rcMsOpts('month').forEach(function (m) { RC_MONTH_PICKS.add(m); });
   else { if (RC_MONTH_PICKS.has(mode)) RC_MONTH_PICKS.delete(mode); else RC_MONTH_PICKS.add(mode); }
   rcRender();   // 期间 / 月份切换后，状态分布图与职缺明细同步联动
 }
-function rcSetPeriod(v) { RC_PERIOD = v || 'all'; rcRender(); }
+function rcSetPeriod(v) { rcReportOff(); RC_PERIOD = v || 'all'; rcRender(); }
 function rcKpiHtml(list) {
   return list.map(function (k) {
     return '<div class="rc-kpi' + (k.blue ? ' blue' : '') + '"><div class="l">' + k.l + '</div><div class="v">' + k.v + '</div><div class="s">' + rcEsc(k.s) + '</div></div>';
@@ -5655,6 +5710,7 @@ function rcRenderHome() {
     + '· <b>名额完成 ≠ 整单结案（2026-11-17 用户口径）</b>：一张单「拟增补人数 / 需求人数」为 2 人时，<b>只补到 1 人，整单仍不算结案</b>。逐名额判定：<b>完成</b>＝有姓名且（有报到日或「增补状态」为结案）；<b>取消</b>＝增补状态为取消（不再补人）；<b>未完成</b>＝其余（含空名额）。单据级：<b>整单结案</b>＝所有名额皆完成 / 取消且表单状态为处理完毕（或有结案日）；<b>部分完成·未结案</b>＝已有名额完成但仍有未完成名额；<b>名额齐·表单未结案</b>＝名额全补齐但表单仍处理中；两者都<b>不算结案</b>。明细末列「单据结案」写明每张单「完成 d / 共 t 人」，状态列另有「⚠部分 d/t」角标（不横向滚动也能看到），表头同步统计「多名额单 / 部分完成未结案」张数。跨年延续标注也改用同一套名额判定，取消 / 空名额不再误标为跨年完成。<br>'
     + '· <b>两套口径必须分开看</b>：<b>KPI、状态分布图与「状态」列</b>沿用原「整单表单状态」派生口径（驳回→暂停招聘 / 结案→已完成 / 其余→在招），故 711 总职缺、84 目前总计在招、142 暂停招聘等主口径数字<b>未变</b>；<b>「单据结案」列与单据计数</b>按上述逐名额规则判定，只作标注与核对，不参与 KPI。若某槽显示「已完成」但单据结案列写「部分完成·未结案」，代表整单还有名额未补人，并非数据矛盾。<br>'
     + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
+    + '<br>· <b>报表口径 17 笔基准（2026-11-17）</b>：筛选栏新增「申请主管」「工作城市」两个可复选维度与「📋 报表口径 17 笔（在招 11）」一键预设。报表以「招聘 HR＝Mandy Hu 胡吉青」显示 17 笔（已完成 3 / 待入职 3 / 在招 11）；平台按同一 HR 只能筛出 14 槽 / 在招 7，原因是报表范围内有 10 个槽在源表无 Offer / 投递记录、招聘 HR 空白。预设改用「8 位申请主管 ＋ 上海 ＋ 2026 期间」精确复现 17 槽 / 13 单，其中 <b>在招 11</b> 包含 3 张「部分完成 1/2·未结案」单的全部 6 个槽（整单未结案，已到岗名额仍计在招），另 6 槽为源表「駁回」作废单（平台标暂停招聘，报表排除）。预设只设置筛选条件，<b>711 总职缺 / 84 目前总计在招等主口径基线不变</b>；手动调整任一筛选、期间或月份即自动退出预设。'
     + '</div>';
   el.innerHTML = html;
 }
@@ -5819,6 +5875,15 @@ function rcRenderProgress() {
       + '上方 KPI 同组＝ 总职缺 <b>' + (kp ? kp.total : '—') + '</b> · 已完成 <b>' + (kp ? kp.done : '—') + '</b> · 待入职 <b>' + (kp ? kp.wait : '—') + '</b> · 暂停 <b>' + (kp ? kp.pause : '—') + '</b> · 在招 <b>' + (kp ? kp.open : '—') + '</b> —— ' + diff + '。'
       + '本期<b>跨年延续 ' + carryList.length + '</b> 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '）。'
       + '按单据：<b>整单结案 ' + doneOrders + '</b> 张 / <b>部分完成·未结案 ' + partialOrders + '</b> 张（一名额完成 ≠ 整单结案，见「单据结案」列）。';
+    if (RC_REPORT_ON) {
+      var pSlots = slots.filter(function (s) { return rcOrderInfo(s.single).state === 'partial'; }).length;
+      an.innerHTML += '<br>📋 <b>报表口径（17 笔基准 · 2026/01–10 · 上海）</b>：本范围 <b>' + cumOpen
+        + ' 槽在招</b> ＝ ' + partialOrders + ' 张「部分完成 1/2·未结案」单共 <b>' + pSlots
+        + ' 槽全数计在招</b>（整单未结案，已到岗的那 1 人<b>不</b>从在招剔除）＋ 其余单名额在招单；另 <b>'
+        + cumPause + ' 槽为源表「駁回」作废单</b>，平台标「暂停招聘」，报表排除不计。'
+        + '按「招聘 HR＝胡吉青」只能筛出 14 槽 / 在招 7（另 10 槽在源表无 Offer / 投递记录，HR 空白），'
+        + '故本预设改用「申请主管 ＋ 工作城市 ＋ 期间」复现报表范围；<b>17 与 11 均由数据实时算出，未在 KPI 层写死</b>。';
+    }
   }
 
   var tn = document.getElementById('rcTableNote');
