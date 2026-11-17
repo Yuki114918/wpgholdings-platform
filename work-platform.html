@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261117a';
+var DATA_VER = '20261117b';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -5429,18 +5429,72 @@ function rcViewRows(kind) {
   }
   return arr;
 }
-/* 跨年延续职缺：前一年开出、延到下一年才完成，或延到结算年仍未完成。
-   ① 跨年完成＝申请年 < 结案/报到年且已结案（排除驳回作废）；
-   ② 跨年未结＝申请年 < 结算年、至今无结案日、非已完成且非驳回作废。 */
+/* ===== 名额完成 / 单据结案 三级口径（2026-11-17 用户口径）=====
+   源表字段：「需求人数（拟增补人数）」＋「新进人员姓名一/二/三」「预计报到日」「增补状态一/二/三」
+   ＋整单「表单状态」「结案日期」。一张单拟增补 2 人时，只补到 1 人，整单仍不算结案。
+   ① 名额完成＝该名额有姓名 且（有报到日 或 增补状态为「结案 / 結案」）；
+   ② 名额取消＝增补状态为「取消」（该名额不再补人，既不算完成也不算未完成）；
+   ③ 名额未完成＝其余（含空名额、已发 Offer 未报到）。
+   ④ 整单结案＝本单所有名额皆「完成」或「取消」，且整单表单状态为处理完毕 / 结案（或已有结案日）；
+      部分完成·未结案＝至少 1 个名额完成、但仍存在未完成名额 ⇒ 一名额完成 ≠ 整单结案；
+      名额齐·表单未结案＝名额全部补齐但表单仍处理中 ⇒ 同样不算结案。
+   ⚠️ KPI 与「状态」列沿用原「整单表单状态」口径（711 / 84 / 142 不变）；
+      本组判定只用于明细「单据结案」列、状态列角标与单据计数，两套口径在页面显式区分。 */
+function rcSlotState(s) {
+  var st = (s.slotStatus || '').trim();
+  if (/^(取消|作廢|作废)$/.test(st)) return '取消';
+  if (/^(结案|結案|已结案|已結案)$/.test(st) && (s.name || '').trim()) return '完成';
+  if ((s.name || '').trim() && (s.reportDate || '').trim()) return '完成';
+  return '未完成';
+}
+var RC_ORDER_MAP = null, RC_ORDER_SRC = null;
+function rcOrderMap() {
+  if (RC_ORDER_MAP && RC_ORDER_SRC === RC) return RC_ORDER_MAP;
+  var m = {};
+  RC.slots.forEach(function (s) { (m[s.single] = m[s.single] || []).push(s); });
+  RC_ORDER_MAP = m; RC_ORDER_SRC = RC;
+  return m;
+}
+function rcOrderInfo(single) {
+  var v = rcOrderMap()[single] || [];
+  var total = v.length, done = 0, cancel = 0, open = 0;
+  v.forEach(function (s) {
+    var k = rcSlotState(s);
+    if (k === '完成') done++; else if (k === '取消') cancel++; else open++;
+  });
+  var form = (v[0] && v[0].formStatus) || '';
+  var closed = /处理完毕|處理完畢|结案|結案|已结案|已結案/.test(form) || !!(v[0] && v[0].closeDate);
+  var rejected = /驳回|駁回|作废|作廢/.test(form);
+  var state, label;
+  if (rejected) { state = 'rejected'; label = '已作废'; }
+  else if (open === 0 && done > 0 && closed) { state = 'done'; label = '整单结案 ' + done + '/' + total; }
+  else if (open === 0 && done > 0) { state = 'pending'; label = '名额齐 ' + done + '/' + total + ' · 表单未结案'; }
+  else if (open === 0 && done === 0) { state = 'cancelOnly'; label = '结案·无补人 0/' + total; }
+  else if (done > 0 && open > 0) { state = 'partial'; label = '部分完成 ' + done + '/' + total + ' · 未结案'; }
+  else { state = 'open'; label = '在招 0/' + total; }
+  return { total: total, done: done, cancel: cancel, open: open, state: state, label: label,
+    text: '本单拟增补 ' + total + ' 人：完成 ' + done + ' / 取消 ' + cancel + ' / 未完成 ' + open + '；' + label };
+}
+function rcOrderCell(s) {
+  var o = rcOrderInfo(s.single);
+  var color = (o.state === 'partial' || o.state === 'pending') ? '#b45309'
+    : (o.state === 'done' ? '#1a9c5b' : (o.state === 'rejected' ? '#94a3b8' : '#004E8C'));
+  return '<span title="' + rcEsc(o.text) + '" style="color:' + color + ';font-weight:600;white-space:nowrap">' + rcEsc(o.label) + '</span>';
+}
+
+/* 跨年延续职缺：与「名额完成」共用同一套判定，避免把取消 / 空名额误标为跨年完成。
+   ① 跨年完成＝该名额已完成，且申请年 < 结案 / 报到年（排除驳回作废）；
+   ② 跨年未结＝该名额仍未完成、非取消、无结案日，且申请年早于结算年。 */
 function rcCarry(s) {
   var ay = (s.applyKey || '').slice(0, 4);
   if (!ay) return null;
   var ey = (s.closeDate || s.reportDate || '').slice(0, 4);
   var asofY = ((RC && RC.meta && RC.meta.asOf) || '').slice(0, 4);
-  var rejected = /駁回|驳回/.test(s.formStatus || '');
-  if (!rejected && ey && ey > ay && s.status === '已完成')
+  var rejected = /駁回|驳回|作废|作廢/.test(s.formStatus || '');
+  var ss = rcSlotState(s);
+  if (!rejected && ss === '完成' && ey && ey > ay)
     return { type: 'done', from: ay, to: ey, text: ay + '→' + ey + ' 跨年完成' };
-  if (!rejected && !ey && asofY && ay < asofY && s.status !== '已完成')
+  if (!rejected && ss === '未完成' && !ey && asofY && ay < asofY)
     return { type: 'open', from: ay, to: asofY, text: ay + '→' + asofY + ' 跨年未结' };
   return null;
 }
@@ -5600,6 +5654,8 @@ function rcRenderHome() {
     + '· <b>KPI 总额 / 月份双视图（2026-11-12 三页通用）</b>：①「总额 / 全年」组按期累计（期间下拉：全部累计 / 2024 / 2025 / 2026 / 近 12 个月），忽略顶部月份筛选；②「月份」组按所选月份统计（月份下拉<b>可复选多选</b>，默认跟随顶部筛选或结算月，多选时显示合计）。<b>职缺进度一览表 / 外招-过程分析 / 内招-过程分析</b>三页同屏双组、共用同一组期间与月份状态。<br>'
     + '· <b>下拉联动与数额对齐（2026-11-17）</b>：切换「期间」或「月份（可多选）」下拉后，<b>「待入职 / 已完成职缺分布」图与「职缺明细」表同步重算</b>，与对应 KPI 组<b>同源同期、数字一致</b>；未手动选月份时跟随「总额 / 全年」组期间，手动选月份后跟随「月份」组所选月份。顶部「月份」复选筛选仍可再叠加。图表区上方的<b>「🔗 数额对齐核对」条</b>会逐项列出两处数字供核对，三页明细（含外招 / 内招过程数据）一并联动。<b>三年逐月趋势线</b>固定为全量主口径供跨年对比，不随下拉变化（图例已标注）。<br>'
     + '· <b>跨年延续职缺（前一年未完成延到下一年）</b>：职缺明细新增「跨年标注」列，并在「状态」列旁加「↳跨年」小角标（横向滚动前也能识别）。<b>跨年完成</b>＝申请年早于结案 / 报到年（前一年底未完成、次年才补到人）；<b>跨年未结</b>＝申请年早于结算年、至今无结案日且仍在招（排除駁回作废单）。表头同时统计本筛选下两类槽数，便于把「本期新增」与「前期延续」分开看。<br>'
+    + '· <b>名额完成 ≠ 整单结案（2026-11-17 用户口径）</b>：一张单「拟增补人数 / 需求人数」为 2 人时，<b>只补到 1 人，整单仍不算结案</b>。逐名额判定：<b>完成</b>＝有姓名且（有报到日或「增补状态」为结案）；<b>取消</b>＝增补状态为取消（不再补人）；<b>未完成</b>＝其余（含空名额）。单据级：<b>整单结案</b>＝所有名额皆完成 / 取消且表单状态为处理完毕（或有结案日）；<b>部分完成·未结案</b>＝已有名额完成但仍有未完成名额；<b>名额齐·表单未结案</b>＝名额全补齐但表单仍处理中；两者都<b>不算结案</b>。明细末列「单据结案」写明每张单「完成 d / 共 t 人」，状态列另有「⚠部分 d/t」角标（不横向滚动也能看到），表头同步统计「多名额单 / 部分完成未结案」张数。跨年延续标注也改用同一套名额判定，取消 / 空名额不再误标为跨年完成。<br>'
+    + '· <b>两套口径必须分开看</b>：<b>KPI、状态分布图与「状态」列</b>沿用原「整单表单状态」派生口径（驳回→暂停招聘 / 结案→已完成 / 其余→在招），故 711 总职缺、84 目前总计在招、142 暂停招聘等主口径数字<b>未变</b>；<b>「单据结案」列与单据计数</b>按上述逐名额规则判定，只作标注与核对，不参与 KPI。若某槽显示「已完成」但单据结案列写「部分完成·未结案」，代表整单还有名额未补人，并非数据矛盾。<br>'
     + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
     + '</div>';
   el.innerHTML = html;
@@ -5739,6 +5795,16 @@ function rcRenderProgress() {
   var carryList = slots.filter(function (s) { return !!rcCarry(s); });
   var carryDone = carryList.filter(function (s) { return rcCarry(s).type === 'done'; }).length;
   var carryOpen = carryList.length - carryDone;
+  // 单据级结案统计：基于全量单据（不因筛选只剩部分名额而误判）
+  var orderSeen = {}, multiOrders = 0, partialOrders = 0, doneOrders = 0;
+  slots.forEach(function (s) {
+    if (orderSeen[s.single]) return;
+    orderSeen[s.single] = 1;
+    var oi = rcOrderInfo(s.single);
+    if (oi.total > 1) multiOrders++;
+    if (oi.state === 'partial') partialOrders++;
+    if (oi.state === 'done') doneOrders++;
+  });
   var cumDone = rcCount(slots, 'status', '已完成');
   var cumOpen = rcCount(slots, 'status', '本月在招') + legacyWait;
   var cumPause = rcCount(slots, 'status', '暂停招聘');
@@ -5753,25 +5819,31 @@ function rcRenderProgress() {
     an.innerHTML = '🔗 <b>数额对齐核对</b>｜当前跟随 <b>' + rcEsc(src) + '</b>（' + rcEsc(topM) + '）：'
       + '下方「状态分布 / 职缺明细」＝ <b>' + slots.length + '</b> 槽 / <b>' + uniqSingles + '</b> 张增补单（已完成 <b>' + cumDone + '</b> · 在招 <b>' + cumOpen + '</b> · 暂停 <b>' + cumPause + '</b>）；'
       + '上方 KPI 同组＝ 总职缺 <b>' + (kp ? kp.total : '—') + '</b> · 已完成 <b>' + (kp ? kp.done : '—') + '</b> · 待入职 <b>' + (kp ? kp.wait : '—') + '</b> · 暂停 <b>' + (kp ? kp.pause : '—') + '</b> · 在招 <b>' + (kp ? kp.open : '—') + '</b> —— ' + diff + '。'
-      + '本期<b>跨年延续 ' + carryList.length + '</b> 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '），已标注于明细末列。';
+      + '本期<b>跨年延续 ' + carryList.length + '</b> 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '）。'
+      + '按单据：<b>整单结案 ' + doneOrders + '</b> 张 / <b>部分完成·未结案 ' + partialOrders + '</b> 张（一名额完成 ≠ 整单结案，见「单据结案」列）。';
   }
 
   var tn = document.getElementById('rcTableNote');
   if (tn) tn.textContent = '共 ' + slots.length + ' 个职缺槽位 / ' + uniqSingles + ' 张增补单（当前范围：' + vlab + '，与上方 KPI 同源同期）；'
     + '其中跨年延续 ' + carryList.length + ' 槽（跨年完成 ' + carryDone + ' / 跨年未结 ' + carryOpen + '）：「状态」列旁有「↳跨年」角标，末列「跨年标注」列出完整流向。'
     + '同一增补单号出现 2~3 行＝该单需求人数 >1 按名额展开，并非重复导入，请看「名额 / 招募对象」两列；「招募对象」空白＝该名额尚未补人。'
-    + 'KPI 与图表按人头（槽位）计，按单据计数请对照这里的张数。招聘 HR 由 Offer / 职位情况分析关联，空白表示源数据无对应记录。区域＝CN 子区域（与月报同口径）。';
+    + '本范围多名额单 ' + multiOrders + ' 张，其中部分完成·未结案 ' + partialOrders + ' 张（只补到部分名额，整单不算结案）、整单结案 ' + doneOrders + ' 张：'
+    + '末列「单据结案」写明每张单完成 d / 共 t 人，状态列以「⚠部分 d/t」角标提示；一名额完成 ≠ 整单结案。'
+    + 'KPI 与图表按人头（槽位）计且沿用整单表单状态口径，按单据计数请对照这里的张数；两套口径不同，页面已显式区分。招聘 HR 由 Offer / 职位情况分析关联，空白表示源数据无对应记录。区域＝CN 子区域（与月报同口径）。';
   var rows = slots.slice().sort(function (a, b) { return (b.applyFull || '').localeCompare(a.applyFull || ''); }).map(function (s) {
     var cg = rcCarry(s);
     var carryTag = cg ? ' <span style="display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#fff1e0;color:#b45309;font-size:10px;white-space:nowrap" title="' + rcEsc(cg.text) + '">↳跨年</span>' : '';
+    var oi = rcOrderInfo(s.single);
+    var partTag = (oi.total > 1 && (oi.state === 'partial' || oi.state === 'pending'))
+      ? ' <span style="display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;background:#fff7ed;color:#b45309;border:1px solid #fed7aa;font-size:10px;white-space:nowrap" title="' + rcEsc(oi.text + '；一名额完成 ≠ 整单结案') + '">⚠部分 ' + oi.done + '/' + oi.total + '</span>' : '';
     return [rcEsc(s.subLabel), rcEsc(s.bu), rcEsc(s.city), rcEsc(s.zhiXi),
       rcEsc(s.title || s.zhiXiFull), rcEsc(s.inout), (s.recruitDays == null ? '—' : s.recruitDays + ' 天'),
       rcEsc(s.mgr), rcEsc(s.hr || '—'), rcEsc(s.reportDate || '—'),
-      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>' + carryTag, rcEsc(s.single),
+      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>' + carryTag + partTag, rcEsc(s.single),
       '第 ' + (s.slot || 1) + ' / ' + (slotTotalMap[s.single] || 1) + ' 位',
-      rcEsc(s.name || '—（空名额）'), rcCarryCell(s)];
+      rcEsc(s.name || '—（空名额）'), rcCarryCell(s), rcOrderCell(s)];
   });
-  rcTable('rcTable', ['区域', 'BU', '城市', '职系', '职缺/职称', '内外', '招聘天数', '申请主管', '招聘 HR', '预计报到', '状态', '增补单号', '名额', '招募对象', '跨年标注'], rows);
+  rcTable('rcTable', ['区域', 'BU', '城市', '职系', '职缺/职称', '内外', '招聘天数', '申请主管', '招聘 HR', '预计报到', '状态', '增补单号', '名额', '招募对象', '跨年标注', '单据结案'], rows);
 
   // Offer 明细（合并视角，默认收起）
   var on = document.getElementById('rcOfferNote');
