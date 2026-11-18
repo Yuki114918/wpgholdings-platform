@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261118a';
+var DATA_VER = '20261118b';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -5218,14 +5218,19 @@ async function wpgLoadRecruitment() {
     if (!at || at.filled !== 10 || !at.mgrs) return false;
     var ds = r.slots.filter(function (s) { return at.mgrs.indexOf(s.mgr) >= 0 && s.city === at.city && s.applyKey >= at.from && s.applyKey <= at.to; });
     if (ds.length !== 17 || !ds.every(function (s) { return s.hr === at.name; })) return false;
-    // 2026-11-18 口径守卫：田彦鹏 12 槽（深圳 2026，源表需求/招聘负责人＋用户截图）亦须已下沉。
-    if (!at.roc || at.roc.filled !== 12 || !at.roc.keys || at.roc.keys.length !== 12) return false;
-    var rocOK = at.roc.keys.every(function (key) {
+    // 2026-11-18b 起，田彦鹏归属由 reportSnapshot 定版（13 槽）接管，旧的 12 槽守卫已废弃。
+    // 2026-11-18b 报表时点定版守卫：胡吉青 17 / 田彦鹏 13 按截图逐槽定版，
+    // 且田彦鹏 13 槽须带 2026/10/31 时点状态 rptStatus（8 在招/1 待入职/1 暂停/3 已完成）。
+    var snap = r.meta.reportSnapshot;
+    if (!snap || snap.asOf !== '2026-10-31' || !snap.mandy || !snap.roc) return false;
+    if (snap.mandy.total !== 17 || snap.roc.total !== 13) return false;
+    if (!snap.roc.keys || snap.roc.keys.length !== 13) return false;
+    var snapOK = snap.roc.keys.every(function (key) {
       var p = key.split('#');
       var hit = r.slots.filter(function (s) { return s.single === p[0] && String(s.slot) === p[1]; });
-      return hit.length === 1 && hit[0].hr === at.roc.name;
+      return hit.length === 1 && hit[0].hr === snap.roc.hr && !!hit[0].rptStatus;
     });
-    if (!rocOK) return false;
+    if (!snapOK) return false;
     return r.offers.some(function (o) { return /已发 Offer/.test(o.entryBasis || ''); });
   });
   if (ok) { rcInit(); }
@@ -5377,6 +5382,18 @@ function rcByYear(kind, year) {
   return arr;
 }
 function rcCount(arr, fld, val) { return arr.filter(function (x) { return x[fld] === val; }).length; }
+/* 2026-11-18b 报表时点状态：HR 筛选命中田彦鹏定版、且该槽带 rptStatus 时，
+   用 2026/10/31 报表时点状态替代 11/9 结算状态；其余情形一律回退原 status。
+   仅影响显示层 KPI / 状态分布 / 明细，不改数据 status / 主口径 711/84/142。 */
+function rcSlotSt(s) {
+  if (s && s.rptStatus && RC_SEL && RC_SEL.hr && RC_SEL.hr.size) {
+    var hit = false;
+    RC_SEL.hr.forEach(function (v) { if (/Roc Tian|田彦鹏/.test(v)) hit = true; });
+    if (hit) return s.rptStatus;
+  }
+  return s ? s.status : '';
+}
+function rcCountSt(arr, val) { return arr.filter(function (x) { return rcSlotSt(x) === val; }).length; }
 /* 目前总计在招：截至结算日仍在处理中的职缺累计（含 2024 起所有年份）。
    固定 status=本月在招(前端显示「在招」)，忽略「月份 / 职缺状态 / Offer 判定」三项筛选，
    其余维度（工作范围 / 区域 / BU / 职系 / 招聘 HR / 内外渠道）按当前筛选生效。
@@ -5387,7 +5404,10 @@ function rcOpenTotal(opt) {
   var fmap = RC_FIELD.slots, n = 0;
   RC.slots.forEach(function (x) {
     if (!rcInScope(x)) return;
-    if (x.status !== '本月在招' && x.status !== '待入职') return;
+    var _st = rcSlotSt(x);
+    if (_st !== '本月在招' && _st !== '待入职') return;
+    // 报表时点定版：rptStatus=待入职 的槽由「待入职」KPI 单独体现，不再重复计入在招（截图口径）
+    if (x.rptStatus && _st === '待入职') return;
     var ym = String(x.applyKey == null ? '' : x.applyKey);
     if (opt.month && ym !== opt.month) return;
     if (opt.months && opt.months.indexOf(ym) < 0) return;
@@ -5700,7 +5720,7 @@ function rcRenderHome() {
     + '· <b>两套口径必须分开看</b>：<b>KPI、状态分布图与「状态」列</b>沿用原「整单表单状态」派生口径（驳回→暂停招聘 / 结案→已完成 / 其余→在招），故 711 总职缺、84 目前总计在招、142 暂停招聘等主口径数字<b>未变</b>；<b>「单据结案」列与单据计数</b>按上述逐名额规则判定，只作标注与核对，不参与 KPI。若某槽显示「已完成」但单据结案列写「部分完成·未结案」，代表整单还有名额未补人，并非数据矛盾。<br>'
     + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
     + '<br>· <b>胡吉青 17 笔口径已下沉到数据层（2026-11-17）</b>：报表以「招聘 HR＝Mandy Hu 胡吉青」显示 17 笔，其中 <b>在招 11</b>。原平台按同一 HR 只有 14 槽 / 在招 7，原因是范围内 10 个槽在源表无 Offer / 投递记录、招聘 HR 空白。现已按用户锁定 D 口径把「8 位申请主管 ＋ 上海 ＋ 2026/01–10」这 10 个槽<b>在数据层直接归属胡吉青</b>（data/recruit-v2.js 的 meta.hrAttribution.filled=10），<b>不是前端筛选预设</b>。因此只要按「招聘 HR＝Mandy Hu 胡吉青」筛选，总额 / 月份双组 KPI、状态分布图、职缺明细、Offer 明细与内外招页全部自然得到同一范围 17 槽 / 13 单、在招 11、暂停 6（源表「駁回」作废单）。<b>在招 11</b> 含 3 张「部分完成 1/2·未结案」单的全部 6 个槽：整单未结案，已到岗名额不从在招剔除；其余 5 槽为单名额在招单。<b>711 总职缺 / 84 目前总计在招等主口径基线不变</b>，全部数字由数据实时算出。'
-    + '<br>· <b>田彦鹏 HR 归属下沉（2026-11-18）</b>：按用户提供的「招聘 HR＝Roc Tian 田彦鹏」报表，深圳 2026 有 12 槽原在平台显示 HR 空白——9 槽经「职位情况分析-2026」的需求负责人/招聘负责人唯一命中田彦鹏，另 3 槽（KenLin 1、WecanChen 2）源表招募主管空白、依用户截图归属。现已在 <b>data/recruit-v2.js 数据层直接写入 hr 字段</b>（meta.hrAttribution.roc.filled=12），按 HR 筛选即自然带入 KPI / 状态分布 / 明细 / 内外招页；<b>不是筛选预设</b>，主口径 711 / 84 / 142 未变。报表 13 槽是 2026/10/31 结算日快照，平台「期间＝2026」是全年累计，时间口径不同。'
+    + '<br>· <b>报表截图逐槽定版（2026-11-18b，胡吉青 17 / 田彦鹏 13）</b>：两位 HR 的报表都是 <b>2026/10/31 时点快照</b>，平台此前按 HR 筛选会额外带入「报表范围外的历史已完成槽」（胡吉青 +7、田彦鹏 +22），导致总数虚高。现按用户要求<b>以截图数字为准</b>，在 <b>data/recruit-v2.js 数据层逐槽定版 HR 归属</b>（meta.reportSnapshot）：胡吉青＝「8 位申请主管＋上海＋2026/01–10」共 <b>17 槽</b>（在招 11 / 暂停 6），田彦鹏＝截图 13 行匹配的深圳槽共 <b>13 槽</b>（在招 8 / 待入职 1 / 暂停 1 / 已完成 3）；范围外的历史槽回到 HR 空白。田彦鹏 13 槽另有 3 槽在 10/31 时点状态与 11/9 结算状态不同（Offer 未报到→待入职、暂停、11/01 报到→在招），以 <b>rptStatus 字段</b>保存到数据层，前端 KPI / 状态分布 / 明细统一读取，故与截图<b>逐项一致</b>。<b>不是筛选预设</b>，主口径 711 / 84 / 142 未变。'
     + '</div>';
   el.innerHTML = html;
 }
@@ -5716,25 +5736,25 @@ function rcRenderProgressKpis(ctx) {
   var cumRun = rcOpenTotal({ period: ctx.rg });
   var cumKpis = [
     { l: '总职缺数', v: cs.length, s: plab + ' · 累计' },
-    { l: '已完成', v: rcCount(cs, 'status', '已完成'), s: plab + ' · 表单结案' },
+    { l: '已完成', v: rcCountSt(cs, '已完成'), s: plab + ' · 表单结案' },
     { l: '待入职', v: rcCount(co, 'entryPhase', '待入职'), s: '已发 Offer · 计划入职日晚于结算日 ' + ctx.asof, blue: true },
-    { l: '暂停招聘', v: rcCount(cs, 'status', '暂停招聘'), s: plab + ' · 表单驳回' },
+    { l: '暂停招聘', v: rcCountSt(cs, '暂停招聘'), s: plab + ' · 表单驳回' },
     { l: '目前总计在招', v: cumRun, s: '截至结算日 ' + ctx.asof + ' 仍在处理中 · 期间内申请' }
   ];
   var monKpis = [
     { l: tag + '新增职缺', v: msS.length, s: tail + ' 新增' },
     { l: ctx.multi ? '所选月各自上月新增' : '上月新增职缺', v: psS.length, s: ctx.multi ? '各月上一月合计' : prevLab + ' 新增' },
-    { l: tag + '已完成', v: rcCount(msS, 'status', '已完成'), s: tail + ' 结案' },
-    { l: tag + '暂停招聘', v: rcCount(msS, 'status', '暂停招聘'), s: tail + ' 驳回' },
+    { l: tag + '已完成', v: rcCountSt(msS, '已完成'), s: tail + ' 结案' },
+    { l: tag + '暂停招聘', v: rcCountSt(msS, '暂停招聘'), s: tail + ' 驳回' },
     { l: tag + '新在招', v: rcOpenTotal({ months: ms }), s: tail + ' 申请且目前仍在招', blue: true },
     { l: tag + ' Offer 数', v: moS.length, s: tail + ' 发出 / 在流程', blue: true }
   ];
   var a = document.getElementById('rcKpisCum'); if (a) a.innerHTML = rcKpiHtml(cumKpis);
   var b = document.getElementById('rcKpisMonth'); if (b) b.innerHTML = rcKpiHtml(monKpis);
   /* 供「数额对齐核对」条直接复用，避免二次计算产生口径偏差 */
-  window.RC_CUM_KPIS = { total: cs.length, done: rcCount(cs, 'status', '已完成'), pause: rcCount(cs, 'status', '暂停招聘'),
+  window.RC_CUM_KPIS = { total: cs.length, done: rcCountSt(cs, '已完成'), pause: rcCountSt(cs, '暂停招聘'),
     wait: rcCount(co, 'entryPhase', '待入职'), open: cumRun, offers: co.length };
-  window.RC_MON_KPIS = { total: msS.length, done: rcCount(msS, 'status', '已完成'), pause: rcCount(msS, 'status', '暂停招聘'),
+  window.RC_MON_KPIS = { total: msS.length, done: rcCountSt(msS, '已完成'), pause: rcCountSt(msS, '暂停招聘'),
     wait: rcCount(moS, 'entryPhase', '待入职'), open: rcOpenTotal({ months: ms }), offers: moS.length };
   var waitOffer = rcCount(co, 'entryPhase', '待入职');
   var onboarded = rcCount(co, 'entryPhase', '已入职');
@@ -5756,17 +5776,17 @@ function rcRenderExternalKpis(ctx) {
   var psS = rcSlotRows({ months: ctx.prevMonths }, 'outer');
   var cumKpis = [
     { l: '外招职缺数', v: cs.length, s: plab + ' · 累计（管道非内调）' },
-    { l: '已完成', v: rcCount(cs, 'status', '已完成'), s: plab + ' · 表单结案' },
+    { l: '已完成', v: rcCountSt(cs, '已完成'), s: plab + ' · 表单结案' },
     { l: '待入职', v: rcCount(co, 'entryPhase', '待入职'), s: '已发 Offer · 晚于结算日 ' + ctx.asof, blue: true },
-    { l: '暂停招聘', v: rcCount(cs, 'status', '暂停招聘'), s: plab + ' · 表单驳回' },
+    { l: '暂停招聘', v: rcCountSt(cs, '暂停招聘'), s: plab + ' · 表单驳回' },
     { l: '目前总计在招', v: rcOpenTotal({ period: ctx.rg, filter: RC_OUTER_SLOT }), s: '截至结算日 ' + ctx.asof + ' 仍在处理中' },
     { l: '外招投递记录', v: rcFunnelSum(cf, 'rows'), s: '职位×渠道×月 聚合 ' + cf.length + ' 组', blue: true }
   ];
   var monKpis = [
     { l: tag + '新增职缺', v: msS.length, s: tail + ' 新增' },
     { l: ctx.multi ? '所选月各自上月新增' : '上月新增职缺', v: psS.length, s: ctx.multi ? '各月上一月合计' : prevLab + ' 新增' },
-    { l: tag + '已完成', v: rcCount(msS, 'status', '已完成'), s: tail + ' 结案' },
-    { l: tag + '暂停招聘', v: rcCount(msS, 'status', '暂停招聘'), s: tail + ' 驳回' },
+    { l: tag + '已完成', v: rcCountSt(msS, '已完成'), s: tail + ' 结案' },
+    { l: tag + '暂停招聘', v: rcCountSt(msS, '暂停招聘'), s: tail + ' 驳回' },
     { l: tag + '新在招', v: rcOpenTotal({ months: ms, filter: RC_OUTER_SLOT }), s: tail + ' 申请且目前仍在招', blue: true },
     { l: tag + '外招投递记录', v: rcFunnelSum(mf, 'rows'), s: tail + ' · 仅外招渠道', blue: true }
   ];
@@ -5808,8 +5828,8 @@ function rcRenderProgress() {
   var stOrder = ['已完成', '本月在招', '暂停招聘', '其他'];
   var stLabel = { '已完成': '已完成', '本月在招': '在招（目前总计）', '暂停招聘': '暂停招聘', '其他': '其他' };
   var stColor = { '已完成': '#1a9c5b', '本月在招': '#E31937', '暂停招聘': '#94a3b8', '其他': '#cbd5e1' };
-  var stData = stOrder.map(function (s) { return { name: stLabel[s] || s, key: s, v: rcCount(slots, 'status', s), color: stColor[s] }; });
-  var legacyWait = rcCount(slots, 'status', '待入职');
+  var stData = stOrder.map(function (s) { return { name: stLabel[s] || s, key: s, v: rcCountSt(slots, s), color: stColor[s] }; });
+  var legacyWait = rcCountSt(slots, '待入职');
   if (legacyWait) stData.forEach(function (d) { if (d.key === '本月在招') d.v += legacyWait; });
   stData = stData.filter(function (d) { return d.v > 0; });
   rcBars('rcStatusChart', stData);
@@ -5849,9 +5869,9 @@ function rcRenderProgress() {
     if (oi.state === 'partial') partialOrders++;
     if (oi.state === 'done') doneOrders++;
   });
-  var cumDone = rcCount(slots, 'status', '已完成');
-  var cumOpen = rcCount(slots, 'status', '本月在招') + legacyWait;
-  var cumPause = rcCount(slots, 'status', '暂停招聘');
+  var cumDone = rcCountSt(slots, '已完成');
+  var cumOpen = rcCountSt(slots, '本月在招'); /* 报表时点定版：待入职 KPI 单列，不并入在招 */
+  var cumPause = rcCountSt(slots, '暂停招聘');
 
   // 🔗 数额对齐核对：直接引用 KPI 渲染时的快照，确保两处数字同源
   var an = document.getElementById('rcAlignNote');
@@ -5880,19 +5900,21 @@ function rcRenderProgress() {
         + dPartial.length + ' 槽</b>：整单未结案，已到岗名额不剔除；其余为单名额在招单。'
         + '以上均由数据实时算出，主口径 711 / 84 / 142 未变。';
     }
-    if (at && at.roc && hrSel && hrSel.size && Array.from(hrSel).some(function (v) { return /Roc Tian|田彦鹏/.test(v); })) {
-      var rk = at.roc.keys.map(function (k) {
+    var snap = (RC.meta && RC.meta.reportSnapshot) || null;
+    if (snap && snap.roc && hrSel && hrSel.size && Array.from(hrSel).some(function (v) { return /Roc Tian|田彦鹏/.test(v); })) {
+      var rk = snap.roc.keys.map(function (k) {
         var p = k.split('#');
         return RC.slots.filter(function (s) { return s.single === p[0] && String(s.slot) === p[1]; })[0];
       }).filter(Boolean);
-      var rOpen = rk.filter(function (s) { return s.status === '本月在招' || s.status === '待入职'; }).length;
-      var rPause = rk.filter(function (s) { return s.status === '暂停招聘'; }).length;
-      var rDone = rk.filter(function (s) { return s.status === '已完成'; }).length;
-      an.innerHTML += '<br>👤 <b>田彦鹏 HR 归属（数据层，源表依据）</b>：深圳 2026 共 <b>' + rk.length
-        + ' 槽</b>已直接归属「' + rcEsc(at.roc.name) + '」（其中 9 槽由「职位情况分析」需求/招聘负责人唯一命中，'
-        + '3 槽依用户截图的 KenLin / WecanChen），已完成 ' + rDone + ' · 在招 ' + rOpen + ' · 暂停 ' + rPause
-        + '。报表「2026/10/31 结算日快照」为 13 槽（在招 8 / 待入职 1 / 暂停 1 / 已完成 3），'
-        + '与平台「期间＝2026 全年」不是同一时间口径，勿直接相减；主口径 711 / 84 / 142 未变。';
+      var rOpen = rk.filter(function (s) { return rcSlotSt(s) === '本月在招'; }).length;
+      var rWait = rk.filter(function (s) { return rcSlotSt(s) === '待入职'; }).length;
+      var rPause = rk.filter(function (s) { return rcSlotSt(s) === '暂停招聘'; }).length;
+      var rDone = rk.filter(function (s) { return rcSlotSt(s) === '已完成'; }).length;
+      an.innerHTML += '<br>👤 <b>田彦鹏 报表时点定版（数据层）</b>：深圳 2026 共 <b>' + rk.length
+        + ' 槽</b>已按用户 2026/10/31 报表截图<b>逐槽定版</b>（data/recruit-v2.js 的 meta.reportSnapshot.roc），'
+        + '报表内槽归属「' + rcEsc(snap.roc.hr) + '」，报表外历史槽回到 HR 空白；<b>在招 ' + rOpen + ' · 待入职 '
+        + rWait + ' · 暂停 ' + rPause + ' · 已完成 ' + rDone + '</b>，与截图 13 槽（在招 8 / 待入职 1 / 暂停 1 / 已完成 3）逐项一致。'
+        + '报表外的历史已完成槽不再计入该 HR 筛选；主口径 711 / 84 / 142 未变。';
     }
   }
 
@@ -5912,7 +5934,7 @@ function rcRenderProgress() {
     return [rcEsc(s.subLabel), rcEsc(s.bu), rcEsc(s.city), rcEsc(s.zhiXi),
       rcEsc(s.title || s.zhiXiFull), rcEsc(s.inout), (s.recruitDays == null ? '—' : s.recruitDays + ' 天'),
       rcEsc(s.mgr), rcEsc(s.hr || '—'), rcEsc(s.reportDate || '—'),
-      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(s.status) + '</b>' + carryTag + partTag, rcEsc(s.single),
+      '<b style="color:' + (stColor[s.status] || '#64748b') + '">' + rcEsc(rcSlotSt(s)) + '</b>' + carryTag + partTag, rcEsc(s.single),
       '第 ' + (s.slot || 1) + ' / ' + (slotTotalMap[s.single] || 1) + ' 位',
       rcEsc(s.name || '—（空名额）'), rcCarryCell(s), rcOrderCell(s)];
   });
