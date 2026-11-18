@@ -59,37 +59,55 @@ function wpgShowLoadError(failed){
   if(el){ el.innerHTML = html; el.style.color='#7A1D2B'; }
   console.error('数据分块加载失败:', failed);
 }
-async function wpgFetchData(url, timeoutMs){
+async function wpgFetchData(url, timeoutMs, externalSignal){
   timeoutMs = timeoutMs || 60000;
   var ctrl = new AbortController();
-  var t = setTimeout(function(){ ctrl.abort(); }, timeoutMs);
+  var t = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, timeoutMs);
+  var onAbort = function(){ try{ctrl.abort();}catch(e){} };
+  if(externalSignal) externalSignal.addEventListener('abort', onAbort);
   try{
     var res = await fetch(url, {signal: ctrl.signal});
     if(!res.ok) throw new Error('http'+res.status);
     var buf = await res.arrayBuffer();
     return await wpgDecryptText(WPG_KEY, buf);
-  }finally{ clearTimeout(t); }
+  }finally{ clearTimeout(t); if(externalSignal) externalSignal.removeEventListener('abort', onAbort); }
 }
 async function wpgLoadOneChunk(idx){
-  var lastErr = null;
-  for(var b=0; b<DATA_BASES.length; b++){
-    for(var attempt=0; attempt<2; attempt++){
-      try{
-        window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+ (attempt?'重试 ':'') + wpgBaseName(DATA_BASES[b]);
-        wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
-        // 首次 25s（2MB 分块留足余量）；重试放宽到 45s 并加 cb 穿透缓存
-        var timeout = attempt===0 ? 25000 : 45000;
-        var chunkUrl = DATA_BASES[b]+'employees-data-v21-part'+idx+'.js.enc';
-        if(attempt>0) chunkUrl = wpgCacheBust(chunkUrl);
-        var js = await wpgFetchData(chunkUrl, timeout);
-        window.WPG_LOAD_EXTRA = '';
-        var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
-        return {ok:true, idx:idx, source:DATA_BASES[b]};
-      }catch(e){ lastErr=e; console.warn('分块'+idx+' 从 '+DATA_BASES[b]+' 尝试'+(attempt+1)+'失败:', e.message||e); }
-    }
+  // 三源并行竞速：任一源先解密成功即注入并中止其余请求；单源偶发超时不再拖住整页（原串行最坏约 210s）。
+  var file = 'employees-data-v21-part'+idx+'.js.enc';
+  function raceRound(bust){
+    var timeout = bust ? 30000 : 15000;
+    return new Promise(function(resolve){
+      var done=false, remaining=DATA_BASES.length, lastErr=null, controllers=[];
+      DATA_BASES.forEach(function(base){
+        var ctrl = new AbortController(); controllers.push(ctrl);
+        var timer = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, timeout);
+        (async function(){
+          try{
+            window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+(bust?'穿透 ':'')+wpgBaseName(base);
+            wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
+            var url = base+file+(bust ? ('?cb='+Date.now()) : '');
+            var js = await wpgFetchData(url, timeout, ctrl.signal);
+            if(done) return;
+            done=true;
+            controllers.forEach(function(c){ if(c!==ctrl) try{c.abort();}catch(e){} });
+            window.WPG_LOAD_EXTRA='';
+            var sc=document.createElement('script'); sc.textContent=js; document.head.appendChild(sc);
+            resolve({ok:true, idx:idx, source:base});
+          }catch(e){
+            lastErr=e;
+            if(!done) console.warn('分块'+idx+' 从 '+base+' '+(bust?'穿透':'竞速')+'失败:', e.message||e);
+            if(!done){ remaining--; if(remaining===0){ done=true; resolve({ok:false, idx:idx, error:lastErr}); } }
+          }finally{ clearTimeout(timer); }
+        })();
+      });
+    });
   }
-  window.WPG_LOAD_EXTRA = '';
-  return {ok:false, idx:idx, error:lastErr};
+  var r = await raceRound(false);
+  if(r.ok) return r;
+  r = await raceRound(true);   // 第二轮加 cb 穿透 CDN/浏览器旧缓存
+  window.WPG_LOAD_EXTRA='';
+  return r;
 }
 // 限制并发池，避免一次开 10 个连接导致网络拥塞
 async function wpgRunWithConcurrency(tasks, concurrency){
