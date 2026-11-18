@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261117d';
+var DATA_VER = '20261118a';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -5220,6 +5220,14 @@ async function wpgLoadRecruitment() {
     if (!at || at.filled !== 10 || !at.mgrs) return false;
     var ds = r.slots.filter(function (s) { return at.mgrs.indexOf(s.mgr) >= 0 && s.city === at.city && s.applyKey >= at.from && s.applyKey <= at.to; });
     if (ds.length !== 17 || !ds.every(function (s) { return s.hr === at.name; })) return false;
+    // 2026-11-18 口径守卫：田彦鹏 12 槽（深圳 2026，源表需求/招聘负责人＋用户截图）亦须已下沉。
+    if (!at.roc || at.roc.filled !== 12 || !at.roc.keys || at.roc.keys.length !== 12) return false;
+    var rocOK = at.roc.keys.every(function (key) {
+      var p = key.split('#');
+      var hit = r.slots.filter(function (s) { return s.single === p[0] && String(s.slot) === p[1]; });
+      return hit.length === 1 && hit[0].hr === at.roc.name;
+    });
+    if (!rocOK) return false;
     return r.offers.some(function (o) { return /已发 Offer/.test(o.entryBasis || ''); });
   });
   if (ok) { rcInit(); }
@@ -5321,6 +5329,9 @@ function rcMsSyncUi() {
    不再依赖任何筛选预设：按 HR 筛选即为真实范围，KPI / 状态分布 /
    明细 / 内外招页同源得到 在招 11 + 暂停 6（駁回作废单）；
    3 张「部分完成 1/2·未结案」单的 6 槽全数计在招（整单未结案，已到岗名额不剔除）。
+   2026-11-18 再补田彦鹏 12 槽：深圳 2026 中 9 槽由「职位情况分析」需求负责人/招聘负责人
+   唯一命中 Roc Tian 田彦鹏，另 3 槽（KenLin 1、WecanChen 2）依用户截图的申请主管归属；
+   数据层直接写入 hr 字段，meta.hrAttribution.roc.filled=12，旧快照由加载守卫降级。
    所有数字由数据实时算出，711 / 84 / 142 主口径基线不变。 */
 function rcClearFilter() { rcDefaultSel(); RC_PERIOD = 'all'; RC_MONTH_PICKS.clear(); rcMsInit(); rcRender(); }
 function rcFilterUi() {
@@ -5691,6 +5702,7 @@ function rcRenderHome() {
     + '· <b>两套口径必须分开看</b>：<b>KPI、状态分布图与「状态」列</b>沿用原「整单表单状态」派生口径（驳回→暂停招聘 / 结案→已完成 / 其余→在招），故 711 总职缺、84 目前总计在招、142 暂停招聘等主口径数字<b>未变</b>；<b>「单据结案」列与单据计数</b>按上述逐名额规则判定，只作标注与核对，不参与 KPI。若某槽显示「已完成」但单据结案列写「部分完成·未结案」，代表整单还有名额未补人，并非数据矛盾。<br>'
     + '· <b>一个增补单号多人（按名额展开）</b>：增补单有「需求人数」与「新进人员一 / 二 / 三」栏位，系统按需求人数把一张单展开成 N 个职缺槽位，因此职缺明细里同一增补单号出现 2~3 行<b>不是重复导入</b>；明细新增「名额（第 N 位 / 共 M 位）」与「招募对象」两列便于分辨，表头同时标注本筛选下「N 个槽位 / M 张增补单」。源表最多 3 组栏位，需求 &gt;3 的单目前只展开 3 槽（多为台湾职缺）。<b>KPI 与所有图表仍按人头（槽位）统计</b>，按单据计数请对照表头的张数。'
     + '<br>· <b>胡吉青 17 笔口径已下沉到数据层（2026-11-17）</b>：报表以「招聘 HR＝Mandy Hu 胡吉青」显示 17 笔，其中 <b>在招 11</b>。原平台按同一 HR 只有 14 槽 / 在招 7，原因是范围内 10 个槽在源表无 Offer / 投递记录、招聘 HR 空白。现已按用户锁定 D 口径把「8 位申请主管 ＋ 上海 ＋ 2026/01–10」这 10 个槽<b>在数据层直接归属胡吉青</b>（data/recruit-v2.js 的 meta.hrAttribution.filled=10），<b>不是前端筛选预设</b>。因此只要按「招聘 HR＝Mandy Hu 胡吉青」筛选，总额 / 月份双组 KPI、状态分布图、职缺明细、Offer 明细与内外招页全部自然得到同一范围 17 槽 / 13 单、在招 11、暂停 6（源表「駁回」作废单）。<b>在招 11</b> 含 3 张「部分完成 1/2·未结案」单的全部 6 个槽：整单未结案，已到岗名额不从在招剔除；其余 5 槽为单名额在招单。<b>711 总职缺 / 84 目前总计在招等主口径基线不变</b>，全部数字由数据实时算出。'
+    + '<br>· <b>田彦鹏 HR 归属下沉（2026-11-18）</b>：按用户提供的「招聘 HR＝Roc Tian 田彦鹏」报表，深圳 2026 有 12 槽原在平台显示 HR 空白——9 槽经「职位情况分析-2026」的需求负责人/招聘负责人唯一命中田彦鹏，另 3 槽（KenLin 1、WecanChen 2）源表招募主管空白、依用户截图归属。现已在 <b>data/recruit-v2.js 数据层直接写入 hr 字段</b>（meta.hrAttribution.roc.filled=12），按 HR 筛选即自然带入 KPI / 状态分布 / 明细 / 内外招页；<b>不是筛选预设</b>，主口径 711 / 84 / 142 未变。报表 13 槽是 2026/10/31 结算日快照，平台「期间＝2026」是全年累计，时间口径不同。'
     + '</div>';
   el.innerHTML = html;
 }
@@ -5869,6 +5881,20 @@ function rcRenderProgress() {
         + '（源表「駁回」作废单）。在招含 <b>' + dPartialSlots + ' 张「部分完成·未结案」单的全部 '
         + dPartial.length + ' 槽</b>：整单未结案，已到岗名额不剔除；其余为单名额在招单。'
         + '以上均由数据实时算出，主口径 711 / 84 / 142 未变。';
+    }
+    if (at && at.roc && hrSel && hrSel.size && Array.from(hrSel).some(function (v) { return /Roc Tian|田彦鹏/.test(v); })) {
+      var rk = at.roc.keys.map(function (k) {
+        var p = k.split('#');
+        return RC.slots.filter(function (s) { return s.single === p[0] && String(s.slot) === p[1]; })[0];
+      }).filter(Boolean);
+      var rOpen = rk.filter(function (s) { return s.status === '本月在招' || s.status === '待入职'; }).length;
+      var rPause = rk.filter(function (s) { return s.status === '暂停招聘'; }).length;
+      var rDone = rk.filter(function (s) { return s.status === '已完成'; }).length;
+      an.innerHTML += '<br>👤 <b>田彦鹏 HR 归属（数据层，源表依据）</b>：深圳 2026 共 <b>' + rk.length
+        + ' 槽</b>已直接归属「' + rcEsc(at.roc.name) + '」（其中 9 槽由「职位情况分析」需求/招聘负责人唯一命中，'
+        + '3 槽依用户截图的 KenLin / WecanChen），已完成 ' + rDone + ' · 在招 ' + rOpen + ' · 暂停 ' + rPause
+        + '。报表「2026/10/31 结算日快照」为 13 槽（在招 8 / 待入职 1 / 暂停 1 / 已完成 3），'
+        + '与平台「期间＝2026 全年」不是同一时间口径，勿直接相减；主口径 711 / 84 / 142 未变。';
     }
   }
 
