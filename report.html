@@ -350,6 +350,9 @@ footer span{display:block}
 
 
 
+
+
+
 <style id="execSummaryStyle">
 .exec-wrap{max-width:1180px;margin:0 auto;padding:26px 30px 60px;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#1e293b;}
 .exec-hero{background:linear-gradient(135deg,#0f2d4f 0%,#1e4e79 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:30px 34px;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(15,45,79,.22);}
@@ -440,6 +443,22 @@ footer span{display:block}
 .gp-warn{background:#fff7ed;border:1px solid #fed7aa;}.gp-warn b{color:#c2410c;}
 .gp-org{margin-top:14px;background:#faf5ff;border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:11px;padding:14px 16px;font-size:12.3px;line-height:1.7;color:#4c1d95;}
 .gp-org b{display:block;font-size:12.5px;color:#6d28d9;margin-bottom:5px;}
+.gp-next{margin-top:12px;background:#f0fdfa;border:1px solid #99f6e4;border-left:4px solid #0d9488;border-radius:11px;padding:13px 16px;font-size:12.3px;line-height:1.7;color:#134e4a;}
+.gp-next b{display:block;font-size:12.5px;color:#0f766e;margin-bottom:6px;}
+.gp-next ol{margin:0;padding-left:18px;}.gp-next li{margin-bottom:5px;}
+.gp-next .who{color:#0f766e;font-weight:700;}
+/* 外部对标 / 同行借鉴 */
+.bench-panel{margin-top:16px;background:linear-gradient(180deg,#f0f9ff,#fff);border:1px solid #bae6fd;border-left:4px solid #0284c7;border-radius:12px;padding:16px 19px;}
+.bench-panel h4{font-size:13.5px;font-weight:800;color:#075985;margin:0 0 4px;display:flex;align-items:center;gap:7px;}
+.bench-panel .bsub{font-size:11px;color:#64748b;margin:0 0 12px;}
+.bench-tbl{width:100%;border-collapse:collapse;font-size:11.8px;line-height:1.6;}
+.bench-tbl th{background:#e0f2fe;color:#075985;font-weight:800;text-align:left;padding:7px 9px;border:1px solid #bae6fd;font-size:11px;}
+.bench-tbl td{padding:8px 9px;border:1px solid #dbeafe;vertical-align:top;color:#334155;}
+.bench-tbl td:first-child{font-weight:700;color:#0c4a6e;width:15%;}
+.bench-tbl .b-peer{width:34%;}.bench-tbl .b-us{width:34%;}
+.bench-tbl .verdict{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-right:5px;}
+.v-yes{background:#dcfce7;color:#166534;}.v-part{background:#fef9c3;color:#854d0e;}.v-no{background:#fee2e2;color:#991b1b;}
+.bench-note{margin-top:10px;font-size:11px;color:#64748b;line-height:1.6;background:#f8fafc;border-radius:7px;padding:8px 11px;}
 .gp-src{margin-top:9px;font-size:10.5px;color:#94a3b8;line-height:1.5;}
 .exec-foot{margin-top:26px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:16px 19px;font-size:11.8px;line-height:1.8;color:#64748b;}
 .exec-foot b{color:#334155;}
@@ -513,6 +532,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
 
 
 
+
+
+
 <!-- ===== 高管摘要 EXEC SUMMARY START ===== -->
 <div id="tab-exec" style="display:none">
 <div class="exec-wrap">
@@ -525,7 +547,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       <p>业务端强劲（Q3 单季净利首破百亿、同比翻倍），但人才端呈现「招聘效率承压 + 关键岗争夺加剧 + 年龄结构偏成熟」三重张力：全区在册 2,086 人、总量已稳（净流出仅 11 人），风险从「人数」转向「效率与结构」——面试通过率仅 41.8%、WPI 完成率 39.5% 且 offer 率 45.8% 双低；平均年龄 39.8 岁、30 岁以下仅 11.7%（年轻口径为 35 岁以下，现有报表未提供该细分），LOG 42.9 岁为最老单元。HR 应守住关键岗、把调薪预算花在刀刃上，并以组织面向的继任盘点与职等矩阵补齐梯队短板。</p>
       <span class="exec-conf">置信度：中</span>
     </div>
-    <div class="exec-meta">内部数据：内部资料对比报告（数据期 2026/10 · 名册快照 11/01）｜ 外部数据：外部数据快讯（更新至 2026/11/18）｜ 组织目标：2027 CN HR OKR 第一版 ｜ 数据源单一口径，均可回溯 &nbsp;·&nbsp; 数据供决策参考，非终决策</div>
+    <div class="exec-meta">内部数据：内部资料对比报告（数据期 2026/10 · 名册快照 11/01）｜ 外部数据：外部数据快讯（更新至 2026/11/18）｜ 组织方向：参考 2027 CN HR OKR（非照抄目标值）｜ 数据源单一口径，均可回溯 &nbsp;·&nbsp; 数据供决策参考，非终决策</div>
   </section>
 
   <div class="exec-grptabs" id="execGrpTabs"><button class="exec-grptab active" type="button" onclick="switchExecGrp('all', this)">全区总览</button><button class="exec-grptab" type="button" onclick="switchExecGrp('ait', this)">诠鼎集团（AIT）</button><button class="exec-grptab" type="button" onclick="switchExecGrp('wpi', this)">世平集团（WPI）</button><button class="exec-grptab" type="button" onclick="switchExecGrp('tgbc', this)">鑫联大集团（TGBC）</button><button class="exec-grptab" type="button" onclick="switchExecGrp('bsc', this)">后勤支援中心（BSC+WPGH）</button><button class="exec-grptab" type="button" onclick="switchExecGrp('log', this)">运筹集团（LOG）</button><button class="exec-grptab" type="button" onclick="switchExecGrp('gbg', this)">海外事业群（GBG）</button></div>
@@ -614,7 +636,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
   </div>
 
   <h3 class="exec-h3">04 &nbsp;HR 行动建议（可验收清单 · 含组织面）</h3>
-  <p class="exec-sub">每条含责任人（角色）/ 时限 / 量化标准 / 停止标准。阈值为<b>示例数字，需用内部数据校准</b>；标注「组织面」的 3 项对齐 2027 CN HR OKR 并参考 500 强实践（9-Box、继任覆盖率、技能本位）。</p>
+  <p class="exec-sub">每条含责任人（角色）/ 时限 / 量化标准 / 停止标准。<b>目标阈值不预设百分比，先做基线盘点再定</b>；外部同行做法与借鉴判断见下方「外部对标与同行借鉴」。2027 CN HR OKR 仅作方向参考，非照抄其目标值。</p>
   <div class="act-grid">
     <div class="act-card a-p0">
       <div class="act-top"><span class="act-pri">P0</span><span class="act-title">关键岗保留窗口</span></div>
@@ -622,7 +644,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       <div class="act-row"><span class="rk">责任人</span><b>HRD + 各 BU HRBP</b>（薪酬委员会复核）</div>
       <div class="act-row"><span class="rk">时限</span><b>2 周内</b>完成名单，<b>30 天</b>完成沟通</div>
       <div class="act-row"><span class="rk">动作</span>锁定 FAE/销售/PM 关键岗高绩效者，一对一保留沟通 + 个性化方案</div>
-      <div class="act-row"><span class="rk">量化标准</span>关键岗主动离职率 <b>&lt;5%</b>（示例值），保留面谈覆盖率 <b>100%</b></div>
+      <div class="act-row"><span class="rk">量化标准</span>保留面谈覆盖率 <b>100%</b>；关键岗主动离职率以 Q1 基线为准<b>逐季改善</b>（不预设百分比）</div>
       <div class="act-stop">停止/回滚：方案超出薪酬委员会授权区间即暂停，转委员会决议；涉留任协议需法务确认。</div>
     </div>
     <div class="act-card a-p0">
@@ -631,7 +653,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       <div class="act-row"><span class="rk">责任人</span><b>薪酬委员会 + C&B</b>（HRD 拍板）</div>
       <div class="act-row"><span class="rk">时限</span><b>本月内</b>定方案，随 Q4 调薪落地</div>
       <div class="act-row"><span class="rk">动作</span>按绩效与关键度分档配置，压缩普调、集中资源</div>
-      <div class="act-row"><span class="rk">量化标准</span>高绩效者调薪占比 <b>≥20%</b>（示例值），预算总额不超核定盘</div>
+      <div class="act-row"><span class="rk">量化标准</span>高绩效者调薪占比<b>高于公司均值</b>（WTW 前 11.1% 拿 21.8% 为外部参照，非我司承诺），预算总额不超核定盘</div>
       <div class="act-stop">停止/回滚：任何普调突破预算盘即冻结；调薪终决策须薪酬委员会审批，本页仅为建议。</div>
     </div>
     <div class="act-card a-p1">
@@ -640,7 +662,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       <div class="act-row"><span class="rk">责任人</span><b>招聘负责人 + 各 BU 用人主管</b></div>
       <div class="act-row"><span class="rk">时限</span><b>本季度</b>完成 8–10 所目标院校清单 + 资深挖猎名单</div>
       <div class="act-row"><span class="rk">动作</span>秋招锁名校生源，全年滚动挖猎竞品溢出资深 FAE/销售/PM；对 WPI 拒 offer 者做原因回访</div>
-      <div class="act-row"><span class="rk">量化标准</span>WPI 完成率由 39.5% 提升至 <b>≥60%</b>（示例值），面试通过率提升 <b>5pp</b></div>
+      <div class="act-row"><span class="rk">量化标准</span>WPI 完成率<b>逐季回升</b>（先定基线，同业在招数：中电港 76/文晔 51，渠道落差先补齐）；面试通过率按漏损定位结果改善</div>
       <div class="act-stop">停止/回滚：若渠道 ROI 连续两月为负，暂停该渠道并复盘岗位吸引力（薪酬/门槛）。</div>
     </div>
     <div class="act-card a-p1">
@@ -649,54 +671,101 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       <div class="act-row"><span class="rk">责任人</span><b>LOG HRBP + 用人主管</b></div>
       <div class="act-row"><span class="rk">时限</span><b>本季度</b>完成关键岗盘点，<b>半年</b>完成继任者名单</div>
       <div class="act-row"><span class="rk">动作</span>9-Box 盘点关键岗，明确继任者 + 带教计划；DL/LI 职系分策，校招补入年轻梯队</div>
-      <div class="act-row"><span class="rk">量化标准</span>关键岗继任覆盖率 <b>≥80%</b>（OKR 目标），50+ 占比逐年下降</div>
+      <div class="act-row"><span class="rk">量化标准</span>48 位 50+ 关键岗<b>逐岗建立交棒人</b>（覆盖率先盘点后定），50+ 占比逐年下降</div>
       <div class="act-stop">停止/回滚：涉及任何岗位调整或人员优化须走合法程序，需本地法律确认，HR 不单独拍板。</div>
     </div>
     <div class="act-card a-p1 a-org">
       <div class="act-top"><span class="act-pri">P1</span><span class="act-org">组织面</span><span class="act-title">关键岗继任盘点与职位矩阵落地</span></div>
-      <div class="act-row"><span class="rk">依据</span>AIT 职位异动 1,576 次但职等异动 0 次；3–5 年司龄仅 12.6%（内部对比）。对齐 OKR KR3.1/3.2/3.3，参考 500 强 9-Box 与继任覆盖率实践</div>
+      <div class="act-row"><span class="rk">依据</span>AIT 职位异动 1,576 次但职等异动 0 次；3–5 年司龄仅 12.6%（内部对比）。外部：9-Box、继任盘点、技能本位职等为 500 强常见做法，但无统一阈值</div>
       <div class="act-row"><span class="rk">责任人</span><b>HRD + BSC HR + 薪酬委员会</b></div>
       <div class="act-row"><span class="rk">时限</span><b>Q1</b> 岗位清单 / <b>Q2</b> 提名初评（每岗≥2 人）/ <b>Q3</b> 校准 2–3 场 / <b>Q4</b> 发布《职位矩阵图》1.0</div>
       <div class="act-row"><span class="rk">动作</span>先做 BSC + AIT 关键岗 9-Box 盘点，叠加 Mercer IPE 职等评价；80% 部门完成职位技能与人力盘点</div>
-      <div class="act-row"><span class="rk">量化标准</span>关键岗继任覆盖率 <b>≥80%</b>、Ready Now <b>≥20%</b>、IPE 覆盖 <b>≥90%</b> 正式岗（均为 OKR 目标值）</div>
+      <div class="act-row"><span class="rk">量化标准</span>完成关键岗盘点与《职位矩阵图》1.0、每岗明确继任者名单；覆盖率/Ready Now/IPE 占比<b>以内部基线盘点后设定</b>（OKR 草案值仅参考，非已达承诺）</div>
       <div class="act-stop">停止/回滚：职等调整须薪酬委员会审批；涉岗位/人员调整走合法程序，需本地法律确认。</div>
     </div>
     <div class="act-card a-p1 a-org">
       <div class="act-top"><span class="act-pri">P1</span><span class="act-org">组织面</span><span class="act-title">中段梯队与内部活水（轮岗 / 无缝交接）</span></div>
-      <div class="act-row"><span class="rk">依据</span>3–5 年 263 人（12.6%）、1–3 年 171 人（8.2%）中段稀薄；LOG 内推为零、50+ 占 26.8%。对齐 OKR CHO O3「无缝交接」与 KR4.3</div>
+      <div class="act-row"><span class="rk">依据</span>3–5 年 263 人（12.6%）、1–3 年 171 人（8.2%）中段稀薄；LOG 内推为零、50+ 占 26.8%。外部：猎聘关键岗招聘周期 70–90 天，内部活水比外招更快补位</div>
       <div class="act-row"><span class="rk">责任人</span><b>HRD + 各 BU HRBP + 用人主管</b></div>
       <div class="act-row"><span class="rk">时限</span><b>本季度</b>完成 3–10 年段保留池名单，<b>半年内</b>完成首批轮岗</div>
       <div class="act-row"><span class="rk">动作</span>选派 <b>10% HR 伙伴</b>轮岗 6 个月或支援海外跨区专案；建立主管交棒架构与 IDP 档案；LOG 单设内推激励</div>
-      <div class="act-row"><span class="rk">量化标准</span>轮岗比例 <b>≥10%</b>、关键岗位 IDP 覆盖 <b>≥70%</b>（OKR 2028 目标）、交棒架构建档率 <b>100%</b></div>
+      <div class="act-row"><span class="rk">量化标准</span>关键岗位交棒架构<b>逐岗建档</b>、轮岗与 IDP 先做试点再定比例（OKR 草案 10%/70% 仅参考，须结合业务承接力校准）</div>
       <div class="act-stop">停止/回滚：轮岗须业务主管同意并完成工作交接，不得影响服务连续性；跨区支援需当地法规合规确认。</div>
     </div>
     <div class="act-card a-p2">
       <div class="act-top"><span class="act-pri">P2</span><span class="act-title">HRSSC 数字化沉淀</span></div>
-      <div class="act-row"><span class="rk">依据</span>咨询量大、口径分散，重复事务占用 HR 产能；对齐 OKR KR6.2（RPA/AI ≥3 场景、Chatbot 首解率 ≥80%）</div>
+      <div class="act-row"><span class="rk">依据</span>咨询量大、口径分散，重复事务占用 HR 产能；外部同业已用 AI 自助答疑 + 人工兜底降本，是 HRSSC 成熟实践</div>
       <div class="act-row"><span class="rk">责任人</span><b>HRSSC 负责人 + IT</b></div>
       <div class="act-row"><span class="rk">时限</span><b>半年</b>分阶段上线</div>
       <div class="act-row"><span class="rk">动作</span>人事小 i 自助答疑 + 人工兜底，沉淀咨询数据反哺口径统一</div>
-      <div class="act-row"><span class="rk">量化标准</span>自助解决率 <b>≥60%</b>（示例值），高频问题口径一致率 <b>100%</b></div>
+      <div class="act-row"><span class="rk">量化标准</span>高频问题口径一致率 <b>100%</b>；自助解决率先设基线、分阶段提升（不预设百分比）</div>
       <div class="act-stop">停止/回滚：AI 答复准确率不达标即回退人工兜底；涉个人信息处理需合规确认。</div>
     </div>
     <div class="act-card a-p2">
       <div class="act-top"><span class="act-pri">P2</span><span class="act-title">数据源单一化治理</span></div>
-      <div class="act-row"><span class="rk">依据</span>内部曾并存 PPTX 定版与快照两套数，外部散见多份快讯，口径易混</div>
+      <div class="act-row"><span class="rk">依据</span><b>具体差异（可追溯）：</b>PPTX 定版（2026/08）在册 <b>2,075</b> / 离职率 <b>5.93%</b> / 招聘完成率 <b>58.1%</b>，与《内部资料对比报告》（2026/10）的 <b>2,086</b> / <b>6.09%</b> / <b>67.9%</b> 三处核心指标并存；外部《数据快讯》历经 v11（10/09）→v14（11/18）多版本，同一指标多次刷新。用户 11/19 已明确「以后比照办理」统一口径。</div>
       <div class="act-row"><span class="rk">责任人</span><b>HR 数据负责人</b></div>
       <div class="act-row"><span class="rk">时限</span><b>半年</b>固化数据源单一规则</div>
-      <div class="act-row"><span class="rk">动作</span>内部数字统一取《内部资料对比报告》、外部数字统一取《外部数据快讯》，报表标注来源与截止日</div>
-      <div class="act-row"><span class="rk">量化标准</span>高管报告数据源单一率 <b>100%</b>，跨报表口径争议工单下降 <b>50%</b>（示例值）</div>
+      <div class="act-row"><span class="rk">动作</span>内部数字统一取《内部资料对比报告》、外部数字统一取《外部数据快讯》，报表标注来源与截止日；旧口径数仅作历史说明、不再进入高管报告</div>
+      <div class="act-row"><span class="rk">量化标准</span>高管报告数据源单一率 <b>100%</b>（单一口径，非示例值）；跨报表口径争议工单<b>逐季下降</b>，基线 Q1 盘点后定</div>
       <div class="act-stop">停止/回滚：口径变更须先经 HRD 确认并回溯受影响报表，避免历史数据断链。</div>
     </div>
     <div class="act-card a-p2 a-org">
       <div class="act-top"><span class="act-pri">P2</span><span class="act-org">组织面</span><span class="act-title">价值观行为转化与三支柱 2.0 复盘</span></div>
-      <div class="act-row"><span class="rk">依据</span>对齐 OKR KR1.2（管理者价值观行为评分 +15%、应用案例 ≥6 个）与 P1.3（BU HR ↔ BSC HR 每季/半年复盘、输出 2 个协作优化案例）</div>
+      <div class="act-row"><span class="rk">依据</span>整合期文化稀释风险 + 协作口径分散；管理者行为与 BU/BSC 协作缺少统一观察。</div>
       <div class="act-row"><span class="rk">责任人</span><b>BSC 主管 + 组织发展负责人</b></div>
       <div class="act-row"><span class="rk">时限</span><b>Q2</b> 管理者工作坊 / <b>Q4</b> 评分对比；复盘会每季 1 次</div>
-      <div class="act-row"><span class="rk">动作</span>T.I.P.E. 场景化行为评估（招聘/绩效/晋升），建立 BU HR ↔ BSC HR 双向复盘机制，沉淀协作案例</div>
-      <div class="act-row"><span class="rk">量化标准</span>管理者行为评分同比 <b>≥+15%</b>、价值观案例 <b>≥6 个</b>、协作优化案例 <b>≥2 个</b>（均为 OKR 目标值）</div>
+      <div class="act-row"><span class="rk">动作</span>把价值观转成招聘/绩效/晋升的可观察行为，建立 BU HR ↔ BSC HR 双向复盘机制，沉淀协作案例</div>
+      <div class="act-row"><span class="rk">量化标准</span>管理者行为评分与协作案例<b>按基线逐年改善</b>（基线值待 Q1 盘点后定，不预设百分比）</div>
       <div class="act-stop">停止/回滚：评估涉及个人数据须合规确认；结果用于发展，不作为单一奖惩依据。</div>
     </div>
+  </div>
+
+  <div class="bench-panel">
+    <h4><span class="ic">🌐</span>05 &nbsp;外部对标与同行借鉴（不照抄 OKR，给自有判断）</h4>
+    <p class="bsub">内部数字取内部资料对比报告、外部事实取外部数据快讯（更新至 11/18）；同行做法为公开信息研判，借鉴结论是我司视角建议，须经业务与薪酬委员会评估后落地。</p>
+    <table class="bench-tbl">
+      <thead><tr><th>议题</th><th class="b-peer">同行 / 市场做法（外部快讯）</th><th class="b-us">我司现状 → 可借鉴点与落点</th><th>判断</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>关键岗激励与留才</td>
+          <td>WTW：中国实际调薪 4.3%、预期 4.9%；<b>前 11.1% 高绩效拿走 21.8% 预算</b>。美世：高绩效涨 8–10%、普通仅 2–3%，AI 资深溢价 20–35%。文晔以「净利破百亿 + 17 薪」作留任叙事。</td>
+          <td>我司主动离职率 6.09%，AIT 离职 72 人最多、WPI 非自愿占自身 50%。可借鉴：<b>把增量预算集中到关键岗高绩效者</b>，并用「Q3 净利破百亿 + 职等可见」做留任叙事；<b>不建议全面跟薪</b>（文晔体量与我司不同），只做定向差异化。</td>
+          <td><span class="verdict v-part">借鉴·改造</span></td>
+        </tr>
+        <tr>
+          <td>招聘提速 / 缺口补位</td>
+          <td>同业在招（外部快讯）：中电港 76 / 安富利 68 / 文晔 51 / 艾睿 29，<b>我司外部渠道仅 5 个</b>。猎聘：采购经理需求 +46.6%、芯片新发职位 +22.2%、关键岗招聘周期 70–90 天。</td>
+          <td>我司完成率 67.9%、面试通过率 41.8%。可借鉴：<b>渠道落差先补齐</b>（秋招 + 定向挖猎双轨），把「懂稀缺料号 + 保供」的复合采购岗<b>单列招聘与薪酬方案</b>；TGBC 98.1% 有效率的评分卡内部复制，比外购工具更快见效。</td>
+          <td><span class="verdict v-yes">直接借鉴</span></td>
+        </tr>
+        <tr>
+          <td>结构性紧缺下的<br>人力分层</td>
+          <td>芯八哥：本轮是<b>供给受限的结构性行情</b>，算力/车规/高容缺口最紧、通用料偏弱。建议人力投放结构化、按产品线毛利与紧缺度分层。</td>
+          <td>我司存储营收占比已从 26%→54%。可借鉴：<b>算力/存储/车规产品线加配 FAE 与保供人力，通用料线不盲目扩编</b>；Q4 高财测下配套超额提成并评估销售/采购压力负荷。</td>
+          <td><span class="verdict v-yes">直接借鉴</span></td>
+        </tr>
+        <tr>
+          <td>技能给薪 / 梯队培养</td>
+          <td>猎聘：Chiplet 岗 +211%、年薪 64.95 万（均值 2.23 倍）、资深架构师全国仅 200–300 人；德勤预测 2030 年全球半导体缺 100 万熟练工。同业用校企联合培养缩短周期。</td>
+          <td>我司平均年龄 39.8 岁、30 岁以下仅 11.7%，LOG 50+ 占 26.8%。可借鉴：<b>技能岗按技能本位重设门槛（LOG 的 DL：叉车/WMS/夜班）+ 校企联合培养</b>；<b>不宜照抄 Chiplet 高薪</b>（岗位性质不同），学其「技能分层 + 内部培养」逻辑。</td>
+          <td><span class="verdict v-part">借鉴·改造</span></td>
+        </tr>
+        <tr>
+          <td>稀缺技能岗保留</td>
+          <td>WTW/美世：普调时代终结、「价值驱动」上位；非薪酬杠杆（发展、体验、学习）补足预算受限的留任缺口。</td>
+          <td>BSC 资讯仅 26 人支撑全区 2,086 人。可借鉴：<b>资讯/采购等稀缺岗单列技能溢价 + 保留清单</b>，以发展机会替代无法给的普调幅度。海外 GBG 的高价值市场关系能力同理，用轮岗培养而非空降。</td>
+          <td><span class="verdict v-yes">直接借鉴</span></td>
+        </tr>
+        <tr>
+          <td>组织效能 / 继任盘点</td>
+          <td>公开 500 强实践：9-Box 人才盘点、继任覆盖率、技能本位职等是常见做法；<b>但无统一「标准阈值」</b>，各司按自身基线设定。</td>
+          <td>我司 AIT 职位异动 1,576 次而职等异动 0 次、3–5 年司龄仅 12.6%。判断：<b>方法论可借鉴（盘点 + 职位矩阵 + 活水），阈值不可照搬</b>。OKR 草案的 80%/90%/10% 仅为内部规划示例，本页不作为已达承诺，须先做基线盘点再定目标。</td>
+          <td><span class="verdict v-no">方法借鉴<br>阈值不照抄</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="bench-note"><b>判断说明：</b>「直接借鉴」＝同行做法与我司岗位性质相近、可较快落地；「借鉴·改造」＝逻辑可用但需按我司体量/岗位改造后落地；「阈值不照抄」＝方法论可参考，但具体百分比须以内部基线盘点校准。任何调薪、留任与岗位调整仍须薪酬委员会 / HRD / 法务复核。</div>
   </div>
 
   </div><!-- /execGrp-all -->
@@ -711,8 +780,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>已完成 57 单，占全区完成量 52.8%，交付主力</li><li>30 岁以下 83 人 + 年资不足 1 年 47 人，有持续年轻血液</li><li>雇用 56 人全区最多，离职率与去年同期基本持平</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>职位异动 1,576 次、职等异动 0 次——组织在动、职级没动</li><li>离职 72 人全区最多（占 56.7%），同比减员 −46 最大</li><li>面试通过率 47.9%，在招 12 个交付压力重</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>整合期先给「可预期的职级节点」：对齐 2027 OKR KR3.2，优先在 AIT 做 Mercer IPE 职位评价与《职位矩阵图》1.0（覆盖≥90% 正式岗），把 1,576 次职位异动转成可认定的职等；同步按 KR3.1 做关键岗接班盘点（覆盖率≥80%、Ready Now≥20%），并排查 72 名离职者中产品岗是否被竞对定向挖角。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.1 节（2026/10）；组织动作对齐 2027 CN HR OKR O3。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>排查 72 名离职者中被竞对定向挖角的产品/FAE 岗，建反挖预案 <span class="who">（AIT HRBP · 本月复盘）</span></li><li>1,576 次职位异动做职位价值盘点，把「动了的岗」对应到职等 <span class="who">（HRD + C&B · Q4 出盘点表）</span></li><li>离职率 8.48% 全区最高，锁定高绩效关键岗一对一挽留 <span class="who">（AIT 主管 + HRBP · 2 周成名单）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>整合期先给「可预期的职级节点」：优先在 AIT 做职位价值评价与《职位矩阵图》，把 1,576 次职位异动转成可认定的职等；同步做关键岗接班盘点，并排查 72 名离职者中产品岗是否被竞对定向挖角。同业做法：文晔 DC/服务器占比已达 68%、中电港 Q3 增速 +238.87%，均在高薪抢 FAE/PM——我司以「Q3 净利破百亿 + 职等可见」作留任叙事，比单纯跟薪更可持续。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.1 节（2026/10）+ 外部数据快讯（同业 Q3 业绩）。组织方向参考 OKR，阈值需内部校准。</div>
 </div>
 <div id="execGrp-wpi" class="exec-grppanel">
   <div class="gp-head">
@@ -724,8 +794,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>30 岁以下 13.9% 全区最高，年轻化程度最好</li><li>职等异动 333 次（占全区 80%），激励力度第一</li><li>离职率 3.44% 最低，约面率 77.6%、到面率 76.2%</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>完成率 39.5% 全区最低，在招 17 个占全区 55%</li><li>offer 率 45.8% 全区最低，超过一半 offer 被拒</li><li>非自愿离职占自身 50%，84% 职缺 7 月后才开放</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>低完成率来自窗口短（84% 职缺 7 月后开），低 offer 率才是真问题——岗位吸引力而非招聘流程。建议：① 对近 3 个月拒 offer 者做原因回访（本月性价比最高的调研）；② 将 IPE 职位矩阵（KR3.2）推广至 WPI，用职等与发展空间补吸引力；③ 核查 12 个非自愿离职岗替补计划，避免 Q4 缺口叠加。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.2 节与预警一（2026/10）；组织动作对齐 2027 CN HR OKR O3。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>对近 3 个月拒 offer 者做原因回访，聚焦薪酬/岗位吸引力 <span class="who">（WPI HRBP · 本月≥10 人）</span></li><li>把 17 个在招职缺按紧缺度分层，优先补算力/存储/车规产品线 <span class="who">（WPI 用人主管 · 2 周分层）</span></li><li>核查 12 个非自愿离职岗替补计划，避免 Q4 缺口叠加 <span class="who">（WPI HRBP + 主管 · 本季闭环）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>低完成率来自窗口短（84% 职缺 7 月后开），低 offer 率才是真问题——岗位吸引力而非招聘流程。同业对标：安富利卡位航空航天等高价值垂直、艾睿靠方案服务形成高毛利，均用「岗位含金量」抵消薪酬劣势；我司可借鉴——用职位矩阵把 WPI 职等与发展空间显性化，而非全面加薪。先做拒 offer 回访验证根因（本月性价比最高的调研）。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.2 节与预警一（2026/10）+ 外部数据快讯（同业战略分化）。</div>
 </div>
 <div id="execGrp-tgbc" class="exec-grppanel">
   <div class="gp-head">
@@ -737,8 +808,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>同比 +13（+13.0%），全区唯一显著增长</li><li>招聘全链条标杆：有效率 98.1%、通过率 87.5%、offer 率 92.9%</li><li>雇用 17 人（同比 +10），扩张期人才补充到位</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>平均年资 8.4 年、1–3 年仅 13 人，中间层偏薄</li><li>暂停率 10%（2/20），需厘清岗位存续</li><li>50 岁以上 15 人（13.3%），需关注主管层继任</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>把 TGBC 的候选人画像经验沉淀为「面试评分卡 + 岗位技能标准」，对齐 OKR KR3.3（80% 部门完成职位技能与人力盘点），并反哺 WPI/LOG。扩张期同步按 KR3.1 做关键岗继任盘点，避免增长后主管断档。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.3 节（2026/10）；组织动作对齐 2027 CN HR OKR O3/KR3.3。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>沉淀 87.5% 通过率的候选人画像为面试评分卡，反哺 WPI/LOG <span class="who">（TGBC HRBP · 本季出卡）</span></li><li>30–50 岁中间层盘点，锁定 1–3 年高潜 13 人建 IDP <span class="who">（TGBC 主管 · 本季名单）</span></li><li>厘清 2 个暂停职缺的列管/存续，避免盘点失真 <span class="who">（TGBC HRBP · 2 周内）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>把 TGBC 的候选人画像经验沉淀为「面试评分卡 + 岗位技能标准」并反哺 WPI/LOG——这是全区最值得内部复制的做法（通过率 87.5%、offer 率 92.9%）。同业对标：中电港 Q3 +238.87% 的高速扩张伴随梯队压力，我司 TGBC 同比 +13% 更应趁势做关键岗继任，避免增长后主管断档。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.3 节（2026/10）+ 外部数据快讯（中电港增速）。</div>
 </div>
 <div id="execGrp-bsc" class="exec-grppanel">
   <div class="gp-head">
@@ -750,8 +822,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>平均年龄 37.6 岁最年轻；完成率 85% 全区第二</li><li>offer 率 100%（25 发 25 接）、到面率 86.7%</li><li>财会 90 + 行政 78 两大块占 76.7%，配置完整</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>资讯仅 26 人支撑全区 2,086 人，配置偏紧</li><li>暂停 2 个职缺，需确认岗位存续问题</li><li>3–5 年年资 10% 偏薄；>10 年占 55.3%</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>BSC 是 OKR 组织面的主战场：Q4 前完成关键岗接班盘点（每岗≥1 名 Ready Now 或 1–2 年继任者，覆盖≥80%）与 Mercer IPE 评价；按 KR3.3 完成 80% 部门职位技能与人力盘点；按 P1.3 建立「BU HR ↔ BSC HR 每季复盘会」，输出 2 个协作优化案例。资讯 26 人属稀缺技能岗，参照 500 强做法做技能溢价与保留清单。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.4 节（2026/10）；组织动作对齐 2027 CN HR OKR O3/O6 与 P1.3。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>资讯 26 人做技能盘点与保留清单，设技能溢价（稀缺岗） <span class="who">（BSC 主管 + C&B · 本季名单）</span></li><li>关键岗接班盘点：每岗≥1 名继任者，先覆盖财会/行政/资讯 <span class="who">（BSC 主管 · Q4 前完成）</span></li><li>建立「BU HR ↔ BSC HR」每季复盘，输出 2 个协作优化案例 <span class="who">（HRD · 每季 1 次）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>BSC 是组织面主战场：先完成关键岗接班盘点与职位价值评价，再做部门职位技能与人力盘点，并建立「BU HR ↔ BSC HR 每季复盘」。同业/市场做法：猎聘数据显示采购经理需求 +46.6%、AI 应用能力年薪溢价 15–20%，稀缺技能岗须用「技能给薪 + 发展机会」而非普调保留——资讯 26 人正是这类岗位，建议单列技能溢价与保留清单。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.4 节（2026/10）+ 外部数据快讯（猎聘/WTW 技能溢价）。</div>
 </div>
 <div id="execGrp-log" class="exec-grppanel">
   <div class="gp-head">
@@ -763,8 +836,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>111 人年资超 10 年，队伍极稳；到面率 80.0%</li><li>离职率 6.70% 与去年同期持平</li><li>雇用 7 人，基本维持动态平衡</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>平均年龄 42.9 岁、50+ 占 26.8%，全区最老</li><li>30 岁以下仅 11 人（6.1%），年轻人几乎补不进</li><li>暂停率 50%、面试通过率 15.0%、内推为零（均全区最低）</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>三重叠加（老化 + 招不进 + 留不住）须当作组织问题而非招聘效率问题：① 对齐 OKR KR3.1，立即启动 48 位 50+ 关键岗的继任规划；② LD 运筹 DL 87 人与 LI 运筹 IDL 88 人分开定策略，DL 按技能本位（会开叉车/懂 WMS/可夜班）重设门槛，IDL 才谈学历；③ 单设 LOG 内推激励；④ 用轮岗与跨区历练（KR4.3，10% HR 伙伴/6 个月）补梯队。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.5 节与预警三（2026/10）；组织动作对齐 2027 CN HR OKR O3/KR4.3。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>48 位 50+ 关键岗启动继任规划，明确交棒人与时程 <span class="who">（LOG 主管 + HRBP · 本季启动）</span></li><li>DL（87 人）按技能本位重设门槛（叉车/WMS/夜班），IDL 才谈学历 <span class="who">（LOG 用人主管 · 2 周改标准）</span></li><li>内推为零 → 单设 LOG 内推激励，配套跨区历练补梯队 <span class="who">（LOG HRBP · 本季上线）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>三重叠加（老化 + 招不进 + 留不住）须当作组织问题而非招聘效率问题：① 立即启动 48 位 50+ 关键岗继任规划；② LD 运筹 DL 87 人与 LI 运筹 IDL 88 人分开定策略，DL 按技能本位（会开叉车/懂 WMS/可夜班）重设门槛，IDL 才谈学历；③ 单设 LOG 内推激励。同业借鉴：德勤预测 2030 年全球半导体缺 100 万熟练工、猎聘关键岗招聘周期 70–90 天——技能岗靠「重新定义门槛 + 内部培养」比外部抢人更现实。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.5 节与预警三（2026/10）+ 外部数据快讯（德勤/猎聘供需）。</div>
 </div>
 <div id="execGrp-gbg" class="exec-grppanel">
   <div class="gp-head">
@@ -776,8 +850,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
     <div class="gp-box gp-good"><b>优势</b><ul><li>完成率 100%、offer 率 100%、离职率 0%</li><li>大专以上 100%，学历结构全区最优</li><li>环比 +1、同比 +1，稳定增长</li></ul></div>
     <div class="gp-box gp-warn"><b>关注</b><ul><li>1–3 年年资 0 人，几乎没有中间梯队</li><li>30 岁以下仅 1 人，平均年龄 42.4 岁</li><li>到面率 40.0% 全区最低（5 邀 2 到）</li></ul></div>
   </div>
-  <div class="gp-org"><b>组织面向建议</b>28 人但承担海外触角职能，高度依赖资深员工。重点放在主管层继任（KR3.1 覆盖率≥80%）而非规模扩张；承接 2027 OKR KR4.1「海外跨区支援专案至少 2 个」，把 GBG 作为 cn 干部跨区历练的落点，形成「派得出、接得住」的梯队闭环。</div>
-  <div class="gp-src">来源：内部资料对比报告 6.6 节（2026/10）；组织动作对齐 2027 CN HR OKR O3/KR4.1。样本 28 人，小样本不作细分交叉。</div>
+  <div class="gp-next"><b>下一步行动 · 数据要变成动作</b><ol><li>主管层继任盘点（小样本 28 人，逐岗确认交棒人） <span class="who">（海外事业群主管 · 本季完成）</span></li><li>把 GBG 作为 CN 干部跨区历练落点，设计 1–2 个支援专案 <span class="who">（HRD · 本季立项）</span></li><li>到面率 40% 偏低：复盘邀约话术与候选人体验 <span class="who">（海外 HRBP · 2 周改流程）</span></li></ol></div>
+  <div class="gp-org"><b>组织面建议（自有研判）</b>28 人但承担海外触角职能，高度依赖资深员工。重点放在主管层继任而非规模扩张；把 GBG 作为 CN 干部跨区历练的落点，形成「派得出、接得住」的梯队闭环。同业借鉴：安富利布局航空航天等高价值垂直、艾睿深耕工业车规方案服务——海外高价值市场的「关系 + 技术」复合能力无法速成，宜用轮岗培养而非外部空降。样本 28 人，小样本不作细分交叉。</div>
+  <div class="gp-src">来源：内部资料对比报告 6.6 节（2026/10）+ 外部数据快讯（同业垂直布局）。组织方向参考 OKR，非照抄目标值。</div>
 </div>
 
   <div class="exec-foot">
@@ -800,7 +875,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
         <tr><td>调薪率</td><td>实际 4.3% / 预期 4.9%</td><td><b>外部数据快讯</b>：WTW 2026 年中定稿</td><td>2026 年中</td></tr>
         <tr><td>芯片人才供需</td><td>岗位 +3.0% / 采购经理 +46.6%</td><td><b>外部数据快讯</b>：猎聘（11/05 更新）</td><td>2026/11/05</td></tr>
         <tr><td>供应缺口</td><td>延至 2028</td><td><b>外部数据快讯</b>：村田扩产公告 / 集邦</td><td>2026/11/04–11/10</td></tr>
-        <tr><td>组织面向目标</td><td>继任≥80% / IPE≥90% / 轮岗10%</td><td><b>2027 CN HR OKR 第一版（待讨论）</b>：规划值</td><td>2026/11/13 版</td></tr>
+        <tr><td>组织方向（仅参考）</td><td>继任盘点 / 职位矩阵 / 轮岗活水（方向，非阈值）</td><td><b>2027 CN HR OKR 第一版（待讨论）</b>：仅作方向参考；阈值以内部基线盘点校准，不照抄</td><td>2026/11/13 版</td></tr>
       </table>
     </details>
   </div>
@@ -1257,15 +1332,31 @@ document.addEventListener('DOMContentLoaded', function(){
   var btn=document.getElementById('wpgSubmit'); if(btn) btn.addEventListener('click', wpgTryUnlock);
   var inp=document.getElementById('wpgPass'); if(inp){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter') wpgTryUnlock(); }); }
   // EXEC ENTRY JS START
-  // 专题报告直达：?tab=exec 自动激活高管摘要页签
+  // 专题报告直达：?tab=exec 自动激活高管摘要页签；?grp=xxx 切到对应集团面板
   try {
     var _p = new URLSearchParams(location.search);
     if (_p.get('tab') === 'exec' && typeof switchTopTab === 'function') {
       var _eb = document.getElementById('tabExecBtn');
       switchTopTab('exec', _eb);
+      var _g = _p.get('grp');
+      if (_g && typeof switchExecGrp === 'function') {
+        // 等 DOM 就绪后切换（switchExecGrp 定义在 exec 摘要内联脚本中）
+        setTimeout(function(){
+          try {
+            var _btn = null, _tabs = document.querySelectorAll('.exec-grptab');
+            for (var i=0;i<_tabs.length;i++){
+              if ((_tabs[i].getAttribute('onclick')||'').indexOf("'" + _g + "'")>=0){ _btn=_tabs[i]; break; }
+            }
+            switchExecGrp(_g, _btn || undefined);
+            var _panel=document.getElementById('execGrp-'+_g);
+            if(_panel && _panel.getClientRects().length){ _panel.scrollIntoView({block:'start'}); }
+          } catch(e) {}
+        }, 60);
+      }
     }
   } catch (e) {}
   // EXEC ENTRY JS END
+  
 });
 // 若有旧 Service Worker 在控制页面，注册自毁 SW 清理其缓存并注销
 if('serviceWorker' in navigator && navigator.serviceWorker.controller){

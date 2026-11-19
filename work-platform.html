@@ -1457,11 +1457,21 @@ function mergeEmployeeData() {
         <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
       </div>
 <!-- EXEC ENTRY NAV START -->
-      <div class="nav-item" data-target="exec" onclick="location.href='report.html?v=22&tab=exec'">
+      <div class="nav-item nav-parent" data-target="exec" id="navExecParent" onclick="location.href='report.html?v=22&tab=exec'">
         <span class="nav-icon">🎯</span><span class="nav-label">高管摘要（一眼看全局）</span>
-        <span style="margin-left:auto;font-size:10px;color:var(--text-secondary);">↗</span>
+        <span class="nav-arrow" id="navExecArrow" onclick="event.stopPropagation();toggleExecNav()">▲</span>
+      </div>
+      <div class="nav-children" id="navExecChildren">
+        <div class="nav-item nav-child" data-execgrp="all" onclick="location.href='report.html?v=22&tab=exec&grp=all'"><span class="nav-label">全区总览</span></div>
+        <div class="nav-item nav-child" data-execgrp="ait" onclick="location.href='report.html?v=22&tab=exec&grp=ait'"><span class="nav-label">诠鼎 AIT</span></div>
+        <div class="nav-item nav-child" data-execgrp="wpi" onclick="location.href='report.html?v=22&tab=exec&grp=wpi'"><span class="nav-label">世平 WPI</span></div>
+        <div class="nav-item nav-child" data-execgrp="tgbc" onclick="location.href='report.html?v=22&tab=exec&grp=tgbc'"><span class="nav-label">鑫联大 TGBC</span></div>
+        <div class="nav-item nav-child" data-execgrp="bsc" onclick="location.href='report.html?v=22&tab=exec&grp=bsc'"><span class="nav-label">后勤 BSC</span></div>
+        <div class="nav-item nav-child" data-execgrp="log" onclick="location.href='report.html?v=22&tab=exec&grp=log'"><span class="nav-label">运筹 LOG</span></div>
+        <div class="nav-item nav-child" data-execgrp="gbg" onclick="location.href='report.html?v=22&tab=exec&grp=gbg'"><span class="nav-label">海外 GBG</span></div>
       </div>
 <!-- EXEC ENTRY NAV END -->
+
 
       <div class="nav-group-label">主导航</div>
       <div class="nav-item active" data-target="all" onclick="switchModule('all')">
@@ -5633,6 +5643,13 @@ function toggleRecruitNav(){
   if(ch)ch.classList.toggle('collapsed');
   if(ar)ar.textContent=ch&&ch.classList.contains('collapsed')?'▼':'▲';
 }
+  // EXEC NAV JS START
+  function toggleExecNav(){
+    var ch=document.getElementById('navExecChildren');var ar=document.getElementById('navExecArrow');
+    if(ch)ch.classList.toggle('collapsed');
+    if(ar)ar.textContent=ch&&ch.classList.contains('collapsed')?'▼':'▲';
+  }
+  // EXEC NAV JS END
 function switchRecruitSub(k){
   if(typeof switchModule==='function')switchModule('recruit');
   if(typeof r3SwitchSub==='function')r3SwitchSub(k);
