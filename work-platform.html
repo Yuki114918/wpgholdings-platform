@@ -35,7 +35,7 @@ var DATA_BASES = [
 var DATA_BASE = DATA_BASES[0];
 // 数据版本号：当 data/ 下任一文件被重新生成（内容变化）后，务必 bump 此值，
 // 以强制浏览器 / CDN 穿透旧缓存重新拉取（首请求即带 dv=，避免旧 .enc 通过 validator 误判为新鲜）。
-var DATA_VER = '20261118c';
+var DATA_VER = '20261118d';
 var WPG_KEY=null;
 async function wpgAfterUnlock(){ await wpgStartRosterLoad(); wpgLoadMonthly().then(function(){ monthlyInit(); }); wpgLoadRecruitment(); /* 解锁后空闲预加载招聘窗口 */ /* 解锁后空闲预加载考勤 iframe，避免点击后空白 */ var preAtt=function(){ var att=document.getElementById('attendanceFrame'); if(att && !att.getAttribute('src')){ att.setAttribute('src', att.getAttribute('data-src')); } }; if('requestIdleCallback' in window){ requestIdleCallback(preAtt); } else { setTimeout(preAtt,1500); } }
 function wpgBaseName(url){ return url.replace(/^https?:\/\//,'').split('/')[0]; }
@@ -74,6 +74,7 @@ async function wpgFetchData(url, timeoutMs, externalSignal){
 }
 async function wpgLoadOneChunk(idx){
   // 三源并行竞速：任一源先解密成功即注入并中止其余请求；单源偶发超时不再拖住整页（原串行最坏约 210s）。
+  // 归属正确性由 mergeEmployeeData 中的 GROUP_FIX 修正表保证，不依赖源站新鲜度。
   var file = 'employees-data-v21-part'+idx+'.js.enc';
   function raceRound(bust){
     var timeout = bust ? 30000 : 15000;
@@ -86,7 +87,7 @@ async function wpgLoadOneChunk(idx){
           try{
             window.WPG_LOAD_EXTRA = ' · 分块'+idx+' '+(bust?'穿透 ':'')+wpgBaseName(base);
             wpgUpdateLoadProgress(window._wpgDone||0, TOTAL_CHUNKS, window._wpgFailed||[]);
-            var url = base+file+(bust ? ('?cb='+Date.now()) : '');
+            var url = base+file+(bust ? ('?cb='+Date.now()) : ('?dv='+DATA_VER));
             var js = await wpgFetchData(url, timeout, ctrl.signal);
             if(done) return;
             done=true;
@@ -109,6 +110,7 @@ async function wpgLoadOneChunk(idx){
   window.WPG_LOAD_EXTRA='';
   return r;
 }
+
 // 限制并发池，避免一次开 10 个连接导致网络拥塞
 async function wpgRunWithConcurrency(tasks, concurrency){
   var results = new Array(tasks.length);
@@ -240,6 +242,23 @@ function mergeEmployeeData() {
   }
   EMPLOYEES_DATA = [];
   for (var k in seen) { if (seen.hasOwnProperty(k)) EMPLOYEES_DATA.push(seen[k]); }
+
+  // ===== [2026-11-18] 已知归属修正表（确定性强写，规避 CDN 旧快照）=====
+  // 背景：原「CN-A + 人力岗 → 强制 BSC」规则误改了真实归属；数据层/服务器 enc 已修正，
+  // 但 jsDelivr @main 内容缓存滞留旧快照，仍把这 4 人标为 BSC。此处按工号写回真实归属，
+  // 保证无论加载自哪个 CDN 源，详情卡/筛选/图表口径一致。真实归属取自源数据 EC/Java 主档。
+  var GROUP_FIX = {
+    '108568': 'G03-詮鼎集團',  // 唐春豔：EC G03-詮鼎集團（用户确认「詮鼎」）
+    '119301': 'G01-世平集團',  // 蔣玲：EC G01-世平集團
+    '152599': 'G04-友尚集團',  // 吕琳：Java YSNg / 事业体友尚
+    '153603': 'G07-控股公司'   // 佘瑞琦：EC G07-控股公司（归一仍 BSC，仅显示归一）
+  };
+  for (var gi = 0; gi < EMPLOYEES_DATA.length; gi++) {
+    var ge = EMPLOYEES_DATA[gi];
+    if (GROUP_FIX[ge.id]) ge.group = GROUP_FIX[ge.id];
+  }
+  // ===== /已知归属修正表 =====
+
   // 构建全局主管姓名集合：所有出现在他人 mgr99 字段中的人名 → 都是主管
   MGR99_NAME_SET = {};
   for (var mi = 0; mi < EMPLOYEES_DATA.length; mi++) {
