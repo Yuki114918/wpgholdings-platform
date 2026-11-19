@@ -5133,7 +5133,7 @@ var R3_SEL = {};
 const R3_COLORS = ['#E31937','#004E8C','#c2870b','#137a45','#8b5cf6','#06b6d4','#e07b39','#6b7280','#ec4899','#14b8a6'];
 
 function r3Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function r3N(v){var n=Number(v);return isNaN(n)?0:n;}
+function r3N(v,def){if(v==null||v==='')return def==null?0:def;var n=Number(v);return isNaN(n)?(def==null?0:def):n;}
 function r3Pct(a,b){return b>0?(r3N(a)/r3N(b)*100).toFixed(1)+'%':'—';}
 function r3DefaultSel(){R3_SEL={};R3_KEYS.forEach(function(k){R3_SEL[k]=new Set();});R3_SNAP=(R3&&R3.meta&&R3.meta.defaultSnap)||'20261031';}
 r3DefaultSel();
@@ -5182,7 +5182,7 @@ function r3InitMeta(){
   ['r3ProgressSource','r3ExSource','r3InSource','r3RetSource','r3ChSource','r3EffSource'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=src;});
   var foot=document.getElementById('r3Foot');
   if(foot)foot.innerHTML='<b>口径说明：</b>本模块按 2026-11-19 用户确认的 Power BI 报表口径重构，完全替换旧版（原 711/84/142 累计口径与 HR 定版已移除）。'
-    +'<br>· <b>职缺进度 / 渠道贡献 / 渠道效能</b>：源＝主管月会表每月快照，KPI＝SUM(需求人数) 按「职缺增补」分类（口径源自《新指标库-招聘模板》DAX）。默认 20261031 快照。'
+    +'<br>· <b>职缺进度 / 渠道贡献 / 渠道效能</b>：源＝主管月会表每月快照，KPI＝按「职缺增补」分类统计有效职缺条数（需求人数有值记1条，空白不计；对齐 Power BI 截图）。默认 20261031 快照。'
     +'<br>· <b>外招过程</b>：源＝北森招聘过程分析表（双周），有效简历率＝部门通过/HR发起筛选、约面成功率＝面试数/部门通过、到面率＝到面/面试。'
     +'<br>· <b>内招过程</b>：源＝职缺报报-招聘过程表；<b>留任率</b>：源＝入离职名册，正职新进（不含派遣/约聘/顾问）、按 1/3/6 个月在职时点计算，离职回职者＝「新进_离职回任」。'
     +'<br>⚠️ 数据仅供 HR 决策参考，非终决策；截图数字为参考基准，实际以统一文件夹最新源表为准。';
@@ -5363,12 +5363,12 @@ function r3Table(id,cols,rows,note){
 /* ============================ ① 职缺进度一览表 ============================ */
 function r3RenderProgress(){
   var slots=r3Slots();
-  // KPI：按职缺增补 SUM(需求人数)
+  // KPI（2026-11-19 修正）：按职缺增补统计有效职缺条数（需求人数有值记1条，空白不计），对齐 Power BI 截图
   var agg={};['在招职缺-本月','待入职','已完成职缺','暂停/自主招聘'].forEach(function(k){agg[k]=0;});
-  slots.forEach(function(s){if(agg[s.zeng]!=null)agg[s.zeng]+=s.need;});
-  var total=slots.reduce(function(a,s){return a+s.need;},0);
+  slots.forEach(function(s){if(agg[s.zeng]!=null)agg[s.zeng]+=r3N(s.cnt, s.need>0?1:0);});
+  var total=slots.reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   r3Kpis('r3ProgressKpis',[
-    {l:'月总职缺数',v:total,c:'blue',s:'当前快照 · SUM(需求人数)'},
+    {l:'月总职缺数',v:total,c:'blue',s:'当前快照 · 有效职缺条数'},
     {l:'在招职缺',v:agg['在招职缺-本月'],s:'本月仍在招募'},
     {l:'待入职',v:agg['待入职'],c:'amber',s:'已录用未到岗'},
     {l:'已完成职缺',v:agg['已完成职缺'],c:'green',s:'本月完成'},
@@ -5378,7 +5378,7 @@ function r3RenderProgress(){
   var zhis=sortedUnique(slots.map(function(s){return s.zhiXi;}).filter(Boolean));
   var cats=['在招','待入职','已完成','暂停'];
   var zmap={'在招职缺-本月':0,'待入职':1,'已完成职缺':2,'暂停/自主招聘':3};
-  var series=cats.map(function(c,i){return {name:c,color:R3_COLORS[i],data:zhis.map(function(z){return slots.filter(function(s){return s.zhiXi===z&&zmap[s.zeng]===i;}).reduce(function(a,s){return a+s.need;},0);})};});
+  var series=cats.map(function(c,i){return {name:c,color:R3_COLORS[i],data:zhis.map(function(z){return slots.filter(function(s){return s.zhiXi===z&&zmap[s.zeng]===i;}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);})};});
   r3Legend('r3ProgLegend',series.map(function(s){return {name:s.name,color:s.color};}));
   r3GroupBar('r3ProgZhiChart',zhis.length?zhis:['无数据'],series,240);
   // 逐月趋势（跨快照，取当前筛选但忽略 snap）
@@ -5391,7 +5391,7 @@ function r3RenderProgress(){
     if(!cand.length)cand=snaps.filter(function(t){return t.slice(0,6)===String(y)+mm;});
     var use=cand[cand.length-1];if(!use)return 0;
     var ss=R3.slotsAll.filter(function(s){return s.snap===use&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi)&&r3Pass('hr',s.hr);});
-    return ss.reduce(function(a,s){return a+s.need;},0);
+    return ss.reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   })};});
   r3Legend('r3ProgTrendLegend',tseries.map(function(s){return {name:s.name,color:s.color};}));
   r3Line('r3ProgTrend',trendCats,tseries,240);
@@ -5402,7 +5402,7 @@ function r3RenderProgress(){
     {t:'招聘天数',f:function(r){return r.recruitDays==null?'—':r.recruitDays;}},
     {t:'灯号',f:function(r){var lc=r.light==='绿'?'g':(r.light==='黄'?'y':(r.light==='红'?'r':''));return lc?'<span class="r3-light '+lc+'"></span>'+r3Esc(r.light):'—';}}
   ];
-  r3Table('r3ProgTable',cols,slots,'共 '+slots.length+' 条职缺 · 快照 '+R3_SNAP+' · 招聘天数＝任用核准日−最高主管核准日');
+  r3Table('r3ProgTable',cols,slots,'共 '+slots.length+' 行（其中 '+total+' 条有效职缺计入 KPI） · 快照 '+R3_SNAP+' · KPI 按有效职缺条数计数（需求人数有值记1条） · 招聘天数＝任用核准日−最高主管核准日');
 }
 
 /* ============================ ② 外招-过程分析 ============================ */
@@ -5458,9 +5458,9 @@ function r3RenderInternal(){
   var rows=R3.inner||[];
   // 与主管月会快照联动：内招/外招职缺数（用当前筛选的 slots）
   var slots=r3Slots();
-  var innerN=slots.filter(function(s){return /内调|内招|内部/.test(s.channel||'');}).reduce(function(a,s){return a+s.need;},0);
-  var outerN=slots.filter(function(s){return /外找|外招/.test(s.channel||'');}).reduce(function(a,s){return a+s.need;},0);
-  var openN=slots.filter(function(s){return s.zeng==='在招职缺-本月';}).reduce(function(a,s){return a+s.need;},0);
+  var innerN=slots.filter(function(s){return /内调|内招|内部/.test(s.channel||'');}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
+  var outerN=slots.filter(function(s){return /外找|外招/.test(s.channel||'');}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
+  var openN=slots.filter(function(s){return s.zeng==='在招职缺-本月';}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   r3Kpis('r3InKpis',[
     {l:'在招职缺数',v:openN,c:'blue',s:'当前快照'},
     {l:'外招职缺数',v:outerN,s:'管道含外找'},
@@ -5472,8 +5472,8 @@ function r3RenderInternal(){
   // 内招 vs 外招 月变化（跨快照，统计每个快照的管道分类）
   var snaps=R3.meta.snaps.slice(-12);
   var cats=snaps.map(function(s){return s.date.slice(2,7);});
-  var innerSeries=snaps.map(function(sn){var ss=R3.slotsAll.filter(function(s){return s.snap===sn.tag&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);});return ss.filter(function(s){return /内调|内招|内部/.test(s.channel||'');}).reduce(function(a,s){return a+s.need;},0);});
-  var outerSeries=snaps.map(function(sn){var ss=R3.slotsAll.filter(function(s){return s.snap===sn.tag&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);});return ss.filter(function(s){return /外找|外招/.test(s.channel||'');}).reduce(function(a,s){return a+s.need;},0);});
+  var innerSeries=snaps.map(function(sn){var ss=R3.slotsAll.filter(function(s){return s.snap===sn.tag&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);});return ss.filter(function(s){return /内调|内招|内部/.test(s.channel||'');}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);});
+  var outerSeries=snaps.map(function(sn){var ss=R3.slotsAll.filter(function(s){return s.snap===sn.tag&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);});return ss.filter(function(s){return /外找|外招/.test(s.channel||'');}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);});
   var ts=[{name:'内招职缺数',color:R3_COLORS[3],data:innerSeries},{name:'外招职缺数',color:R3_COLORS[0],data:outerSeries}];
   r3Legend('r3InTrendLegend',ts.map(function(s){return {name:s.name,color:s.color};}));
   r3Line('r3InTrend',cats,ts,280);
@@ -5549,31 +5549,31 @@ function r3RenderChannel(){
   var slots=r3Slots();
   // 只统计"已完成职缺"（有渠道的新进）
   var done=slots.filter(function(s){return s.zeng==='已完成职缺';});
-  var total=done.reduce(function(a,s){return a+s.need;},0);
+  var total=done.reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   r3Kpis('r3ChKpis',[
     {l:'新进人数',v:total,c:'blue',s:'已完成职缺 · 当前快照'},
     {l:'渠道数',v:sortedUnique(done.map(function(s){return s.channel;}).filter(Boolean)).length,s:'有标注的招聘渠道'},
-    {l:'主管自寻',v:done.filter(function(s){return s.channel==='主管自寻';}).reduce(function(a,s){return a+s.need;},0),c:'green',s:'渠道贡献'},
-    {l:'内部推荐',v:done.filter(function(s){return /内推|推荐/.test(s.channel||'');}).reduce(function(a,s){return a+s.need;},0),c:'green',s:'渠道贡献'}
+    {l:'主管自寻',v:done.filter(function(s){return s.channel==='主管自寻';}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0),c:'green',s:'渠道贡献'},
+    {l:'内部推荐',v:done.filter(function(s){return /内推|推荐/.test(s.channel||'');}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0),c:'green',s:'渠道贡献'}
   ]);
   // 年度-新进人数（跨快照的已完成职缺，按年份去重近似：取每年最后快照）
   var years=[2024,2025,2026];
   var yearVals=years.map(function(y){
     var snaps=R3.meta.snaps.filter(function(s){return s.tag.slice(0,4)===String(y);});
     var use=snaps[snaps.length-1];if(!use)return 0;
-    return R3.slotsAll.filter(function(s){return s.snap===use.tag&&s.zeng==='已完成职缺'&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);}).reduce(function(a,s){return a+s.need;},0);
+    return R3.slotsAll.filter(function(s){return s.snap===use.tag&&s.zeng==='已完成职缺'&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   });
   r3HBar('r3ChYear',years.map(function(y){return y+'年';}),yearVals,function(i){return R3_COLORS[i+1];},230);
   // 渠道 by 职系（堆叠）
   var zhis=['P','S','T','AS'];
   var chans=sortedUnique(done.map(function(s){return s.channel;}).filter(Boolean)).slice(0,8);
-  var cseries=chans.map(function(c,i){return {name:c,color:R3_COLORS[i%R3_COLORS.length],data:zhis.map(function(z){return done.filter(function(s){return s.zhiXi===z&&s.channel===c;}).reduce(function(a,s){return a+s.need;},0);})};});
+  var cseries=chans.map(function(c,i){return {name:c,color:R3_COLORS[i%R3_COLORS.length],data:zhis.map(function(z){return done.filter(function(s){return s.zhiXi===z&&s.channel===c;}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);})};});
   r3Legend('r3ChZhiLegend',cseries.map(function(s){return {name:s.name,color:s.color};}));
   r3StackBar('r3ChZhi',zhis,cseries,230);
   // 渠道 by 年（分组）
   var chseries=chans.map(function(c,i){return {name:c,color:R3_COLORS[i%R3_COLORS.length],data:years.map(function(y){
     var snaps=R3.meta.snaps.filter(function(s){return s.tag.slice(0,4)===String(y);});var use=snaps[snaps.length-1];if(!use)return 0;
-    return R3.slotsAll.filter(function(s){return s.snap===use.tag&&s.zeng==='已完成职缺'&&s.channel===c&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);}).reduce(function(a,s){return a+s.need;},0);
+    return R3.slotsAll.filter(function(s){return s.snap===use.tag&&s.zeng==='已完成职缺'&&s.channel===c&&r3Pass('sub',s.sub)&&r3Pass('bu',s.bu)&&r3Pass('zhiXi',s.zhiXi);}).reduce(function(a,s){return a+r3N(s.cnt, s.need>0?1:0);},0);
   })};});
   r3Legend('r3ChChanLegend',chseries.map(function(s){return {name:s.name,color:s.color};}));
   r3GroupBar('r3ChChan',years.map(function(y){return y+'年';}),chseries,260);
