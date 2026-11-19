@@ -5162,23 +5162,32 @@ async function wpgLoadRecruitment(){
     'https://gcore.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/',
     'https://cdn.jsdelivr.net/gh/Yuki114918/wpgholdings-platform@main/data/']);
   async function tryLoad(){
-    for(var b=0;b<R3_BASES.length;b++){
-      try{
-        var u=R3_BASES[b]+'recruit-v3.js?dv='+DATA_VER;
-        var ctrl=new AbortController();var t=setTimeout(function(){ctrl.abort();},12000);
-        var res=await fetch(u,{signal:ctrl.signal});clearTimeout(t);
-        if(!res.ok)throw new Error('http'+res.status);
-        var js=await res.text();
-        // 语义守卫：先从文本判定新旧，命中旧快照直接换源，不注入脚本
-        if(js.indexOf('有效职缺条数')<0 || !/"cnt":/.test(js)) throw new Error('STALE_DATA');
-        window.RECRUIT_V3=null;
-        var sc=document.createElement('script');sc.textContent=js;document.head.appendChild(sc);
-        var r=window.RECRUIT_V3;
-        if(!(r&&r.meta&&r.meta.counts&&r.slotsAll&&r.proc&&r.roster&&r.channelCost)){window.RECRUIT_V3=null;throw new Error('BAD_DATA');}
-        return true;
-      }catch(e){console.warn('招聘v3从 '+R3_BASES[b]+' 加载失败:',e.message||e);}
-    }
-    return false;
+    // 并行竞速：解锁时有大量并发 fetch（花名册/月报），串行等待会超时；
+    // 多源同时请求，谁先返回「语义合格」的新版数据就注入谁。
+    return await new Promise(function(resolve){
+      var done=false, remaining=R3_BASES.length;
+      function finish(ok){ if(done)return; done=true; resolve(ok); }
+      R3_BASES.forEach(function(base,b){
+        var ctrl=new AbortController();
+        var t=setTimeout(function(){ctrl.abort();},b===0?20000:30000);
+        (async function(){
+          try{
+            var u=base+'recruit-v3.js?dv='+DATA_VER;
+            var res=await fetch(u,{signal:ctrl.signal});clearTimeout(t);
+            if(!res.ok)throw new Error('http'+res.status);
+            var js=await res.text();
+            // 语义守卫：命中旧快照（无 cnt/无新口径文案）直接放弃该源
+            if(js.indexOf('有效职缺条数')<0 || !/"cnt":/.test(js)) throw new Error('STALE_DATA');
+            if(done)return;                       // 已被别的源抢先
+            window.RECRUIT_V3=null;
+            var sc=document.createElement('script');sc.textContent=js;document.head.appendChild(sc);
+            var r=window.RECRUIT_V3;
+            if(!(r&&r.meta&&r.meta.counts&&r.slotsAll&&r.proc&&r.roster&&r.channelCost)){window.RECRUIT_V3=null;throw new Error('BAD_DATA');}
+            finish(true);
+          }catch(e){ clearTimeout(t); console.warn('招聘v3从 '+base+' 加载失败:',e.message||e); if(--remaining<=0)finish(false); }
+        })();
+      });
+    });
   }
   var ok=await tryLoad();
   if(ok){r3Init();}
