@@ -2230,6 +2230,14 @@ function mergeEmployeeData() {
       .r3-foldhead:hover{text-decoration:underline;}
       .r3-foot{font-size:11.5px;color:var(--text-secondary);margin-top:10px;line-height:1.8;background:#fff5f6;border:1px solid #f3d6da;border-radius:9px;padding:10px 14px;}
       .r3-source{background:#eef6ff;border:1px solid #bcd7f2;color:#003b66;border-radius:9px;padding:9px 13px;font-size:12px;line-height:1.7;margin-bottom:14px;}
+      .r3-advice{background:linear-gradient(135deg,#f0fdf4 0%,#eff6ff 100%);border:1px solid #bbf7d0;border-left:5px solid #137a45;border-radius:11px;padding:13px 16px;margin:2px 0 16px;}
+      .r3-advice h4{margin:0 0 8px;font-size:13.5px;color:#137a45;display:flex;align-items:center;gap:7px;}
+      .r3-advice h4 .r3-adv-tag{background:#137a45;color:#fff;font-size:10.5px;border-radius:5px;padding:2px 7px;font-weight:600;}
+      .r3-advice-body{font-size:12px;line-height:1.75;color:#1f3a2e;}
+      .r3-advice-body .r3-adv-row{margin:5px 0;padding-left:16px;position:relative;}
+      .r3-advice-body .r3-adv-row:before{content:'';position:absolute;left:2px;top:9px;width:6px;height:6px;border-radius:50%;background:#137a45;}
+      .r3-advice-body b{color:#0b5e34;}
+      .r3-advice .r3-adv-foot{margin-top:8px;padding-top:7px;border-top:1px dashed #a7d8bd;font-size:11px;color:#5b7a68;}
     </style>
     <h2 class="section-title" onclick="toggleSection(this.parentElement)">🎯 招聘效能分析（CN ABC 区）<span class="m-cn-badge">6 大分析页</span><span class="collapse-arrow">▼</span></h2>
     <div class="r3-asof" id="r3AsOf"></div>
@@ -2288,6 +2296,7 @@ function mergeEmployeeData() {
           <span class="r3-hint" id="r3ExCaliber"></span>
         </div>
         <div class="r3-kpis" id="r3ExKpis"></div>
+        <div class="r3-advice" id="r3ExAdvice"></div>
         <div class="r3-grid2">
           <div class="r3-card"><h3>招聘漏斗 · 按职系<span class="r3-hint">HR发起筛选 → 部门通过 → 面试 → 到面</span></h3><div class="r3-legend" id="r3ExFunnelLegend"></div><div class="r3-svg" id="r3ExFunnel" style="height:250px;"></div></div>
           <div class="r3-card"><h3>过程转化率（有效简历 / 约面 / 到面 / 面试通过）</h3><div class="r3-svg" id="r3ExRate" style="height:250px;"></div></div>
@@ -5431,6 +5440,54 @@ function r3ExRows(){
   var si=document.getElementById('r3ExInit');var init=si?si.value:'';
   return R3.proc.filter(function(p){return (!snap||p.snap===snap)&&(!init||p.initiator===init);});
 }
+/* 外招-人员改进建议：按当前筛选的漏斗数据动态诊断，定位最大漏损点给行动建议 */
+function r3RenderExAdvice(rows,sum,doing){
+  var box=document.getElementById('r3ExAdvice');
+  if(!box)return;
+  if(!rows.length){box.innerHTML='<h4>💡 人员改进建议</h4><div class="r3-advice-body">当前筛选无外招过程数据，请调整筛选条件。</div>';return;}
+  var ini=document.getElementById('r3ExInit');var who=(ini&&ini.value&&ini.value!=='全部')?ini.value:'当前筛选范围';
+  var rate=function(a,b){return b>0?a/b:0;};
+  var pct=function(a,b){return b>0?(a/b*100).toFixed(1)+'%':'—';};
+  var effRate=rate(sum.deptPass,sum.hrScreen);      // 有效简历率
+  var meetRate=rate(sum.invited,sum.deptPass);      // 约面成功率
+  var arriveRate=rate(sum.arrived,sum.invited);     // 到面率
+  var passRate=rate(sum.passed,sum.arrived);        // 面试通过率
+  var offerRate=rate(sum.onboard,sum.offer);        // 到岗率
+  // 定位最大漏损环节（各转化率越低越需改进；分母为 0 的环节跳过）
+  var steps=[
+    {n:'有效简历率',v:effRate,base:sum.hrScreen,out:sum.deptPass,
+     diag:'HR 发起筛选 '+sum.hrScreen+' 份，部门仅通过 '+sum.deptPass+' 份，大量简历在初筛后被刷。',
+     act:'与用人主管对齐岗位画像与硬性条件，HR 初筛前先做 1 页 JD 校准；对被刷简历抽样复盘，减少无效推送。'},
+    {n:'约面成功率',v:meetRate,base:sum.deptPass,out:sum.invited,
+     diag:'部门通过 '+sum.deptPass+' 份，仅邀约 '+sum.invited+' 人面试。',
+     act:'通过后 24 小时内完成邀约，锁定候选人时间；对未邀约者标注原因（薪资/地点/岗位匹配），避免简历沉睡。'},
+    {n:'到面率',v:arriveRate,base:sum.invited,out:sum.arrived,
+     diag:'邀约 '+sum.invited+' 人，实际到面 '+sum.arrived+' 人，爽约/改期流失明显。',
+     act:'面试前 1 天电话或短信二次确认，提供线上面试选项；统计爽约原因并纳入候选人体验改善。'},
+    {n:'面试通过率',v:passRate,base:sum.arrived,out:sum.passed,
+     diag:'到面 '+sum.arrived+' 人，通过 '+sum.passed+' 人，面试评估标准需校准。',
+     act:'统一结构化面试评分表与能力项，面试官会前对齐标准；对未通过者记录淘汰原因，反向优化邀约画像。'},
+    {n:'Offer 到岗率',v:offerRate,base:sum.offer,out:sum.onboard,
+     diag:'发出 Offer '+sum.offer+' 份，实际到岗 '+sum.onboard+' 人，存在拒 Offer / 放鸽子风险。',
+     act:'Offer 前先做薪酬与入职意向确认，发出后保持联系至到岗日；对拒 Offer 者做原因回访，形成对标数据。'}
+  ].filter(function(s){return s.base>0;}).sort(function(a,b){return a.v-b.v;});
+  var worst=steps[0];
+  var html='<h4>💡 人员改进建议 <span class="r3-adv-tag">'+who+'</span></h4><div class="r3-advice-body">';
+  html+='<div class="r3-adv-row"><b>总体判断：</b>当前 '+rows.length+' 个需求、招聘中 '+doing+' 个；漏斗为 HR 筛选 '+sum.hrScreen+' → 部门通过 '+sum.deptPass+' → 邀面 '+sum.invited+' → 到面 '+sum.arrived+' → 通过 '+sum.passed+' → 到岗 '+sum.onboard+'。</div>';
+  if(worst){
+    html+='<div class="r3-adv-row"><b>最大漏损环节：'+worst.n+'（'+pct(worst.out,worst.base)+'）。</b>'+worst.diag+'</div>';
+    html+='<div class="r3-adv-row"><b>首要动作：</b>'+worst.act+'</div>';
+  }
+  // 次级关注：再列 1-2 个低转化率环节（非最大）
+  var others=steps.slice(1,3);
+  if(others.length){
+    var names=others.map(function(s){return s.n+' '+pct(s.out,s.base);}).join('、');
+    html+='<div class="r3-adv-row"><b>同步关注：</b>'+names+'。建议用同一张漏斗表逐环节复盘，优先补齐低于团队均值的步骤。</div>';
+  }
+  html+='<div class="r3-adv-foot">建议依据本页北森招聘过程数据自动生成，随快照与筛选发起人联动；落地时请结合岗位紧缺度与用人主管反馈校准。</div>';
+  box.innerHTML=html+'</div>';
+}
+
 function r3RenderExternal(){
   var rows=r3ExRows();
   var cal=document.getElementById('r3ExCaliber');
@@ -5448,6 +5505,7 @@ function r3RenderExternal(){
     {l:'面试通过',v:sum.passed,s:'通过率 '+r3Pct(sum.passed,sum.arrived)},
     {l:'已到岗',v:sum.onboard,c:'green',s:'Offer '+sum.offer}
   ]);
+  r3RenderExAdvice(rows,sum,doing);
   // 漏斗按职系
   var zhis=sortedUnique(rows.map(function(r){return r.zhiXi;}).filter(Boolean));
   var stages=[{k:'hrScreen',n:'HR发起筛选'},{k:'deptPass',n:'部门通过'},{k:'invited',n:'邀请面试'},{k:'arrived',n:'到面'},{k:'passed',n:'面试通过'}];
