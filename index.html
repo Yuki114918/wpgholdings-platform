@@ -5153,6 +5153,11 @@ async function wpgLoadRecruitment(){
           var sc=document.createElement('script');sc.textContent=js;document.head.appendChild(sc);
           var r=window.RECRUIT_V3;
           if(!(r&&r.meta&&r.meta.counts&&r.slotsAll&&r.proc&&r.roster&&r.channelCost)){window.RECRUIT_V3=null;throw new Error('BAD_DATA');}
+          // 语义守卫（2026-11-19）：jsDelivr @main 长期滞留旧快照（SUM(需求人数) 口径、无 cnt 字段）。
+          // 命中旧数据则置空并换下一源，直到取到 github.io 的新版，避免 KPI 只靠前端兜底。
+          var isNew = (r.slotsAll.some(function(x){return 'cnt' in x;}))
+                   && (r.meta.method||'').indexOf('有效职缺条数')>=0;
+          if(!isNew){window.RECRUIT_V3=null;throw new Error('STALE_DATA');}
           return true;
         }catch(e){console.warn('招聘v3从 '+DATA_BASES[b]+' 尝试'+(a+1)+'失败:',e.message||e);}
       }
