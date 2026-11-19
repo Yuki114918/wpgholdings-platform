@@ -331,6 +331,84 @@ footer span{display:block}
 .fab-back::after { content:'🏠'; }
 @media(max-width:900px){ .fab-back { display:flex; } }
 </style>
+
+
+
+
+<style id="execSummaryStyle">
+.exec-wrap{max-width:1180px;margin:0 auto;padding:26px 30px 60px;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#1e293b;}
+.exec-hero{background:linear-gradient(135deg,#0f2d4f 0%,#1e4e79 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:30px 34px;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(15,45,79,.22);}
+.exec-hero:after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.06);}
+.exec-eyebrow{font-size:11px;letter-spacing:3px;font-weight:700;color:#8ec5ff;text-transform:uppercase;margin-bottom:10px;}
+.exec-hero h2{font-size:29px;font-weight:800;margin:0 0 16px;letter-spacing:-.5px;}
+.exec-thesis{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:14px 16px;position:relative;z-index:1;}
+.exec-thesis-tag{flex:none;font-size:11px;font-weight:700;color:#0f2d4f;background:#7dd3fc;border-radius:20px;padding:4px 11px;white-space:nowrap;}
+.exec-thesis p{margin:0;font-size:14.5px;line-height:1.75;color:#f1f7ff;}
+.exec-thesis .exec-conf{flex:none;font-size:11px;color:#fff;background:rgba(0,0,0,.22);border-radius:20px;padding:4px 10px;white-space:nowrap;align-self:center;}
+.exec-meta{margin-top:13px;font-size:11.5px;color:#bcd6f5;position:relative;z-index:1;}
+.exec-h3{font-size:16px;font-weight:800;color:#0f2d4f;margin:30px 0 4px;padding-left:12px;border-left:4px solid #2563eb;letter-spacing:-.2px;}
+.exec-sub{font-size:12px;color:#64748b;margin:0 0 15px;padding-left:16px;}
+.exec-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.exec-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:17px 18px;box-shadow:0 1px 3px rgba(0,0,0,.05);position:relative;transition:.15s;}
+.exec-kpi:hover{box-shadow:0 6px 18px rgba(30,78,121,.12);transform:translateY(-1px);}
+.exec-kpi .k-lbl{font-size:12px;color:#64748b;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+.exec-kpi .k-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.dg{background:#10b981;}.dy{background:#f59e0b;}.dr{background:#ef4444;}.db{background:#3b82f6;}
+.exec-kpi .k-val{font-size:32px;font-weight:800;color:#0f2d4f;line-height:1;letter-spacing:-1px;}
+.exec-kpi .k-val small{font-size:14px;font-weight:700;color:#475569;margin-left:3px;letter-spacing:0;}
+.exec-kpi .k-note{font-size:11.5px;color:#94a3b8;margin-top:9px;line-height:1.5;}
+.exec-two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.exec-panel{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.exec-panel h4{font-size:13.5px;font-weight:800;color:#0f2d4f;margin:0 0 13px;display:flex;align-items:center;gap:7px;}
+.exec-panel h4 .ic{font-size:15px;}
+.swot{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.swot-cell{border-radius:9px;padding:12px 13px;font-size:12.3px;line-height:1.65;}
+.swot-cell b{display:block;font-size:12px;margin-bottom:5px;letter-spacing:.5px;}
+.swot-s{background:#ecfdf5;border:1px solid #a7f3d0;}.swot-s b{color:#047857;}
+.swot-w{background:#fff7ed;border:1px solid #fed7aa;}.swot-w b{color:#c2410c;}
+.swot-o{background:#eff6ff;border:1px solid #bfdbfe;}.swot-o b{color:#1d4ed8;}
+.swot-t{background:#fef2f2;border:1px solid #fecaca;}.swot-t b{color:#b91c1c;}
+.swot-cell ul{margin:0;padding-left:16px;}.swot-cell li{margin-bottom:3px;}
+.ext-list{list-style:none;margin:0;padding:0;}
+.ext-list li{padding:9px 0;border-bottom:1px dashed #e8edf3;font-size:12.5px;line-height:1.55;}
+.ext-list li:last-child{border-bottom:none;}
+.ext-list .ex-t{font-weight:700;color:#0f2d4f;}
+.ext-list .ex-d{color:#64748b;font-size:11px;}
+.ext-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;margin-right:6px;vertical-align:1px;}
+.exb-fin{background:#dbeafe;color:#1e40af;}.exb-pay{background:#fef3c7;color:#92400e;}.exb-sup{background:#fee2e2;color:#991b1b;}
+.prio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.prio-col{border-radius:12px;padding:15px 16px;border:1px solid #e2e8f0;}
+.prio-col.p0{background:linear-gradient(180deg,#fef2f2,#fff);border-color:#fecaca;}
+.prio-col.p1{background:linear-gradient(180deg,#fff7ed,#fff);border-color:#fed7aa;}
+.prio-col.p2{background:linear-gradient(180deg,#eff6ff,#fff);border-color:#bfdbfe;}
+.prio-col .ph{font-size:13px;font-weight:800;margin-bottom:3px;}
+.prio-col.p0 .ph{color:#b91c1c;}.prio-col.p1 .ph{color:#c2410c;}.prio-col.p2 .ph{color:#1d4ed8;}
+.prio-col .pd{font-size:11px;color:#94a3b8;margin-bottom:10px;}
+.prio-item{font-size:12.3px;line-height:1.5;padding:7px 0;border-top:1px solid rgba(0,0,0,.04);}
+.prio-item b{color:#0f2d4f;}
+.act-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.act-card{background:#fff;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:11px;padding:15px 17px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.act-card.a-p0{border-left-color:#ef4444;}.act-card.a-p1{border-left-color:#f59e0b;}.act-card.a-p2{border-left-color:#3b82f6;}
+.act-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.act-pri{font-size:10px;font-weight:800;color:#fff;border-radius:5px;padding:2px 7px;}
+.a-p0 .act-pri{background:#ef4444;}.a-p1 .act-pri{background:#f59e0b;}.a-p2 .act-pri{background:#3b82f6;}
+.act-title{font-size:13.5px;font-weight:800;color:#0f2d4f;}
+.act-row{font-size:11.8px;line-height:1.6;margin-top:5px;color:#475569;}
+.act-row .rk{display:inline-block;min-width:52px;color:#94a3b8;font-weight:600;}
+.act-row b{color:#1e293b;}
+.act-stop{margin-top:8px;font-size:11px;color:#b91c1c;background:#fef2f2;border-radius:6px;padding:6px 9px;}
+.exec-foot{margin-top:26px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:16px 19px;font-size:11.8px;line-height:1.8;color:#64748b;}
+.exec-foot b{color:#334155;}
+.exec-foot .warn{color:#b45309;}
+details.exec-det{margin-top:12px;}
+details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight:700;padding:6px 0;}
+.exec-det table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:8px;}
+.exec-det th,.exec-det td{border:1px solid #e2e8f0;padding:7px 10px;text-align:left;}
+.exec-det th{background:#eff6ff;color:#0f2d4f;font-weight:700;}
+@media(max-width:900px){.exec-kpi-grid,.prio-grid{grid-template-columns:repeat(2,1fr);}.exec-two,.act-grid{grid-template-columns:1fr;}}
+@media(max-width:600px){.exec-kpi-grid,.prio-grid{grid-template-columns:1fr;}}
+</style>
+
 </head>
 <body>
 <div id="wpgLogin">
@@ -369,7 +447,190 @@ footer span{display:block}
   <button class="top-tab-btn active" id="tabExtBtn" onclick="switchTopTab('external', this)">📊 外部数据快讯</button>
   <button class="top-tab-btn" id="tabIntBtn" onclick="switchTopTab('internal', this)">🔍 内部资料对比</button>
   <button class="top-tab-btn" id="tabTrendsBtn" onclick="switchTopTab('trends', this)">🚀 HR最新趋势</button>
+  <button class="top-tab-btn" id="tabExecBtn" onclick="switchTopTab('exec', this)">🎯 高管摘要</button>
 </div>
+
+
+
+
+
+<!-- ===== 高管摘要 EXEC SUMMARY START ===== -->
+<div id="tab-exec" style="display:none">
+<div class="exec-wrap">
+
+  <section class="exec-hero">
+    <div class="exec-eyebrow">Executive Summary &middot; 高管摘要</div>
+    <h2>大联大中国区 &nbsp;HR 一眼看全局</h2>
+    <div class="exec-thesis">
+      <span class="exec-thesis-tag">一句话结论</span>
+      <p>业务端强劲（Q3 单季净利首破百亿、同比翻倍），但人才端呈现"招聘偏慢 + 关键岗争夺加剧 + 成本上行"三重张力。HR 下一步不应再加制度，而应集中火力守住关键岗、把调薪预算花在刀刃上、并借同业整合窗口补齐资深人才。</p>
+      <span class="exec-conf">置信度：中</span>
+    </div>
+    <div class="exec-meta">内部口径：PPTX 定版 2026/08 ｜ 外部快讯：截至 2026/11/18 ｜ 两套口径存在时间差，不可直接相减 &nbsp;·&nbsp; 数据供决策参考，非终决策</div>
+  </section>
+
+  <h3 class="exec-h3">01 &nbsp;核心指标仪表盘</h3>
+  <p class="exec-sub">信号灯为 HR 视角判读（绿＝健康 / 黄＝需关注 / 蓝＝中性规模指标），判读口径见页尾。</p>
+  <div class="exec-kpi-grid">
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot db"></span>在职总人数</div><div class="k-val">2,075<small>人</small></div><div class="k-note">2026/08 PPTX 定版口径<br>对比报告 11/04 快照为 2,086 人</div></div>
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot dg"></span>平均年龄 / 年资</div><div class="k-val">39.8<small>岁</small></div><div class="k-note">平均年资 10.1 年 · 结构相对稳定<br>LOG 单元 42.9 岁、50+ 占 26.8%（偏老）</div></div>
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot dg"></span>大专以上学历占比</div><div class="k-val">91.8<small>%</small></div><div class="k-note">人才基数素质较高<br>对比报告同口径 91.9%</div></div>
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot dg"></span>离职率</div><div class="k-val">5.93<small>%</small></div><div class="k-note">离职 123 / 入职 75（净流出 48）<br>对比报告另一算法为 8.48%，口径不同勿相减</div></div>
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot dy"></span>招聘完成率</div><div class="k-val">58.1<small>%</small></div><div class="k-note">124 单 / 完成 72<br>招聘速度是当前主要短板</div></div>
+    <div class="exec-kpi"><div class="k-lbl"><span class="k-dot dg"></span>Q3 单季净利</div><div class="k-val">NT$103.9<small>亿</small></div><div class="k-note">首破百亿 · EPS 5.96（前三季 14.42）<br>营收 NT$5,099.96 亿（年增 108.6%）</div></div>
+  </div>
+
+  <div class="exec-two" style="margin-top:16px;">
+    <div class="exec-panel">
+      <h4><span class="ic">🏢</span>集团人力分布（2026/08 定版）</h4>
+      <div style="font-size:12.3px;line-height:2;">
+        AIT 诠鼎 <b>851</b>（41.0%）· WPI 世平 <b>693</b>（33.4%）<br>
+        LOG 运筹 <b>181</b>（8.7%）· BSC 后勤 <b>170</b> + WPGH 控股 <b>41</b><br>
+        TGBC <b>113</b>（5.4%）· GBG <b>27</b>（1.3%）
+      </div>
+      <div style="margin-top:10px;height:9px;border-radius:6px;overflow:hidden;display:flex;">
+        <span style="width:41%;background:#E31937"></span><span style="width:33.4%;background:#004E8C"></span>
+        <span style="width:8.7%;background:#06b6d4"></span><span style="width:10.2%;background:#8b5cf6"></span>
+        <span style="width:5.4%;background:#9b59b6"></span><span style="width:1.3%;background:#7F8C8D"></span>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:7px;">前两大集团 AIT+WPI 合计约 74%，人力盘点与调薪沟通应优先覆盖。</div>
+    </div>
+    <div class="exec-panel">
+      <h4><span class="ic">📡</span>外部情报速览（截至 11/18）</h4>
+      <ul class="ext-list">
+        <li><span class="ext-badge exb-pay">薪酬</span><span class="ex-t">WTW：中国实际调薪 4.3%、预期 4.9%</span><div class="ex-d">前 11.1% 高绩效者拿走 21.8% 预算 → 差异化是主旋律</div></li>
+        <li><span class="ext-badge exb-sup">供应</span><span class="ex-t">村田 1 万亿日元扩产 MLCC，缺口延至 2028</span><div class="ex-d">三星电机高容 MLCC 交期 30 周→52 周，钽电容 11/1 起涨 20~30%</div></li>
+        <li><span class="ext-badge exb-fin">同业</span><span class="ex-t">TOP4 Q3 财报 PK，大联大营收年增 108.6%</span><div class="ex-d">同业整合期＝资深 FAE/销售/PM 的挖猎窗口</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="exec-h3">02 &nbsp;现状 SWOT</h3>
+  <p class="exec-sub">基于内部定版数据与外部快讯的 HR 视角归纳（判断，非事实陈述）。</p>
+  <div class="exec-panel">
+    <div class="swot">
+      <div class="swot-cell swot-s"><b>S · 优势</b><ul>
+        <li>业务强劲：Q3 净利首破百亿，营收同比翻倍</li>
+        <li>人才结构年轻、高学历（39.8 岁 / 91.8%）</li>
+        <li>HRSSC 共享服务与数字化基础已成型</li>
+      </ul></div>
+      <div class="swot-cell swot-w"><b>W · 短板</b><ul>
+        <li>招聘完成率 58.1%，关键岗到岗偏慢</li>
+        <li>净流出 48 人；LOG 单元年龄结构偏老</li>
+        <li>人力口径分散（定版/快照并存），决策对齐成本高</li>
+      </ul></div>
+      <div class="swot-cell swot-o"><b>O · 机会</b><ul>
+        <li>同业整合期，可定向挖猎资深 FAE/销售/PM</li>
+        <li>秋招窗口（9–11 月）锁定 211/一本生源</li>
+        <li>调薪预算向高绩效倾斜，提升投入产出</li>
+      </ul></div>
+      <div class="swot-cell swot-t"><b>T · 威胁</b><ul>
+        <li>MLCC/存储涨价推高成本与调薪预期</li>
+        <li>2028 前供应缺口长期化，供应链人才争夺加剧</li>
+        <li>高绩效者若留任失败，直接影响业务连续性</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <h3 class="exec-h3">03 &nbsp;战略优先级（影响度 × 紧迫度）</h3>
+  <p class="exec-sub">P0 立即启动 / P1 本季度 / P2 半年内。聚焦杠杆点，明确"不做"：不新增通用制度、不全面普调。</p>
+  <div class="prio-grid">
+    <div class="prio-col p0"><div class="ph">P0 · 立即（守住）</div><div class="pd">高影响 · 高紧迫</div>
+      <div class="prio-item"><b>关键岗保留窗口</b>：FAE/销售/PM 高绩效者一对一挽留</div>
+      <div class="prio-item"><b>Q4 调薪差异化</b>：预算向前 11.1% 高绩效与关键岗倾斜</div>
+    </div>
+    <div class="prio-col p1"><div class="ph">P1 · 本季（补齐）</div><div class="pd">高影响 · 中紧迫</div>
+      <div class="prio-item"><b>招聘提速</b>：校招 + 社招双轨，定向挖猎清单</div>
+      <div class="prio-item"><b>LOG 年龄结构优化</b>：梯队盘点 + 关键岗继任</div>
+    </div>
+    <div class="prio-col p2"><div class="ph">P2 · 半年（固本）</div><div class="pd">中影响 · 中紧迫</div>
+      <div class="prio-item"><b>HRSSC 数字化</b>：人事小 i 自助答疑 + 数据沉淀</div>
+      <div class="prio-item"><b>口径统一</b>：定版/快照口径并轨，报表一键对齐</div>
+    </div>
+  </div>
+
+  <h3 class="exec-h3">04 &nbsp;HR 行动建议（可验收清单）</h3>
+  <p class="exec-sub">每条含责任人（角色）/ 时限 / 量化标准 / 停止标准。阈值为<b>示例数字，需用内部数据校准</b>。</p>
+  <div class="act-grid">
+    <div class="act-card a-p0">
+      <div class="act-top"><span class="act-pri">P0</span><span class="act-title">关键岗保留窗口</span></div>
+      <div class="act-row"><span class="rk">依据</span>高绩效者拿走 21.8% 调薪预算；净流出 48 人</div>
+      <div class="act-row"><span class="rk">责任人</span><b>HRD + 各 BU HRBP</b>（薪酬委员会复核）</div>
+      <div class="act-row"><span class="rk">时限</span><b>2 周内</b>完成名单，<b>30 天</b>完成沟通</div>
+      <div class="act-row"><span class="rk">动作</span>锁定 FAE/销售/PM 关键岗高绩效者，一对一保留沟通 + 个性化方案</div>
+      <div class="act-row"><span class="rk">量化标准</span>关键岗主动离职率 <b>&lt;5%</b>（示例值），保留面谈覆盖率 <b>100%</b></div>
+      <div class="act-stop">停止/回滚：方案超出薪酬委员会授权区间即暂停，转委员会决议；涉留任协议需法务确认。</div>
+    </div>
+    <div class="act-card a-p0">
+      <div class="act-top"><span class="act-pri">P0</span><span class="act-title">Q4 调薪预算差异化配置</span></div>
+      <div class="act-row"><span class="rk">依据</span>WTW 实际调薪 4.3% / 预期 4.9%，前 11.1% 拿走 21.8% 预算</div>
+      <div class="act-row"><span class="rk">责任人</span><b>薪酬委员会 + C&B</b>（HRD 拍板）</div>
+      <div class="act-row"><span class="rk">时限</span><b>本月内</b>定方案，随 Q4 调薪落地</div>
+      <div class="act-row"><span class="rk">动作</span>按绩效与关键度分档配置，压缩普调、集中资源</div>
+      <div class="act-row"><span class="rk">量化标准</span>高绩效者调薪占比 <b>≥20%</b>（示例值），预算总额不超核定盘</div>
+      <div class="act-stop">停止/回滚：任何普调突破预算盘即冻结；调薪终决策须薪酬委员会审批，本页仅为建议。</div>
+    </div>
+    <div class="act-card a-p1">
+      <div class="act-top"><span class="act-pri">P1</span><span class="act-title">招聘双轨提速</span></div>
+      <div class="act-row"><span class="rk">依据</span>招聘完成率 58.1%，关键岗到岗慢；同业整合期有人才供给</div>
+      <div class="act-row"><span class="rk">责任人</span><b>招聘负责人 + 各 BU 用人主管</b></div>
+      <div class="act-row"><span class="rk">时限</span><b>本季度</b>完成 8–10 所目标院校清单 + 资深挖猎名单</div>
+      <div class="act-row"><span class="rk">动作</span>秋招锁名校生源，全年滚动挖猎竞品溢出资深 FAE/销售/PM</div>
+      <div class="act-row"><span class="rk">量化标准</span>关键岗完成率由 58.1% 提升至 <b>≥70%</b>（示例值），到岗周期缩短 <b>15%</b></div>
+      <div class="act-stop">停止/回滚：若渠道 ROI 连续两月为负，暂停该渠道并复盘岗位吸引力（薪酬/门槛）。</div>
+    </div>
+    <div class="act-card a-p1">
+      <div class="act-top"><span class="act-pri">P1</span><span class="act-title">LOG 年龄结构与继任</span></div>
+      <div class="act-row"><span class="rk">依据</span>LOG 平均 42.9 岁、50+ 占 26.8%，为全集团最老单元</div>
+      <div class="act-row"><span class="rk">责任人</span><b>LOG HRBP + 用人主管</b></div>
+      <div class="act-row"><span class="rk">时限</span><b>本季度</b>完成关键岗盘点，<b>半年</b>完成继任者名单</div>
+      <div class="act-row"><span class="rk">动作</span>9-Box 盘点关键岗，明确继任者 + 带教计划，校招补入年轻梯队</div>
+      <div class="act-row"><span class="rk">量化标准</span>关键岗继任覆盖率 <b>≥80%</b>（示例值），50+ 占比逐年下降</div>
+      <div class="act-stop">停止/回滚：涉及任何岗位调整或人员优化须走合法程序，需本地法律确认，HR 不单独拍板。</div>
+    </div>
+    <div class="act-card a-p2">
+      <div class="act-top"><span class="act-pri">P2</span><span class="act-title">HRSSC 数字化沉淀</span></div>
+      <div class="act-row"><span class="rk">依据</span>咨询量大、口径分散，重复事务占用 HR 产能</div>
+      <div class="act-row"><span class="rk">责任人</span><b>HRSSC 负责人 + IT</b></div>
+      <div class="act-row"><span class="rk">时限</span><b>半年</b>分阶段上线</div>
+      <div class="act-row"><span class="rk">动作</span>人事小 i 自助答疑 + 人工兜底，沉淀咨询数据反哺口径统一</div>
+      <div class="act-row"><span class="rk">量化标准</span>自助解决率 <b>≥60%</b>（示例值），高频问题口径一致率 <b>100%</b></div>
+      <div class="act-stop">停止/回滚：AI 答复准确率不达标即回退人工兜底；涉个人信息处理需合规确认。</div>
+    </div>
+    <div class="act-card a-p2">
+      <div class="act-top"><span class="act-pri">P2</span><span class="act-title">人力口径并轨</span></div>
+      <div class="act-row"><span class="rk">依据</span>定版 2,075 与快照 2,086 并存，跨报表对不齐</div>
+      <div class="act-row"><span class="rk">责任人</span><b>HR 数据负责人</b></div>
+      <div class="act-row"><span class="rk">时限</span><b>半年</b>完成主数据口径统一</div>
+      <div class="act-row"><span class="rk">动作</span>明确"定版＝汇报口径、快照＝时点口径"，报表标注来源与截止日</div>
+      <div class="act-row"><span class="rk">量化标准</span>核心报表口径一致率 <b>100%</b>，口径争议工单下降 <b>50%</b>（示例值）</div>
+      <div class="act-stop">停止/回滚：口径变更须先经 HRD 确认并回溯受影响报表，避免历史数据断链。</div>
+    </div>
+  </div>
+
+  <div class="exec-foot">
+    <b>决策边界：</b>本页为 HR 视角建议与判断，<b>非终决策</b>。涉及调薪、留任名单、奖金、岗位调整的事项，须 HRD / 薪酬委员会与法务复核后生效；排班与工时调整需本地法律确认。<br>
+    <b>置信度说明：</b>整体判断<b>置信度：中</b>。依据：内部数据采用你锁定的 PPTX 定版口径（2026/08），外部数据来自公开快讯（截至 11/18）；两套口径存在时间差，若内部 11 月最新快照与定版差异扩大，相关判断需重新校准。<br>
+    <b class="warn">口径提示：</b>离职率存在两套口径（定版 5.93% vs 外部快照 8.48%），分母/期间不同，不可直接相减；绿色信号灯为相对判读，非绝对优劣。<br>
+    <b>隐私提示：</b>全部数据按群体聚合呈现；样本小的单元（示例阈值：少于 10 人）不再细分或交叉切片，避免反推到个人。对外分享前请再次脱敏。<br>
+    <details class="exec-det"><summary>▸ 数据来源与口径明细</summary>
+      <table>
+        <tr><th>指标</th><th>取值</th><th>来源 / 口径</th><th>截止</th></tr>
+        <tr><td>在职人数</td><td>2,075</td><td>PPTX 定版（对比报告快照 2,086）</td><td>2026/08（快照 11/04）</td></tr>
+        <tr><td>年龄 / 年资</td><td>39.8 岁 / 10.1 年</td><td>PPTX 定版</td><td>2026/08</td></tr>
+        <tr><td>大专以上</td><td>91.8%</td><td>PPTX 定版（快照 91.9%）</td><td>2026/08</td></tr>
+        <tr><td>离职率</td><td>5.93%</td><td>PPTX 定版：离职 123 / 入职 75</td><td>2026/08</td></tr>
+        <tr><td>招聘完成率</td><td>58.1%</td><td>124 单 / 完成 72</td><td>2026/08</td></tr>
+        <tr><td>Q3 净利 / 营收</td><td>NT$103.9 亿 / 5,099.96 亿</td><td>大联大 11/10 Q3 财报公告</td><td>2026/11/10</td></tr>
+        <tr><td>调薪率</td><td>实际 4.3% / 预期 4.9%</td><td>WTW 2026 全球薪资预算规划报告</td><td>2026 年中定稿</td></tr>
+        <tr><td>供应缺口</td><td>延至 2028</td><td>村田扩产公告 / 集邦 TrendForce</td><td>2026/11/04–11/10</td></tr>
+      </table>
+    </details>
+  </div>
+
+</div>
+</div>
+<!-- ===== 高管摘要 EXEC SUMMARY END ===== -->
 
 <div id="tab-external"><div class="report-layout">
   <!-- 报告侧边栏导航 -->
@@ -941,10 +1202,12 @@ function switchTopTab(which, btn) {
   var ext = document.getElementById('tab-external');
   var int = document.getElementById('tab-internal');
   var trd = document.getElementById('tab-trends');
+  var exe = document.getElementById('tab-exec');
   // 先隐藏所有
   if (ext) ext.style.display = 'none';
   if (int) int.style.display = 'none';
   if (trd) trd.style.display = 'none';
+  if (exe) exe.style.display = 'none';
   // 显示目标
   if (which === 'internal') {
     if (int) {
@@ -958,6 +1221,8 @@ function switchTopTab(which, btn) {
     }
   } else if (which === 'trends') {
     if (trd) trd.style.display = 'block';
+  } else if (which === 'exec') {
+    if (exe) exe.style.display = 'block';
   } else {
     if (ext) ext.style.display = 'flex';
   }
