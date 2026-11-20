@@ -5707,12 +5707,15 @@ function r3RenderRetention(){
     return !lv;
   }).length;}
   var m1=retained(1),m3=retained(3),m6=retained(6);
+  // 各观察点的可观察人数（到职满 N 个月且结算日已到），用于留任率分母
+  function observed(m){return rows.filter(function(r){var h=new Date(r.hireDate||r.date);if(isNaN(h))return false;var t=new Date(h);t.setMonth(t.getMonth()+m);return t<=new Date(R3.meta.asOf);}).length;}
+  var o1=observed(1),o3=observed(3),o6=observed(6);
   r3Kpis('r3RetKpis',[
     {l:'新进人数',v:total,c:'blue',s:'数据年雇用事件'},
-    {l:'满1个月留任',v:m1,c:'green',s:r3Pct(m1,total)},
-    {l:'满3个月留任',v:m3,c:'green',s:r3Pct(m3,total)},
-    {l:'满6个月留任',v:m6,c:'green',s:r3Pct(m6,total)},
-    {l:'6个月留任率',v:r3Pct(m6,total),c:'blue',s:'留才健康度'}
+    {l:'满1个月留任',v:m1,c:'green',s:'可观察'+o1+'人 · '+r3Pct(m1,o1)},
+    {l:'满3个月留任',v:m3,c:'green',s:'可观察'+o3+'人 · '+r3Pct(m3,o3)},
+    {l:'满6个月留任',v:m6,c:'green',s:'可观察'+o6+'人 · '+r3Pct(m6,o6)},
+    {l:'6个月留任率',v:r3Pct(m6,o6),c:'blue',s:'分母＝满6月可观察人数'}
   ]);
   // 留任数条形图
   r3HBar('r3RetBar',['新进人数','满1个月','满3个月','满6个月'],[total,m1,m3,m6],function(i){return i===0?'#004E8C':R3_COLORS[i];},250);
@@ -5768,12 +5771,13 @@ function r3RenderRetention(){
         var obs=sub.filter(function(r){var d=new Date(r.hireDate||r.date);var t=new Date(d);t.setMonth(t.getMonth()+6);return t<=new Date(R3.meta.asOf);}).length;
         var k=r3RetainedIn(sub,leaves,6);rowTot+=sub.length;rowObs+=obs;
         if(sub.length===0){ h+='<td><span style="color:#cbd5e1">—</span></td>'; }
+        else if(obs===0){ h+='<td><span style="color:#94a3b8" title="入职未满6个月，尚无观察样本">未满期</span><span style="color:#94a3b8;font-size:10px"> '+sub.length+'人</span></td>'; }
         else {
           var cc=obs<10?'#c2870b':'#137a45';
-          h+='<td><span style="color:'+cc+'">'+r3Pct(k,obs)+'</span><span style="color:#94a3b8;font-size:10px"> n'+sub.length+'</span></td>';
+          h+='<td><span style="color:'+cc+'">'+r3Pct(k,obs)+'</span><span style="color:#94a3b8;font-size:10px"> 观察'+obs+'/'+sub.length+'</span></td>';
         }
       });
-      h+='<td><b>'+r3Pct(r3RetainedIn(rows.filter(function(r){return r.group7===g;}),leaves,6),rowObs)+'</b> n'+rowTot+'</td></tr>';
+      h+='<td><b>'+(rowObs?r3Pct(r3RetainedIn(rows.filter(function(r){return r.group7===g;}),leaves,6),rowObs):'未满期')+'</b> <span style="color:#94a3b8;font-size:10px">观察'+rowObs+'/'+rowTot+'</span></td></tr>';
     });
     h+='</tbody></table>';
     e.innerHTML=h;
@@ -5784,20 +5788,36 @@ function r3RenderRetention(){
   r3Legend('r3RetTypeLegend',tseries.map(function(s){return {name:s.name,color:s.color};}));
   r3StackBar('r3RetTypeBar',g7s.length?g7s:['无数据'],tseries,240);
   // 人员类型留任率（按类型整体）
-  var typeRate=types.map(function(t){var sub=rows.filter(function(r){return r._type===t;});var k=sub.filter(function(r){var h=new Date(r.hireDate||r.date);var tgt=new Date(h);tgt.setMonth(tgt.getMonth()+6);if(tgt>new Date(R3.meta.asOf))return false;return !leaves.some(function(l){return l.empno&&l.empno===r.empno&&new Date(l.date)<tgt;});}).length;return sub.length?Math.round(k/sub.length*100):0;});
+  // 分母＝满6个月可观察人数（与矩阵口径一致），未满期不计入；无可观察样本不画柱
+  var typeRate=types.map(function(t){var sub=rows.filter(function(r){return r._type===t;});
+    var obs=sub.filter(function(r){var h=new Date(r.hireDate||r.date);var tgt=new Date(h);tgt.setMonth(tgt.getMonth()+6);return tgt<=new Date(R3.meta.asOf);}).length;
+    var k=r3RetainedIn(sub,leaves,6);
+    return {pct:obs?Math.round(k/obs*100):null,obs:obs};});
   var svg=r3Svg('r3RetTypeRate',240);
-  if(svg){var W=640,H=240,pad={l:44,r:16,t:14,b:36};r3Axes(svg,W,H,pad,100);types.forEach(function(t,i){var x=pad.l+(W-pad.l-pad.r)*0.25+i*(W-pad.l-pad.r)*0.45,h=(H-pad.t-pad.b)*typeRate[i]/100;svg.appendChild(r3El('rect',{x:x,y:H-pad.b-h,width:64,height:h,fill:tseries[i].color,rx:3}));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b-h-5,'text-anchor':'middle','font-size':11,fill:'#334','font-weight':700},typeRate[i]+'%'));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b+16,'text-anchor':'middle','font-size':11,fill:'#475569'},t));});}
+  if(svg){var W=640,H=240,pad={l:44,r:16,t:14,b:36};r3Axes(svg,W,H,pad,100);types.forEach(function(t,i){var x=pad.l+(W-pad.l-pad.r)*0.25+i*(W-pad.l-pad.r)*0.45,tr=typeRate[i],p=tr.pct==null?0:tr.pct,h=(H-pad.t-pad.b)*p/100;if(tr.pct!=null)svg.appendChild(r3El('rect',{x:x,y:H-pad.b-h,width:64,height:h,fill:tseries[i].color,rx:3}));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b-h-5,'text-anchor':'middle','font-size':11,fill:tr.pct==null?'#94a3b8':'#334','font-weight':700},tr.pct==null?'—':tr.pct+'%'));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b+16,'text-anchor':'middle','font-size':11,fill:'#475569'},t));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b+29,'text-anchor':'middle','font-size':9,fill:'#94a3b8'},'观察'+tr.obs+'人'));});}
   // 明细表：按工号关联离职事件，补「离职日」（到职后最近的离职记录；仍在职显示 —）
-  function leaveDateOf(r){
+  function leaveObjOf(r){
     var hd=new Date(r.hireDate||r.date);
     var cand=leaves.filter(function(l){return l.empno&&l.empno===r.empno&&new Date(l.date)>=hd;})
                    .sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    return cand.length?cand[0].date:'—';
+    return cand.length?cand[0]:null;
+  }
+  function leaveDateOf(r){var o=leaveObjOf(r);return o?o.date:'—';}
+  // 在职时长：以数据结算日 asOf 为基准；已离职算到离职日。满整月显示，>=12月显示「X年Y个月」
+  function tenureOf(r){
+    var hd=new Date(r.hireDate||r.date);if(isNaN(hd))return '—';
+    var lv=leaveObjOf(r);
+    var end=lv?new Date(lv.date):new Date(R3.meta.asOf);
+    var mm=(end.getFullYear()-hd.getFullYear())*12+(end.getMonth()-hd.getMonth());
+    if(end.getDate()<hd.getDate())mm--;
+    if(mm<0)mm=0;
+    if(mm<12)return mm+'个月';
+    var y=Math.floor(mm/12),m2=mm%12;return y+'年'+(m2?m2+'个月':'');
   }
   var cols=[{t:'工号',k:'empno'},{t:'姓名',k:'name'},{t:'到职日',k:'hireDate'},
-            {t:'离职日',f:leaveDateOf},
+            {t:'在职时长',f:tenureOf},{t:'离职日',f:leaveDateOf},
             {t:'7集团',k:'group7'},{t:'大区',k:'region'},{t:'城市',k:'cityCn'},{t:'职系',k:'zhiXi'},{t:'人员类型',f:function(r){return r._type;}}];
-  r3Table('r3RetTable',cols,rows,'共 '+rows.length+' 条 · 源＝入离职名册（雇用事件按工号关联离职日）（'+(r3RetCrossActive()?'已启用交叉筛选':'未交叉筛选')+'）');
+  r3Table('r3RetTable',cols,rows,'共 '+rows.length+' 条 · 源＝入离职名册 · 在职时长以结算日 '+R3.meta.asOf+' 计（已离职算至离职日）（'+(r3RetCrossActive()?'已启用交叉筛选':'未交叉筛选')+'）');
 }
 
 /* ============================ ⑤ 渠道贡献-新进人数 ============================ */
