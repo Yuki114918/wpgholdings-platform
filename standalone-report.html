@@ -362,6 +362,9 @@ footer span{display:block}
 
 
 
+
+
+
 <style id="execSummaryStyle">
 .exec-wrap{max-width:1180px;margin:0 auto;padding:26px 30px 60px;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#1e293b;}
 .exec-hero{background:linear-gradient(135deg,#0f2d4f 0%,#1e4e79 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:30px 34px;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(15,45,79,.22);}
@@ -468,6 +471,24 @@ footer span{display:block}
 .bench-tbl .verdict{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-right:5px;}
 .v-yes{background:#dcfce7;color:#166534;}.v-part{background:#fef9c3;color:#854d0e;}.v-no{background:#fee2e2;color:#991b1b;}
 .bench-note{margin-top:10px;font-size:11px;color:#64748b;line-height:1.6;background:#f8fafc;border-radius:7px;padding:8px 11px;}
+/* 绩效体系整体诊断 → 高管建议 */
+.perf-panel{margin-top:16px;background:linear-gradient(180deg,#f5f3ff,#fff);border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:12px;padding:17px 20px;}
+.perf-panel h4{font-size:13.5px;font-weight:800;color:#5b21b6;margin:0 0 4px;display:flex;align-items:center;gap:7px;}
+.perf-panel .bsub{font-size:11px;color:#64748b;margin:0 0 13px;line-height:1.6;}
+.perf-diag{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.perf-card{background:#fff;border:1px solid #ede9fe;border-radius:10px;padding:13px 15px;box-shadow:0 1px 3px rgba(124,58,237,.05);}
+.perf-card .pc-h{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.perf-card .pc-n{font-size:11px;font-weight:800;color:#fff;background:#7c3aed;border-radius:6px;padding:2px 7px;}
+.perf-card .pc-t{font-size:13px;font-weight:800;color:#4c1d95;}
+.perf-card .pc-conf{margin-left:auto;font-size:9.5px;font-weight:700;color:#6d28d9;background:#ede9fe;border-radius:10px;padding:2px 7px;white-space:nowrap;}
+.perf-card .pc-ev{font-size:11.3px;line-height:1.65;color:#475569;margin-top:5px;}
+.perf-card .pc-ev b{color:#1e293b;}
+.perf-card .pc-ad{font-size:11.5px;line-height:1.65;margin-top:9px;padding-top:8px;border-top:1px dashed #e9d5ff;color:#4c1d95;}
+.perf-card .pc-ad b{color:#5b21b6;}
+.perf-card .pc-who{font-size:10.5px;line-height:1.5;color:#7c3aed;margin-top:7px;}
+.perf-next{margin-top:13px;background:#faf5ff;border:1px solid #ddd6fe;border-radius:9px;padding:11px 14px;font-size:11.6px;line-height:1.7;color:#4c1d95;}
+.perf-next b{color:#5b21b6;}
+.perf-next ol{margin:6px 0 0;padding-left:18px;}.perf-next li{margin-bottom:4px;}
 .gp-src{margin-top:9px;font-size:10.5px;color:#94a3b8;line-height:1.5;}
 .exec-foot{margin-top:26px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:16px 19px;font-size:11.8px;line-height:1.8;color:#64748b;}
 .exec-foot b{color:#334155;}
@@ -521,6 +542,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
   <button class="top-tab-btn" id="tabTrendsBtn" onclick="switchTopTab('trends', this)">🚀 HR最新趋势</button>
   <button class="top-tab-btn" id="tabExecBtn" onclick="switchTopTab('exec', this)">🎯 高管摘要</button>
 </div>
+
+
+
 
 
 
@@ -784,6 +808,46 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       </tbody>
     </table>
     <div class="bench-note"><b>判断说明：</b>「直接借鉴」＝同行做法与我司岗位性质相近、可较快落地；「借鉴·改造」＝逻辑可用但需按我司体量/岗位改造后落地；「阈值不照抄」＝方法论可参考，但具体百分比须以内部基线盘点校准。任何调薪、留任与岗位调整仍须薪酬委员会 / HRD / 法务复核。</div>
+  </div>
+
+  <div class="perf-panel">
+    <h4><span class="ic">📈</span>06 &nbsp;绩效与晋升体系：整体诊断 → 高管建议</h4>
+    <p class="bsub">数据取自《绩效考核与晋升洞察报告》<b>整体结论</b>（考核期 2022–2025、名册快照 2025-12、CN 正职 2,128 人）。<b>口径提示：</b>该数据期与日期口径均不同于本页主口径（2026/10、2,086 人），且绩效源沿用 G01–G09 旧集团编号（与现行七集团口径不同）；本节仅作<b>体系级趋势判断</b>，数字不与主口径直接比较或相加，不列个人明细。</p>
+    <div class="perf-diag">
+      <div class="perf-card">
+        <div class="pc-h"><span class="pc-n">01</span><span class="pc-t">评等失去区分度</span><span class="pc-conf">置信：高</span></div>
+        <div class="pc-ev">四年 <b>6,425 条</b>考核记录中，<b>S 73.6% + A 23.5% ≈ 97%</b>；A+ 仅 <b>6 条</b>（近两年为 0）、P 仅 5 条。S/A 两档挤满、两头几乎消失。</div>
+        <div class="pc-ad"><b>判断：</b>这是「评等工具失效」而非「人不行」——标签无法支撑差异化激励。<b>建议：</b>Q4 调薪别只看绩效标签，叠加「关键岗 × 相对评等校准会」二次区分，把预算向前 11.1% 高绩效与关键岗集中（呼应外部 WTW 做法）。</div>
+        <div class="pc-who">责任人：薪酬委员会 + C&B ｜ 时限：调薪方案定稿前完成一次校准</div>
+      </div>
+      <div class="perf-card">
+        <div class="pc-h"><span class="pc-n">02</span><span class="pc-t">考核覆盖存在集团盲区</span><span class="pc-conf">置信：高</span></div>
+        <div class="pc-ev">2025 覆盖率：世平 97.1%、品佳 95.1%、友尚 97.4% 完整；但<b>诠鼎 / 海外 / 鑫联大三年≈0%</b>，运筹 41%（仅 IDL）、后勤 63.6%。</div>
+        <div class="pc-ad"><b>判断：</b>约半数人力所在集团没有可用绩效数据，「绩效驱动调薪 / 晋升」在这些单元无据可依，制度推不动。<b>建议：</b>HR 数位中心推动考核结果回写系统，分批补齐——先后勤、运筹（缺口大且人数多），再鑫联大 / 海外，实现全员可考核、可追溯。</div>
+        <div class="pc-who">责任人：HR 数位中心 + 各集团 HR ｜ 时限：本季先补 2 个集团</div>
+      </div>
+      <div class="perf-card">
+        <div class="pc-h"><span class="pc-n">03</span><span class="pc-t">绩效 → 晋升联动失灵</span><span class="pc-conf">置信：中</span></div>
+        <div class="pc-ev">以 2025 考核者为分母，<b>A 等晋升率 72.3% 反超 S 等 54.5%</b>（S 等 1,111 人是最大群体）；晋升 <b>96.3% 集中在 4 月集体</b>，10 月特殊晋升仅 1.7%。</div>
+        <div class="pc-ad"><b>判断：</b>最大的 S 等群体出现「高绩效平台期」；激励一年只有一次窗口、年中绩优无及时通道。<b>建议：</b>为 S 等做「职等天花板评估」，开专家职级 / 轮岗路径；明确 10 月特殊晋升触发条件（绩优跳级 / 停年自动），给年中绩优及时激励，比例先定基线再校准、不预设百分比。</div>
+        <div class="pc-who">责任人：HRD + C&B + 各 BU 主管 ｜ 时限：Q4 出机制草案</div>
+      </div>
+      <div class="perf-card">
+        <div class="pc-h"><span class="pc-n">04</span><span class="pc-t">高阶通道窄、集团分化</span><span class="pc-conf">置信：中</span></div>
+        <div class="pc-ev">晋升落点 B 初阶 649 + C 中阶 523 ≈ 九成，<b>D 高阶仅 65 人、E 资深 4 人</b>；停年中位由 2022 年 6.92 年降至 2025 年 3.12 年（加快）；集团分化大（海外 85.2% 但基数小 vs 鑫联大 19.8%、运筹 24.6%）；CN 正职三年 <b>−8.2%</b>。</div>
+        <div class="pc-ad"><b>判断：</b>高阶通道稀缺 + 集团两极分化 + 总量收缩，关键岗一旦流失、内部接棒梯队偏薄。<b>建议：</b>打通高阶 / 专家职等双通道；晋升政策按集团规模与业务周期差异化、不一刀切；结合 9-Box 与继任盘点锁定关键保留人群（呼应 P1 组织面卡）。</div>
+        <div class="pc-who">责任人：HRD + 各 BU HRBP ｜ 时限：半年内出职等通道方案</div>
+      </div>
+    </div>
+    <div class="perf-next"><b>高管四步走 · 从诊断到动作</b>
+      <ol>
+        <li><b>定工具</b>：Q4 调薪前完成一次评等校准会，重建区分度，避免「人人 S/A」→ 薪酬委员会，本月启动。</li>
+        <li><b>补数据</b>：考核结果分批回写系统，先补后勤 / 运筹两个缺口大的集团 → HR 数位中心，本季。</li>
+        <li><b>通通道</b>：S 等职等天花板评估 + 10 月特殊晋升触发条件，给绩优及时激励 → HRD + C&B，Q4 出草案。</li>
+        <li><b>锁梯队</b>：高阶 / 专家双通道 + 9-Box 继任盘点，小样本单元差异化设计 → HRD + BU HRBP，半年内。</li>
+      </ol>
+      <div class="gp-src">口径与边界：本节为绩效体系<b>整体趋势研判</b>，源数据止于 2025-12、与主口径（2026/10）期间不同，结论须结合最新数据复核；晋升率以 2025-12 在册为分母，样本小的集团（如海外 27 人）不作细分。任何调薪、职等与岗位调整须薪酬委员会 / HRD / 法务复核，需本地法律确认；数据供决策参考、非终决策。</div>
+    </div>
   </div>
 
   </div><!-- /execGrp-all -->
