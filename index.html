@@ -5775,9 +5775,17 @@ function r3RenderRetention(){
   var typeRate=types.map(function(t){var sub=rows.filter(function(r){return r._type===t;});var k=sub.filter(function(r){var h=new Date(r.hireDate||r.date);var tgt=new Date(h);tgt.setMonth(tgt.getMonth()+6);if(tgt>new Date(R3.meta.asOf))return false;return !leaves.some(function(l){return l.empno&&l.empno===r.empno&&new Date(l.date)<tgt;});}).length;return sub.length?Math.round(k/sub.length*100):0;});
   var svg=r3Svg('r3RetTypeRate',240);
   if(svg){var W=640,H=240,pad={l:44,r:16,t:14,b:36};r3Axes(svg,W,H,pad,100);types.forEach(function(t,i){var x=pad.l+(W-pad.l-pad.r)*0.25+i*(W-pad.l-pad.r)*0.45,h=(H-pad.t-pad.b)*typeRate[i]/100;svg.appendChild(r3El('rect',{x:x,y:H-pad.b-h,width:64,height:h,fill:tseries[i].color,rx:3}));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b-h-5,'text-anchor':'middle','font-size':11,fill:'#334','font-weight':700},typeRate[i]+'%'));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b+16,'text-anchor':'middle','font-size':11,fill:'#475569'},t));});}
-  // 明细表
-  var cols=[{t:'工号',k:'empno'},{t:'姓名',k:'name'},{t:'到职日',k:'hireDate'},{t:'7集团',k:'group7'},{t:'大区',k:'region'},{t:'城市',k:'cityCn'},{t:'职系',k:'zhiXi'},{t:'人员类型',f:function(r){return r._type;}}];
-  r3Table('r3RetTable',cols,rows,'共 '+rows.length+' 条 · 源＝入离职名册雇用事件（'+(r3RetCrossActive()?'已启用交叉筛选':'未交叉筛选')+'）');
+  // 明细表：按工号关联离职事件，补「离职日」（到职后最近的离职记录；仍在职显示 —）
+  function leaveDateOf(r){
+    var hd=new Date(r.hireDate||r.date);
+    var cand=leaves.filter(function(l){return l.empno&&l.empno===r.empno&&new Date(l.date)>=hd;})
+                   .sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    return cand.length?cand[0].date:'—';
+  }
+  var cols=[{t:'工号',k:'empno'},{t:'姓名',k:'name'},{t:'到职日',k:'hireDate'},
+            {t:'离职日',f:leaveDateOf},
+            {t:'7集团',k:'group7'},{t:'大区',k:'region'},{t:'城市',k:'cityCn'},{t:'职系',k:'zhiXi'},{t:'人员类型',f:function(r){return r._type;}}];
+  r3Table('r3RetTable',cols,rows,'共 '+rows.length+' 条 · 源＝入离职名册（雇用事件按工号关联离职日）（'+(r3RetCrossActive()?'已启用交叉筛选':'未交叉筛选')+'）');
 }
 
 /* ============================ ⑤ 渠道贡献-新进人数 ============================ */
