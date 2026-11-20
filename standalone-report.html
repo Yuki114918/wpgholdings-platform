@@ -371,6 +371,9 @@ footer span{display:block}
 
 
 
+
+
+
 <style id="execSummaryStyle">
 .exec-wrap{max-width:1180px;margin:0 auto;padding:26px 30px 60px;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#1e293b;}
 .exec-hero{background:linear-gradient(135deg,#0f2d4f 0%,#1e4e79 55%,#2563eb 100%);color:#fff;border-radius:16px;padding:30px 34px;position:relative;overflow:hidden;box-shadow:0 10px 30px rgba(15,45,79,.22);}
@@ -477,6 +480,31 @@ footer span{display:block}
 .bench-tbl .verdict{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:10px;margin-right:5px;}
 .v-yes{background:#dcfce7;color:#166534;}.v-part{background:#fef9c3;color:#854d0e;}.v-no{background:#fee2e2;color:#991b1b;}
 .bench-note{margin-top:10px;font-size:11px;color:#64748b;line-height:1.6;background:#f8fafc;border-radius:7px;padding:8px 11px;}
+/* 同行对比紧凑卡（顶部） */
+.peer-card{margin-top:14px;background:linear-gradient(135deg,#0f2d4f,#1e3a5f);border-radius:12px;padding:15px 18px;color:#e2f0ff;}
+.peer-card .pc-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.peer-card .pc-hd h4{font-size:13px;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:7px;}
+.peer-link{font-size:11px;font-weight:700;color:#7dd3fc;background:rgba(125,211,252,.12);border:1px solid rgba(125,211,252,.35);border-radius:16px;padding:4px 11px;cursor:pointer;text-decoration:none;white-space:nowrap;}
+.peer-link:hover{background:rgba(125,211,252,.25);}
+.peer-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.peer-col{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:9px;padding:10px 10px 9px;text-align:center;}
+.peer-col.is-us{background:rgba(227,25,55,.22);border-color:rgba(255,120,140,.5);}
+.peer-col .pn{font-size:11px;font-weight:800;color:#cbd5e1;margin-bottom:3px;white-space:nowrap;}
+.peer-col.is-us .pn{color:#fecdd3;}
+.peer-col .pv{font-size:15px;font-weight:800;color:#fff;line-height:1.25;}
+.peer-col .pv small{font-size:9px;font-weight:600;color:#94a3b8;display:block;margin-top:2px;}
+.peer-col .pg{font-size:10px;font-weight:700;margin-top:4px;color:#4ade80;}
+.peer-col .pg.dn{color:#fca5a5;}
+.peer-foot{font-size:10.5px;color:#94a3b8;margin-top:9px;line-height:1.6;}
+.peer-foot b{color:#e2f0ff;}
+/* 折叠明细块（精简） */
+details.exec-fold{margin-top:12px;border:1px solid #e2e8f0;border-radius:9px;background:#fafcff;overflow:hidden;}
+details.exec-fold>summary{cursor:pointer;font-size:11.5px;font-weight:700;color:#2563eb;padding:9px 13px;list-style:none;display:flex;align-items:center;gap:6px;user-select:none;}
+details.exec-fold>summary::-webkit-details-marker{display:none;}
+details.exec-fold>summary::before{content:'▸';font-size:11px;transition:transform .15s;}
+details.exec-fold[open]>summary::before{transform:rotate(90deg);}
+details.exec-fold>summary:hover{background:#eff6ff;}
+.exec-fold-body{padding:0 13px 12px;}
 /* 绩效体系整体诊断 → 高管建议 */
 .perf-panel{margin-top:16px;background:linear-gradient(180deg,#f5f3ff,#fff);border:1px solid #ddd6fe;border-left:4px solid #7c3aed;border-radius:12px;padding:17px 20px;}
 .perf-panel h4{font-size:13.5px;font-weight:800;color:#5b21b6;margin:0 0 4px;display:flex;align-items:center;gap:7px;}
@@ -589,6 +617,9 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
 
 
 
+
+
+
 <!-- ===== 高管摘要 EXEC SUMMARY START ===== -->
 <div id="tab-exec" style="display:none">
 <div class="exec-wrap">
@@ -641,6 +672,21 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
         <li><span class="ext-badge exb-fin">人才</span><span class="ex-t">猎聘：芯片岗位需求仅 +3.0%，采购经理 +46.6%</span><div class="ex-d">芯片平均年薪 29.19 万（+8.8%），Chiplet 岗 +211% → 复合采购/技术岗单列</div></li>
       </ul>
     </div>
+  </div>
+
+  <div class="peer-card">
+    <div class="pc-hd">
+      <h4><span class="ic">🏁</span>大联大 vs 同行 · 一眼看位置</h4>
+      <a class="peer-link" onclick="wpgGotoPeer('sec-flash')">看同行详情 →</a>
+    </div>
+    <div class="peer-grid">
+      <div class="peer-col"><div class="pn">文晔</div><div class="pv">US$183.2<small>亿 · Q3营收</small></div><div class="pg">年增 +82%</div></div>
+      <div class="peer-col is-us"><div class="pn">大联大（我司）</div><div class="pv">US$154.3<small>亿 · Q3营收</small></div><div class="pg">年增 +108%</div></div>
+      <div class="peer-col"><div class="pn">艾睿</div><div class="pv">US$107.2<small>亿 · Q3营收</small></div><div class="pg">年增 +39%</div></div>
+      <div class="peer-col"><div class="pn">安富利</div><div class="pv">US$107.0<small>亿 · Q3营收</small></div><div class="pg">年增 +82%</div></div>
+      <div class="peer-col"><div class="pn">中电港</div><div class="pv">US$85.3<small>亿 · Q3营收</small></div><div class="pg">年增 +239%</div></div>
+    </div>
+    <div class="peer-foot">Q3 营收规模<a class="peer-link" style="padding:1px 7px;margin:0 3px;" onclick="wpgGotoPeer('sec-flash')">来源①</a>：文晔居首、我司第二；<b>我司增速 +108% 为 TOP2 中最快</b>。战略分化：文晔/我司拼 AI 服务器与存储（毛利偏低）、艾睿深耕工业车规（高毛利）、安富利布局航空航天。<b>HR 含义：</b>增速最快的对手（文晔、中电港）正高速扩招，同口径关键岗（FAE/PM/大客户销售）的薪酬与机会须保持竞争力；外部在招渠道我司仅 5 vs 同业 29–76，落差需尽快补齐。同行打法与借鉴判断见 05；完整快讯点右上「看同行详情」。</div>
   </div>
 
   <h3 class="exec-h3">02 &nbsp;现状 SWOT</h3>
@@ -777,7 +823,8 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
 
   <div class="bench-panel">
     <h4><span class="ic">🌐</span>05 &nbsp;外部对标与同行借鉴（不照抄 OKR，给自有判断）</h4>
-    <p class="bsub">人力/离职数字取内部资料对比报告、招聘数字取招聘模块 v3（主管月会表 20261031 / 北森过程 20261106）、外部事实取外部数据快讯（更新至 11/18）；同行做法为公开信息研判，借鉴结论是我司视角建议，须经业务与薪酬委员会评估后落地。</p>
+    <p class="bsub">6 大议题对照同行做法与我司落点（激励留才/招聘补位/人力分层/技能给薪/稀缺岗保留/组织效能）。判断标签：直接借鉴 3 · 借鉴改造 2 · 方法借鉴不照抄 1。<a class="peer-link" style="padding:1px 7px;margin-left:4px;" onclick="wpgGotoPeer('sec-salary')">外部快讯详情 →</a></p>
+    <details class="exec-fold"><summary>展开 6 议题×同行做法对照表</summary><div class="exec-fold-body">
     <table class="bench-tbl">
       <thead><tr><th>议题</th><th class="b-peer">同行 / 市场做法（外部快讯）</th><th class="b-us">我司现状 → 可借鉴点与落点</th><th>判断</th></tr></thead>
       <tbody>
@@ -820,11 +867,13 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
       </tbody>
     </table>
     <div class="bench-note"><b>判断说明：</b>「直接借鉴」＝同行做法与我司岗位性质相近、可较快落地；「借鉴·改造」＝逻辑可用但需按我司体量/岗位改造后落地；「阈值不照抄」＝方法论可参考，但具体百分比须以内部基线盘点校准。任何调薪、留任与岗位调整仍须薪酬委员会 / HRD / 法务复核。</div>
+    </div></details>
   </div>
 
   <div class="perf-panel">
     <h4><span class="ic">📈</span>06 &nbsp;绩效与晋升体系：整体诊断 → 高管建议</h4>
-    <p class="bsub">数据取自《绩效考核与晋升洞察报告》<b>整体结论</b>（考核期 2022–2025、名册快照 2025-12、CN 正职 2,128 人）。<b>口径提示：</b>该数据期与日期口径均不同于本页主口径（2026/10、2,086 人），且绩效源沿用 G01–G09 旧集团编号（与现行七集团口径不同）；本节仅作<b>体系级趋势判断</b>，数字不与主口径直接比较或相加，不列个人明细。</p>
+    <p class="bsub">数据取自《绩效考核与晋升洞察报告》整体结论（考核期 2022–2025 / 名册 2025-12 / CN 正职 2,128 人），<b>仅作体系级趋势判断</b>，不与主口径（2026/10 / 2,086 人）混算、不列个人明细。<b>四诊断：</b>评等失去区分度 · 考核覆盖盲区 · 绩效→晋升联动失灵 · 高阶通道窄。</p>
+    <details class="exec-fold"><summary>展开 4 项诊断的证据与建议明细</summary><div class="exec-fold-body">
     <div class="perf-diag">
       <div class="perf-card">
         <div class="pc-h"><span class="pc-n">01</span><span class="pc-t">评等失去区分度</span><span class="pc-conf">置信：高</span></div>
@@ -851,6 +900,7 @@ details.exec-det summary{cursor:pointer;font-size:12px;color:#2563eb;font-weight
         <div class="pc-who">责任人：HRD + 各 BU HRBP ｜ 时限：半年内出职等通道方案</div>
       </div>
     </div>
+    </div></details>
     <div class="perf-next"><b>高管四步走 · 从诊断到动作</b>
       <ol>
         <li><b>定工具</b>：Q4 调薪前完成一次评等校准会，重建区分度，避免「人人 S/A」→ 薪酬委员会，本月启动。</li>
@@ -988,6 +1038,25 @@ function switchExecGrp(k, btn){
   for (var j = 0; j < tabs.length; j++) { tabs[j].classList.remove('active'); }
   if (btn) { btn.classList.add('active'); }
   return k;
+}
+/* 从高管摘要跳到外部快讯页签的具体章节（外部内容异步注入，需轮询等待锚点出现） */
+function wpgGotoPeer(anchorId){
+  var extBtn = document.getElementById('tabExtBtn');
+  if (typeof switchTopTab === 'function') { switchTopTab('external', extBtn); }
+  var tries = 0;
+  var timer = setInterval(function(){
+    tries++;
+    var el = document.getElementById(anchorId);
+    if (el) {
+      try { el.scrollIntoView({behavior:'smooth', block:'start'}); } catch(e) { el.scrollIntoView(); }
+      clearInterval(timer);
+    } else if (tries > 40) {
+      /* 外部内容未就绪则退回页签顶部 */
+      var ext = document.getElementById('tab-external');
+      if (ext) { ext.scrollIntoView({behavior:'smooth', block:'start'}); }
+      clearInterval(timer);
+    }
+  }, 200);
 }
 </script>
 <!-- ===== 高管摘要 EXEC SUMMARY END ===== -->
