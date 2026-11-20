@@ -5607,6 +5607,10 @@ function r3RenderInternal(){
 /* ============================ ④ 招聘留任率分析 ============================ */
 // ---- 留任率多维交叉筛选 ----
 function r3XPass(field,val){var sel=R3_RETCROSS[field];return !sel||sel.size===0||sel.has(val);}
+// 境内城市集合（从名册 region 实时推导，免受数据快照新旧影响）——用户口径：城市里不要有海外
+function r3DomesticCitySet(){
+  var s={};(R3.roster||[]).forEach(function(r){if(r.cityCn&&r.region&&r.region!=='海外')s[r.cityCn]=1;});return s;
+}
 function r3RetCrossInit(){
   var box=document.getElementById('r3RetCrossRow');if(!box)return;
   var f=(R3&&R3.meta&&R3.meta.filters)||{};
@@ -5615,7 +5619,12 @@ function r3RetCrossInit(){
     // 职系的名册值与职缺筛选器不同，用 roster 专用枚举
     var FKEY={zhiXi:'zhiXiRoster'};
     var opts=f[FKEY[d.k]||d.k]||[];
-    if(d.k==='cityCn'&&opts.length>40)opts=opts.slice(0,40);
+    // 城市：前端兜底剔除海外（数据快照可能滞后），只保留名册里 region≠海外的城市
+    if(d.k==='cityCn'){
+      var dom=r3DomesticCitySet();
+      opts=opts.filter(function(c){return dom[c]==1;});
+      if(opts.length>40)opts=opts.slice(0,40);
+    }
     html+='<div class="r3-xdim"><span class="r3-xdim-lbl">'+d.lbl+'</span><div class="r3-xdim-chips">';
     if(!opts.length)html+='<span class="r3-hint" style="margin:0">无选项</span>';
     opts.forEach(function(o){
@@ -5720,6 +5729,7 @@ function r3RenderRetention(){
   // group7/region/cityCn 的枚举与名册值一致且按人数排序，用它保持排序；zhiXi 直接用实际值。
   var FKEY={group7:'group7',region:'region',cityCn:'cityCn'};
   var actual=sortedUnique(rows.map(function(r){return r[gb];}).filter(function(x){return x&&x!=='N/A'&&x!=='未知';}));
+  if(gb==='cityCn'){var dom=r3DomesticCitySet();actual=actual.filter(function(x){return dom[x]==1;});}
   var gf=FKEY[gb]?((R3.meta.filters||{})[FKEY[gb]]||actual).filter(function(x){return actual.indexOf(x)>=0;}):actual;
   if(gb==='cityCn'&&gf.length>12)gf=gf.slice(0,12);
   var gcats=gf.filter(function(g){return rows.some(function(r){return r[gb]===g;});});
