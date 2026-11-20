@@ -2336,7 +2336,7 @@ function mergeEmployeeData() {
           <span class="r3-hint" id="r3RetCaliber"></span>
         </div>
         <div class="r3-retcross" id="r3RetCross">
-          <div class="r3-retcross-head"><b>多维交叉筛选</b><span class="r3-hint">可跨维度组合：集团 × 职系 × 大区 × 城市 × 子区域；下方 KPI / 图表 / 明细联动</span><button class="r3-clear" onclick="r3RetCrossClear()">✕ 清除交叉筛选</button></div>
+          <div class="r3-retcross-head"><b>多维交叉筛选</b><span class="r3-hint">可跨维度组合：集团 × 职系 × 大区 × 城市；下方 KPI / 图表 / 明细联动</span><button class="r3-clear" onclick="r3RetCrossClear()">✕ 清除交叉筛选</button></div>
           <div class="r3-retcross-row" id="r3RetCrossRow"></div>
           <div class="r3-retcross-stat" id="r3RetCrossStat"></div>
         </div>
@@ -2350,7 +2350,7 @@ function mergeEmployeeData() {
           <div class="r3-ctrl" style="margin:4px 0;">
             <label>分组维度 <select id="r3RetGroupBy" onchange="r3RenderRetention()">
               <option value="group7">7集团</option><option value="zhiXi">职系</option>
-              <option value="region">大区</option><option value="cityCn">城市</option><option value="sub">子区域</option>
+              <option value="region">大区</option><option value="cityCn">城市</option>
             </select></label>
             <span class="r3-hint" id="r3RetGroupNote"></span>
           </div>
@@ -5179,14 +5179,13 @@ var R3_SNAP = '20261031';                 // 默认快照（与截图一致）
 var R3_KEYS = ['snap', 'sub', 'bu', 'zhiXi', 'hr', 'channel', 'zeng'];
 var R3_LABEL = { snap:'月快照', sub:'区域', bu:'集团(BU)', zhiXi:'职系', hr:'筛选发起人', channel:'招聘渠道', zeng:'职缺类别' };
 var R3_SEL = {};
-// 留任率多维交叉筛选：{group7:Set, zhiXi:Set, region:Set, cityCn:Set, sub:Set}
-var R3_RETCROSS = {group7:new Set(), zhiXi:new Set(), region:new Set(), cityCn:new Set(), sub:new Set()};
+// 留任率多维交叉筛选：{group7:Set, zhiXi:Set, region:Set, cityCn:Set}（子区域因名册 79% 缺值已移除）
+var R3_RETCROSS = {group7:new Set(), zhiXi:new Set(), region:new Set(), cityCn:new Set()};
 var R3_XDIM = [
   {k:'group7', lbl:'集团',   field:'group7'},
   {k:'zhiXi',  lbl:'职系',   field:'zhiXi'},
   {k:'region', lbl:'大区',   field:'region'},
-  {k:'cityCn', lbl:'城市',   field:'cityCn'},
-  {k:'sub',    lbl:'子区域', field:'sub'}
+  {k:'cityCn', lbl:'城市',   field:'cityCn'}
 ];
 const R3_COLORS = ['#E31937','#004E8C','#c2870b','#137a45','#8b5cf6','#06b6d4','#e07b39','#6b7280','#ec4899','#14b8a6'];
 
@@ -5611,8 +5610,8 @@ function r3RetCrossInit(){
   var f=(R3&&R3.meta&&R3.meta.filters)||{};
   var html='';
   R3_XDIM.forEach(function(d){
-    // 职系/子区域的名册值与职缺筛选器不同，用 roster 专用枚举
-    var FKEY={zhiXi:'zhiXiRoster',sub:'subRoster'};
+    // 职系的名册值与职缺筛选器不同，用 roster 专用枚举
+    var FKEY={zhiXi:'zhiXiRoster'};
     var opts=f[FKEY[d.k]||d.k]||[];
     if(d.k==='cityCn'&&opts.length>40)opts=opts.slice(0,40);
     html+='<div class="r3-xdim"><span class="r3-xdim-lbl">'+d.lbl+'</span><div class="r3-xdim-chips">';
@@ -5646,8 +5645,7 @@ function r3RetCrossRowPass(r){
   return r3XPass('group7',r.group7||'未标注')
       && r3XPass('zhiXi',r.zhiXi||'')
       && r3XPass('region',r.region||'未知')
-      && r3XPass('cityCn',r.cityCn||'未知')
-      && r3XPass('sub',r.sub||'N/A');
+      && r3XPass('cityCn',r.cityCn||'未知');
 }
 
 function r3RetRows(){
@@ -5683,9 +5681,7 @@ function r3RenderRetention(){
     var allBase=R3.roster.filter(function(r){var ye=document.getElementById('r3RetYear');var year=ye?ye.value:'';return r.event==='hire'&&r.counted&&(!year||String(r.year)===year);});
     var parts=[];
     R3_XDIM.forEach(function(d){var n=R3_RETCROSS[d.k].size;if(n)parts.push(d.lbl+'('+n+')');});
-    var naN=rows.filter(function(r){return r.sub==='N/A'||!r.sub;}).length;
-    st.innerHTML='命中样本 <b>'+rows.length+'</b> / '+allBase.length+' 人'+(parts.length?' · 已选 '+parts.join(' × '):' · 未启用交叉筛选')
-      +(naN?' · 子区域 N/A '+naN+' 人（'+Math.round(naN/rows.length*100)+'%，名册原字段缺失，建议改用城市/大区）':'');
+    st.innerHTML='命中样本 <b>'+rows.length+'</b> / '+allBase.length+' 人'+(parts.length?' · 已选 '+parts.join(' × '):' · 未启用交叉筛选');
   }
   var total=rows.length;
   // 满 1/3/6 个月留任（以事件日期+月数 <= 结算日 且在册近似：用 lastPay/离职事件判定）
@@ -5719,7 +5715,7 @@ function r3RenderRetention(){
   // ---- 分组留任率（可切换维度，柱上标 n） ----
   var gbEl=document.getElementById('r3RetGroupBy');var gb=gbEl?gbEl.value:'group7';
   // 名册维度以当前结果里实际出现的值为准，避免枚举与名册值不匹配导致空图。
-  // group7/region/cityCn 的枚举与名册值一致且按人数排序，用它保持排序；zhiXi/sub 直接用实际值。
+  // group7/region/cityCn 的枚举与名册值一致且按人数排序，用它保持排序；zhiXi 直接用实际值。
   var FKEY={group7:'group7',region:'region',cityCn:'cityCn'};
   var actual=sortedUnique(rows.map(function(r){return r[gb];}).filter(function(x){return x&&x!=='N/A'&&x!=='未知';}));
   var gf=FKEY[gb]?((R3.meta.filters||{})[FKEY[gb]]||actual).filter(function(x){return actual.indexOf(x)>=0;}):actual;
@@ -5780,7 +5776,7 @@ function r3RenderRetention(){
   var svg=r3Svg('r3RetTypeRate',240);
   if(svg){var W=640,H=240,pad={l:44,r:16,t:14,b:36};r3Axes(svg,W,H,pad,100);types.forEach(function(t,i){var x=pad.l+(W-pad.l-pad.r)*0.25+i*(W-pad.l-pad.r)*0.45,h=(H-pad.t-pad.b)*typeRate[i]/100;svg.appendChild(r3El('rect',{x:x,y:H-pad.b-h,width:64,height:h,fill:tseries[i].color,rx:3}));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b-h-5,'text-anchor':'middle','font-size':11,fill:'#334','font-weight':700},typeRate[i]+'%'));svg.appendChild(r3El('text',{x:x+32,y:H-pad.b+16,'text-anchor':'middle','font-size':11,fill:'#475569'},t));});}
   // 明细表
-  var cols=[{t:'工号',k:'empno'},{t:'姓名',k:'name'},{t:'到职日',k:'hireDate'},{t:'7集团',k:'group7'},{t:'大区',k:'region'},{t:'城市',k:'cityCn'},{t:'子区域',k:'sub'},{t:'职系',k:'zhiXi'},{t:'人员类型',f:function(r){return r._type;}}];
+  var cols=[{t:'工号',k:'empno'},{t:'姓名',k:'name'},{t:'到职日',k:'hireDate'},{t:'7集团',k:'group7'},{t:'大区',k:'region'},{t:'城市',k:'cityCn'},{t:'职系',k:'zhiXi'},{t:'人员类型',f:function(r){return r._type;}}];
   r3Table('r3RetTable',cols,rows,'共 '+rows.length+' 条 · 源＝入离职名册雇用事件（'+(r3RetCrossActive()?'已启用交叉筛选':'未交叉筛选')+'）');
 }
 
