@@ -197,7 +197,7 @@
         <div class="rank-card"><h4 id="leaveBreakTitle">各类假别拆分（当期）</h4><div id="leaveBreak" style="max-height:380px;overflow:auto"></div></div>
         <div class="rank-card orange"><h4 id="leaveRankTitle">个人请假时长 TOP 15</h4><div id="leaveRank"></div></div>
       </div>
-      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 调休假 / 产假 / 婚假 / 丧假 / 育儿假 / 出差假 等共 21 类）。拆分按各假别「总时长」降序，单位区分 小时 / 天，人数为该月发生该假别的人数；个人 TOP 排行按「请假总时长_小时」排序。源数据含个别异常单元格（单日 >24h 或 >1天），已按日结上限自动剔除。</div>
+      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 调休假 / 产假 / 婚假 / 丧假 / 育儿假 / 出差假 等共 21 类）。拆分按各假别「总时长」降序，单位区分 小时 / 天，人数为该月发生该假别的人数；个人 TOP 排行按「请假总时长_小时」排序。<b>互斥口径（2026-11-26 修正）：同一天有出差的记录，源数据会把出差 8h 同时写进「请假总时长_小时」，属重复计入，现已剔除——出差日不再计请假时数，仅保留为独立假别展示。</b>源数据含个别异常单元格（单日 >24h 或 >1天），已按日结上限自动剔除。</div>
     </div>
   </div>
 
@@ -1035,7 +1035,7 @@ function openPersonLeave(empNo){
       return '<tr><td>'+x.name+'</td><td>'+fmt(x.v,1)+'</td><td>'+x.unit+'</td></tr>';
     }).join('') : '<tr><td colspan="3" style="text-align:center;color:#8a98a8;padding:20px">源表未提供该员工的假别拆分</td></tr>';
   document.getElementById('leaveModalBody').innerHTML=head+rowsHtml+'</tbody></table>';
-  document.getElementById('leaveModalFoot').innerHTML='右侧「合计小时」来自考勤日结「请假总时长_小时」，按工作日折算（如整月产假 = 22 工作日 × 8h = 176h）；假别明细为原始申报单位（小时 / 天），两者单位口径不同，不可直接相加核对。';
+  document.getElementById('leaveModalFoot').innerHTML='右侧「合计小时」来自考勤日结「请假总时长_小时」（已剔除出差日重复计入的时段），按工作日折算（如整月产假 = 22 工作日 × 8h = 176h）；假别明细为原始申报单位（小时 / 天），两者单位口径不同，不可直接相加核对。';
   document.getElementById('leaveModal').classList.add('open');
   var box=document.querySelector('.leave-modal-box'); if(box) box.scrollTop=0;
 }
