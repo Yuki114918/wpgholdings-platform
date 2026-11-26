@@ -197,7 +197,7 @@
         <div class="rank-card"><h4 id="leaveBreakTitle">各类假别拆分（当期）</h4><div id="leaveBreak" style="max-height:380px;overflow:auto"></div></div>
         <div class="rank-card orange"><h4 id="leaveRankTitle">个人请假时长 TOP 15</h4><div id="leaveRank"></div></div>
       </div>
-      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 调休假 / 产假 / 婚假 / 丧假 / 育儿假 / 出差假 等共 21 类）。拆分按各假别「总时长」降序，单位区分 小时 / 天，人数为该月发生该假别的人数；个人 TOP 排行按「请假总时长_小时」排序。<b>互斥口径（2026-11-26 修正）：同一天有出差的记录，源数据会把出差 8h 同时写进「请假总时长_小时」，属重复计入，现已剔除——出差日不再计请假时数，仅保留为独立假别展示。</b>源数据含个别异常单元格（单日 >24h 或 >1天），已按日结上限自动剔除。</div>
+      <div class="note">休假数据来自考勤日结的各类假别字段（年假 / 事假 / 病假 / 调休假 / 产假 / 婚假 / 丧假 / 育儿假 / 出差假 等共 21 类）。拆分按各假别「总时长」降序，单位区分 小时 / 天，人数为该月发生该假别的人数；个人 TOP 排行按「请假总时长_小时」排序。<b>互斥口径（2026-11-26 修正）：同一天有出差的记录，源数据会把出差时长同时写进「请假总时长_小时」，属重复计入；现按小时折算扣除——出差 N 天扣 N×8h（半天 0.5 天扣 4h），超出出差时段的真实请假予以保留，出差仍作为独立假别展示与可点明细。</b>源数据含个别异常单元格（单日 >24h 或 >1天），已按日结上限自动剔除。</div>
     </div>
   </div>
 
@@ -318,7 +318,7 @@
 
 <script>
 /* ===== 全局数据 ===== */
-var APP_VER='20261110b';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
+var APP_VER='20261126a';          // 考勤页版本号：改动考勤页或数据后务必同步 bump，强制浏览器/iframe 刷新缓存
 var _cv=function(u){ return u + (u.indexOf('?')>=0?'&':'?') + 'v=' + APP_VER; };  // 追加版本缓存破坏
 var SUMMARY=null, DAILY=null, BUKA=null;
 var EMPMAP={}; // 工号 -> {姓名,职称,所属部门,工作地点,bu}
@@ -635,8 +635,14 @@ function leaveBreakdown(e){
 function renderLeaveRank(pm, tag){
   var el=document.getElementById('leaveRank'); if(!el) return;
   var lrt=document.getElementById('leaveRankTitle'); if(lrt) lrt.textContent='个人请假明细 TOP 15'+(tag||'');
-  var arr=pm.filter(function(e){return (+e.请假总时长_小时||0)>0;})
-    .sort(function(a,b){return (+b.请假总时长_小时||0)-(+a.请假总时长_小时||0);}).slice(0,15);
+  // 纳入任一假别>0者（含仅出差者），使其可点开看明细；排序按折算小时(出差天×8 + 请假小时)
+  var _rv=function(e){ return (+e.请假总时长_小时||0)+(+e.出差天数||0)*8; };
+  var arr=pm.filter(function(e){
+      if(_rv(e)>0) return true;
+      for(var i=0;i<LEAVE_META.length;i++){ if((+e[LEAVE_META[i].name]||0)>0) return true; }
+      return false;
+    })
+    .sort(function(a,b){return _rv(b)-_rv(a);}).slice(0,15);
   if(!arr.length){ el.innerHTML='<div class="rank-row"><span class="nm">当前筛选无请假记录</span></div>'; return; }
   var hint='<div class="leave-hint">每行列出「假别 + 原始申报时长」；右侧数值＝单一假别时显示原始时长，多假别时显示折算合计小时。点击任一行可查看该员工全部假别明细。</div>';
   el.innerHTML = hint + arr.map(function(e,i){
@@ -1028,14 +1034,16 @@ function openPersonLeave(empNo){
   var e=(window.LEAVE_PM||[]).filter(function(x){return String(x.工号)===String(empNo);})[0];
   if(!e) return;
   var bd=leaveBreakdown(e);
-  document.getElementById('leaveModalTitle').textContent='【'+e.姓名+'】请假明细';
-  document.getElementById('leaveModalSub').textContent='工号 '+e.工号+' · '+(e.bu||'')+'·'+(e.工作子区域||'')+' · '+deptShort(e.所属部门)+' · 共 '+bd.length+' 类假别 · 合计 '+fmt(+e.请假总时长_小时||0,1)+' 小时'+(window.LEAVE_TAG?(' · '+window.LEAVE_TAG):'');
+  var _hasTrip=(+e.出差天数||0)>0;
+  var _sumTxt=(+e.请假总时长_小时||0)>0 ? ('合计 '+fmt(+e.请假总时长_小时||0,1)+' 小时请假') : (_hasTrip?('仅出差 '+fmt(+e.出差天数||0,1)+' 天'):'');
+  document.getElementById('leaveModalTitle').textContent='【'+e.姓名+'】假别明细';
+  document.getElementById('leaveModalSub').textContent='工号 '+e.工号+' · '+(e.bu||'')+'·'+(e.工作子区域||'')+' · '+deptShort(e.所属部门)+' · 共 '+bd.length+' 类假别'+(_sumTxt?(' · '+_sumTxt):'')+(window.LEAVE_TAG?(' · '+window.LEAVE_TAG):'');
   var head='<table class="datatbl" style="font-size:12.5px"><thead><tr><th>假别</th><th>时长 / 天数</th><th>单位</th></tr></thead><tbody>';
   var rowsHtml=bd.length ? bd.map(function(x){
       return '<tr><td>'+x.name+'</td><td>'+fmt(x.v,1)+'</td><td>'+x.unit+'</td></tr>';
     }).join('') : '<tr><td colspan="3" style="text-align:center;color:#8a98a8;padding:20px">源表未提供该员工的假别拆分</td></tr>';
   document.getElementById('leaveModalBody').innerHTML=head+rowsHtml+'</tbody></table>';
-  document.getElementById('leaveModalFoot').innerHTML='右侧「合计小时」来自考勤日结「请假总时长_小时」（已剔除出差日重复计入的时段），按工作日折算（如整月产假 = 22 工作日 × 8h = 176h）；假别明细为原始申报单位（小时 / 天），两者单位口径不同，不可直接相加核对。';
+  document.getElementById('leaveModalFoot').innerHTML='合计小时来自「请假总时长_小时」：出差时段已按 N天×8h 折算扣除（0.5天=4h），仅保留真实请假；产假等按工作日折算（如整月产假 = 22工作日×8h = 176h）。假别明细为原始申报单位（小时/天），单位口径不同，不可直接相加核对。';
   document.getElementById('leaveModal').classList.add('open');
   var box=document.querySelector('.leave-modal-box'); if(box) box.scrollTop=0;
 }
