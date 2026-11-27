@@ -57,9 +57,9 @@ sleep 3
 for url in \
   "https://wpgholdings-todo.surge.sh/" \
   "https://wpgholdings-todo.surge.sh/report.html" \
-  "https://wpgholdings-todo.surge.sh/report-comparison-v20.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-comparison-v21.html.enc" \
   "https://wpgholdings-todo.surge.sh/report-content-v13.html.enc" \
-  "https://wpgholdings-todo.surge.sh/report-hr-trends-v5.html.enc" \
+  "https://wpgholdings-todo.surge.sh/report-hr-trends-v6.html.enc" \
   "https://wpgholdings-todo.surge.sh/chart.umd.min.js" \
   "https://wpgholdings-todo.surge.sh/attendance.html" \
   "https://wpgholdings-todo.surge.sh/attendance-summary.json" \
@@ -67,7 +67,7 @@ for url in \
   "https://wpgholdings-todo.surge.sh/data/attendance-buka.json" \
   "https://hr-insight-report.surge.sh/" \
   "https://hr-insight-report.surge.sh/report-content-v13.html.enc" \
-  "https://hr-insight-report.surge.sh/report-comparison-v20.html.enc" \
+  "https://hr-insight-report.surge.sh/report-comparison-v21.html.enc" \
   "https://hr-insight-report.surge.sh/chart.umd.min.js" \
   "https://yuki114918.github.io/wpgholdings-platform/report.html" ; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
